@@ -112,9 +112,10 @@ const analyzeIntent = (text, aiSettings) => {
 };
 
 // ─── Build system prompt from tenant settings ───────────────────────
-// Prompt body comes from PlatformAISetting (super admin). Tenant-level
-// prompt editing is hidden. Pass platformPrompt in from caller (already
-// fetched via utils/platformAISettings.getPlatformPromptInstructions).
+// Prompt body defaults to PlatformAISetting (super admin) but a tenant
+// can override it via AISetting.prompt_instructions (see aiSettingController
+// and the AI Chat settings page). Pass platformPrompt in from caller
+// (already resolved by generateAIResponse's prompt-precedence logic).
 const buildSystemPrompt = (aiSettings, intent, platformPrompt = "") => {
   const customPrompt = platformPrompt || "";
 

@@ -1,6 +1,7 @@
 const { AISetting } = require("../models");
 const log = require("../utils/logger");
 const { resolveBaseUrlForModel } = require("./aiModelController");
+const { getPlatformPromptInstructions } = require("../utils/platformAISettings");
 
 const MODULE = "AISettingController";
 
@@ -34,6 +35,11 @@ exports.get = async (req, res) => {
     // simply mirrors the per-channel enabled toggle.
     data.has_whatsapp = !!data.whatsapp_enabled;
     data.has_instagram = !!data.instagram_enabled;
+
+    // Platform default prompt — shown to the tenant as a starting point.
+    // A tenant's own prompt_instructions (once set) takes precedence at
+    // runtime (see conversationController.buildSystemPrompt precedence note).
+    data.platform_default_prompt = await getPlatformPromptInstructions();
 
     log.info(MODULE, "get", { userId: req.user.id, tenantId });
     return res.status(200).json({ success: true, data });

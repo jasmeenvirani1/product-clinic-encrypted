@@ -7,7 +7,7 @@ import { PageSection } from "@/components/PageSection";
 import { aiSettingService, type AISetting, type UpdateAISettingPayload } from "@/services/aiSetting.service";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
-import { AI_MODEL_OPTIONS, OPENAI_COMPATIBLE_BASE_URL } from "@/constants/aiModels";
+import { AI_MODEL_OPTIONS } from "@/constants/aiModels";
 
 // ─── Keyword Manager ────────────────────────────────────────────────
 function KeywordManager({
@@ -123,10 +123,9 @@ export default function AiChatPage() {
         setSettings(data);
         form.setFieldsValue({
           ai_tone: data.ai_tone,
-          // prompt_instructions: data.prompt_instructions, // Hidden for tenant admin — only super admin updates default prompt. Keep for future re-enable.
+          prompt_instructions: data.prompt_instructions || data.platform_default_prompt || "",
           escalate_low_confidence: data.escalate_low_confidence,
           openai_model: data.openai_model || "gpt-4o-mini",
-          openai_base_url: data.openai_base_url || "",
           notification_email: data.notification_email || "",
         });
         setKeywords({
@@ -160,10 +159,9 @@ export default function AiChatPage() {
       setSaving(true);
       const payload: Record<string, unknown> = {
         ai_tone: values.ai_tone,
-        // prompt_instructions: values.prompt_instructions, // Hidden for tenant admin — only super admin updates default prompt. Keep for future re-enable.
+        prompt_instructions: values.prompt_instructions || null,
         escalate_low_confidence: values.escalate_low_confidence,
         openai_model: values.openai_model,
-        openai_base_url: values.openai_base_url || null,
         high_intent_keywords: keywords.high,
         medium_intent_keywords: keywords.medium,
         low_intent_keywords: keywords.low,
@@ -340,15 +338,6 @@ export default function AiChatPage() {
             <Form.Item name="openai_model" label="Model" className="!mb-0">
               <Select options={AI_MODEL_OPTIONS} />
             </Form.Item>
-
-            <Form.Item
-              name="openai_base_url"
-              label="OpenAI-compatible Base URL (optional)"
-              className="!mb-0"
-              extra={`Leave empty for OpenAI. For OpenAI-compatible providers (e.g. MiniMax M3) use ${OPENAI_COMPATIBLE_BASE_URL}`}
-            >
-              <Input placeholder={OPENAI_COMPATIBLE_BASE_URL} allowClear />
-            </Form.Item>
           </div>
 
           {/* Notification Recipient */}
@@ -385,12 +374,14 @@ export default function AiChatPage() {
             </div>
           </div>
 
-          {/* System Prompt update is hidden for tenant admin — only super admin can update the default prompt.
-              Do NOT delete this block — it may be re-enabled in the future.
-          <Form.Item name="prompt_instructions" label="System Prompt" className="!mb-0">
-            <Input.TextArea rows={4} placeholder="Describe how the AI should behave with patients…" />
+          <Form.Item
+            name="prompt_instructions"
+            label="System Prompt"
+            className="!mb-0"
+            extra="Shown pre-filled with our default prompt. Edit it to match how your clinic wants the AI to respond — your changes take over immediately."
+          >
+            <Input.TextArea rows={6} placeholder="Describe how the AI should behave with patients…" />
           </Form.Item>
-          */}
 
           <Form.Item name="ai_tone" label="Tone" className="!mb-0">
             <Radio.Group

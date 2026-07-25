@@ -6,6 +6,8 @@ export interface AISetting {
   tenant_id: number;
   ai_tone: "professional" | "warm" | "premium" | "friendly" | "formal";
   prompt_instructions: string;
+  /** Platform's default prompt — shown as the starting point when the clinic hasn't set its own. */
+  platform_default_prompt: string;
   escalate_low_confidence: boolean;
   auto_handover_high_intent: boolean;
   high_intent_keywords: string[];
