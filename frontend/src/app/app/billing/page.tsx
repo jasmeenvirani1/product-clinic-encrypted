@@ -15,6 +15,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { DataTable } from "@/components/DataTable";
 import { PageSection } from "@/components/PageSection";
 import { billingService } from "@/services/billing.service";
@@ -23,25 +24,45 @@ import { formatCurrency } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { BillingSummary, PaymentRecord, PlanRecord } from "@/utils/types";
 import { APP_FULL_NAME } from "@/constants/brand";
+import { BOOLEAN_FEATURE_FIELDS, CLINIC_PAGE_LABELS } from "@/constants/planFeatures";
 
 // ─── Brand-anchored plan card gradients ──────────────────────────────
-// Every gradient is built from shades of the project brand teal
-// Uses primary color scale only — no off-brand hues.
+// Built entirely from the theme's primary/primary-dark tokens (via Tailwind
+// opacity modifiers for lighter tints) — no hardcoded hex literals, so the
+// cards automatically follow whatever the theme's primary color is set to.
 const PLAN_GRADIENTS = [
-  "from-[#bae6fd] via-[#7dd3fc] to-primary",    // light → brand
-  "from-[#7dd3fc] via-primary to-primary-dark",  // mid lift
-  "from-primary via-primary-dark to-[#0c4a6e]",  // brand → deep
-  "from-[#bae6fd] via-primary to-[#0c4a6e]",     // soft → deep
-  "from-primary via-[#0c4a6e] to-[#082f49]",     // deepest
+  "from-primary/40 via-primary/70 to-primary",        // light → brand
+  "from-primary/70 via-primary to-primary-dark",      // mid lift
+  "from-primary via-primary-dark to-primary-dark/90",  // brand → deep
+  "from-primary/40 via-primary to-primary-dark/90",    // soft → deep
+  "from-primary via-primary-dark to-primary-dark/80",  // deepest
 ] as const;
+
+// Merge the freeform "features" text list with whichever plan-tier
+// feature-access toggles are actually enabled, so the card shows one
+// combined "what's included" list instead of two disconnected blocks.
+const combinedFeatures = (plan: PlanRecord): string[] => {
+  const freeform = plan.features ?? [];
+  const flags = plan.feature_flags ?? {};
+
+  const enabledToggles = BOOLEAN_FEATURE_FIELDS
+    .filter(({ key }) => !!flags[key])
+    .map(({ label }) => label);
+
+  if (flags.dedicated_clinic_page && flags.dedicated_clinic_page !== "none") {
+    enabledToggles.push(`Dedicated Clinic Page (${CLINIC_PAGE_LABELS[flags.dedicated_clinic_page]})`);
+  }
+
+  return Array.from(new Set([...freeform, ...enabledToggles]));
+};
 
 const planPrice = (p: PlanRecord, period: "monthly" | "yearly"): number => {
   if (period === "yearly") return Number(p.yearly_price ?? p.price ?? 0);
   return Number(p.monthly_price ?? p.price ?? 0);
 };
 
-// ─── Invoice download helper (HTML, opens nicely in browser) ─────────
-const downloadInvoiceHtml = (record: PaymentRecord) => {
+// ─── Invoice download helper (vector PDF via jsPDF) ──────────────────
+const downloadInvoicePdf = (record: PaymentRecord) => {
   const safe = (v: unknown) => (v == null || v === "" ? "—" : String(v));
   const amount = Number(record.amount || 0);
   const subtotal = amount;
@@ -54,302 +75,227 @@ const downloadInvoiceHtml = (record: PaymentRecord) => {
     record.transactionId
       ? String(record.transactionId).slice(-10).toUpperCase()
       : `INV-${String(record.id).padStart(6, "0")}`;
+
   const statusKey = String(record.status || "").toLowerCase();
-  const statusPalette: Record<string, { bg: string; fg: string }> = {
-    paid:     { bg: "#ecfdf5", fg: "#0f766e" },
-    pending:  { bg: "#fef3c7", fg: "#92400e" },
-    failed:   { bg: "#fee2e2", fg: "#991b1b" },
-    refunded: { bg: "#e0e7ff", fg: "#3730a3" },
+  const statusPalette: Record<string, { bg: [number, number, number]; fg: [number, number, number] }> = {
+    paid:     { bg: [236, 253, 245], fg: [15, 118, 110] },
+    pending:  { bg: [254, 243, 199], fg: [146, 64, 14] },
+    failed:   { bg: [254, 226, 226], fg: [153, 27, 27] },
+    refunded: { bg: [224, 231, 255], fg: [55, 48, 163] },
   };
-  const statusStyle = statusPalette[statusKey] || { bg: "#e2e8f0", fg: "#334155" };
+  const statusStyle = statusPalette[statusKey] || { bg: [226, 232, 240], fg: [51, 65, 85] };
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invoice ${invoiceNo} — ${APP_FULL_NAME}</title>
-<style>
-  :root { color-scheme: light; }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
-  body {
-    font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f1f5f9;
-    color: #0f172a;
-    -webkit-font-smoothing: antialiased;
-    line-height: 1.55;
-    padding: 40px 16px;
-  }
-  .invoice {
-    max-width: 820px;
-    margin: 0 auto;
-    background: #ffffff;
-    border-radius: 18px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.08);
-  }
-  .accent {
-    height: 6px;
-    background: linear-gradient(90deg, #1F9D8B, #14b8a6, #0f6f60);
-  }
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 36px 44px 28px;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .logo {
-    width: 46px; height: 46px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #1F9D8B, #0f6f60);
-    color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 18px;
-    letter-spacing: 0.04em;
-    box-shadow: 0 6px 16px rgba(31, 157, 139, 0.32);
-  }
-  .brand-name { font-size: 16px; font-weight: 700; color: #0f172a; }
-  .brand-tag  { font-size: 11px; color: #64748b; letter-spacing: 0.08em; text-transform: uppercase; }
-  .invoice-meta { text-align: right; }
-  .invoice-meta .label { font-size: 10px; color: #94a3b8; letter-spacing: 0.12em; text-transform: uppercase; }
-  .invoice-meta .value { font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-top: 2px; }
-  .status-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 8px;
-    padding: 4px 10px;
-    border-radius: 9999px;
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 0.04em; text-transform: uppercase;
-    background: ${statusStyle.bg};
-    color: ${statusStyle.fg};
-  }
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 9999px;
-    background: ${statusStyle.fg};
-  }
-  .parties {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    padding: 0 44px 28px;
-  }
-  .party {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 18px 20px;
-  }
-  .party h3 { margin: 0 0 6px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
-  .party .name { font-size: 14px; font-weight: 600; color: #0f172a; }
-  .party .line { font-size: 12px; color: #64748b; margin-top: 2px; }
-  .dates {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    padding: 0 44px 24px;
-  }
-  .date-cell {
-    border-top: 1px solid #e2e8f0;
-    padding-top: 14px;
-  }
-  .date-cell .label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #94a3b8; font-weight: 600; }
-  .date-cell .value { font-size: 13px; font-weight: 600; color: #0f172a; margin-top: 4px; }
-  table.items {
-    width: calc(100% - 88px);
-    margin: 0 44px;
-    border-collapse: separate;
-    border-spacing: 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  table.items thead th {
-    background: #f8fafc;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 10.5px;
-    font-weight: 600;
-    text-align: left;
-    padding: 12px 16px;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  table.items td {
-    padding: 18px 16px;
-    font-size: 13px;
-    color: #0f172a;
-    border-bottom: 1px solid #f1f5f9;
-  }
-  table.items tr:last-child td { border-bottom: none; }
-  table.items td.right { text-align: right; font-variant-numeric: tabular-nums; }
-  table.items td.muted { color: #64748b; }
-  .totals {
-    margin: 24px 44px 0;
-    display: flex;
-    justify-content: flex-end;
-  }
-  .totals-inner {
-    width: 320px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 16px 20px;
-  }
-  .totals-row {
-    display: flex; justify-content: space-between;
-    font-size: 13px;
-    padding: 6px 0;
-    color: #475569;
-  }
-  .totals-row.grand {
-    font-size: 16px; font-weight: 700; color: #0f172a;
-    border-top: 1px solid #e2e8f0;
-    margin-top: 8px;
-    padding-top: 12px;
-  }
-  .totals-row.grand .amount { color: #1F9D8B; font-size: 18px; }
-  .thanks {
-    margin: 28px 44px 0;
-    padding: 16px 20px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(31, 157, 139, 0.08), rgba(15, 111, 96, 0.04));
-    border: 1px solid rgba(31, 157, 139, 0.18);
-    color: #0f6f60;
-    font-size: 13px;
-  }
-  .footer {
-    margin-top: 28px;
-    padding: 20px 44px 36px;
-    border-top: 1px dashed #cbd5e1;
-    font-size: 11px;
-    color: #94a3b8;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  @media print {
-    body { background: #fff; padding: 0; }
-    .invoice { box-shadow: none; border-radius: 0; }
-  }
-  @media (max-width: 640px) {
-    .header, .parties, .dates, .totals, .thanks, .footer { padding-left: 22px; padding-right: 22px; }
-    table.items { width: calc(100% - 44px); margin: 0 22px; }
-    .parties { grid-template-columns: 1fr; }
-    .dates { grid-template-columns: 1fr 1fr; }
-  }
-</style>
-</head>
-<body>
-  <div class="invoice">
-    <div class="accent"></div>
+  const brand: [number, number, number] = [31, 157, 139];
+  const brandDark: [number, number, number] = [15, 111, 96];
+  const heading: [number, number, number] = [15, 23, 42];
+  const muted: [number, number, number] = [100, 116, 139];
+  const faint: [number, number, number] = [148, 163, 184];
+  const border: [number, number, number] = [226, 232, 240];
+  const surface: [number, number, number] = [248, 250, 252];
 
-    <div class="header">
-      <div class="brand">
-        <div class="logo">M</div>
-        <div>
-          <div class="brand-name">${APP_FULL_NAME}</div>
-          <div class="brand-tag">AI-powered clinic CRM</div>
-        </div>
-      </div>
-      <div class="invoice-meta">
-        <div class="label">Invoice</div>
-        <div class="value">#${invoiceNo}</div>
-        <div class="status-pill">
-          <span class="status-dot"></span>${safe(record.status).toUpperCase()}
-        </div>
-      </div>
-    </div>
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 44;
+  const contentWidth = pageWidth - marginX * 2;
 
-    <div class="parties">
-      <div class="party">
-        <h3>Billed To</h3>
-        <div class="name">${safe(record.userName ?? record.tenantName)}</div>
-        <div class="line">${safe(record.userEmail ?? "")}</div>
-        ${record.tenantName && record.userName ? `<div class="line">${safe(record.tenantName)}</div>` : ""}
-      </div>
-      <div class="party">
-        <h3>Billed From</h3>
-        <div class="name">${APP_FULL_NAME}</div>
-        <div class="line">support@medleads.ai</div>
-        <div class="line">All transactions in USD ($)</div>
-      </div>
-    </div>
+  // Top accent bar
+  doc.setFillColor(...brand);
+  doc.rect(0, 0, pageWidth, 6, "F");
 
-    <div class="dates">
-      <div class="date-cell">
-        <div class="label">Issue Date</div>
-        <div class="value">${issueDate}</div>
-      </div>
-      <div class="date-cell">
-        <div class="label">Billing Period</div>
-        <div class="value">${safe(record.period)}</div>
-      </div>
-      <div class="date-cell">
-        <div class="label">Payment Method</div>
-        <div class="value">${safe(record.method)}</div>
-      </div>
-    </div>
+  // Brand block (logo chip + name)
+  doc.setFillColor(...brandDark);
+  doc.roundedRect(marginX, 28, 34, 34, 8, 8, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("M", marginX + 17, 50, { align: "center" });
 
-    <table class="items">
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th>Period</th>
-          <th>Transaction ID</th>
-          <th style="text-align:right">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <div style="font-weight:600">${safe(record.planName)}</div>
-            <div class="muted" style="font-size:11px;margin-top:2px">Subscription · ${safe(record.period) || "monthly"}</div>
-          </td>
-          <td class="muted">${safe(record.period)}</td>
-          <td class="muted" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px">${safe(record.transactionId)}</td>
-          <td class="right">${fmt(amount)}</td>
-        </tr>
-      </tbody>
-    </table>
+  doc.setTextColor(...heading);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text(APP_FULL_NAME, marginX + 44, 44);
+  doc.setTextColor(...muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.text("AI-POWERED CLINIC CRM", marginX + 44, 55);
 
-    <div class="totals">
-      <div class="totals-inner">
-        <div class="totals-row"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
-        <div class="totals-row"><span>Tax</span><span>${fmt(tax)}</span></div>
-        <div class="totals-row grand"><span>Total Due</span><span class="amount">${fmt(total)}</span></div>
-      </div>
-    </div>
+  // Invoice number + status (right aligned)
+  doc.setTextColor(...faint);
+  doc.setFontSize(8);
+  doc.text("INVOICE", pageWidth - marginX, 36, { align: "right" });
+  doc.setTextColor(...heading);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text(`#${invoiceNo}`, pageWidth - marginX, 50, { align: "right" });
 
-    <div class="thanks">
-      Thank you for your business. This invoice is computer-generated and does not require a signature.
-    </div>
+  const statusText = safe(record.status).toUpperCase();
+  doc.setFontSize(8);
+  const statusTextWidth = doc.getTextWidth(statusText);
+  const pillWidth = statusTextWidth + 20;
+  const pillX = pageWidth - marginX - pillWidth;
+  doc.setFillColor(...statusStyle.bg);
+  doc.roundedRect(pillX, 58, pillWidth, 16, 8, 8, "F");
+  doc.setTextColor(...statusStyle.fg);
+  doc.setFont("helvetica", "bold");
+  doc.text(statusText, pillX + pillWidth / 2, 68.5, { align: "center" });
 
-    <div class="footer">
-      <span>Generated by ${APP_FULL_NAME}</span>
-      <span>Need help? support@medleads.ai</span>
-    </div>
-  </div>
-</body>
-</html>`;
+  // Billed To / Billed From boxes
+  const partyTop = 92;
+  const partyHeight = 62;
+  const partyWidth = (contentWidth - 20) / 2;
 
-  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `invoice-${invoiceNo}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const drawParty = (x: number, title: string, lines: string[]) => {
+    doc.setDrawColor(...border);
+    doc.setFillColor(...surface);
+    doc.roundedRect(x, partyTop, partyWidth, partyHeight, 8, 8, "FD");
+    doc.setTextColor(...faint);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text(title.toUpperCase(), x + 14, partyTop + 18);
+    let y = partyTop + 32;
+    lines.forEach((line, i) => {
+      doc.setFont("helvetica", i === 0 ? "bold" : "normal");
+      doc.setFontSize(i === 0 ? 10.5 : 9);
+      doc.setTextColor(i === 0 ? heading[0] : muted[0], i === 0 ? heading[1] : muted[1], i === 0 ? heading[2] : muted[2]);
+      doc.text(line, x + 14, y);
+      y += 13;
+    });
+  };
+
+  const billedToLines = [safe(record.userName ?? record.tenantName)];
+  if (record.userEmail) billedToLines.push(safe(record.userEmail));
+  if (record.tenantName && record.userName) billedToLines.push(safe(record.tenantName));
+
+  drawParty(marginX, "Billed To", billedToLines);
+  drawParty(marginX + partyWidth + 20, "Billed From", [APP_FULL_NAME, "support@medleads.ai", "All transactions in USD ($)"]);
+
+  // Date row
+  const dateTop = partyTop + partyHeight + 24;
+  const dateColWidth = contentWidth / 3;
+  const dateCells: Array<[string, string]> = [
+    ["Issue Date", issueDate],
+    ["Billing Period", safe(record.period)],
+    ["Payment Method", safe(record.method)],
+  ];
+  dateCells.forEach(([label, value], i) => {
+    const x = marginX + dateColWidth * i;
+    doc.setDrawColor(...border);
+    doc.line(x, dateTop, x + dateColWidth - 16, dateTop);
+    doc.setTextColor(...faint);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.text(label.toUpperCase(), x, dateTop + 14);
+    doc.setTextColor(...heading);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(value, x, dateTop + 28);
+  });
+
+  // Items table
+  const tableTop = dateTop + 48;
+  const tableHeaderHeight = 26;
+  const tableRowHeight = 48;
+  const colWidths = [contentWidth * 0.38, contentWidth * 0.18, contentWidth * 0.28, contentWidth * 0.16];
+  const colX = [
+    marginX,
+    marginX + colWidths[0],
+    marginX + colWidths[0] + colWidths[1],
+    marginX + colWidths[0] + colWidths[1] + colWidths[2],
+  ];
+
+  doc.setDrawColor(...border);
+  doc.roundedRect(marginX, tableTop, contentWidth, tableHeaderHeight + tableRowHeight, 8, 8, "S");
+  doc.setFillColor(...surface);
+  doc.roundedRect(marginX, tableTop, contentWidth, tableHeaderHeight, 8, 8, "F");
+  doc.rect(marginX, tableTop + tableHeaderHeight - 8, contentWidth, 8, "F");
+
+  const headers = ["Description", "Period", "Transaction ID", "Amount"];
+  doc.setTextColor(...muted);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  headers.forEach((h, i) => {
+    const align = i === 3 ? "right" : "left";
+    const x = i === 3 ? colX[i] + colWidths[i] - 14 : colX[i] + 14;
+    doc.text(h.toUpperCase(), x, tableTop + 16, { align });
+  });
+
+  doc.setDrawColor(...border);
+  doc.line(marginX, tableTop + tableHeaderHeight, marginX + contentWidth, tableTop + tableHeaderHeight);
+
+  const rowY = tableTop + tableHeaderHeight + 20;
+  doc.setTextColor(...heading);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.text(safe(record.planName), colX[0] + 14, rowY);
+  doc.setTextColor(...muted);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(`Subscription · ${safe(record.period) || "monthly"}`, colX[0] + 14, rowY + 12);
+
+  doc.setTextColor(...muted);
+  doc.setFontSize(9.5);
+  doc.text(safe(record.period), colX[1] + 14, rowY);
+
+  doc.setFont("courier", "normal");
+  doc.setFontSize(8.5);
+  doc.text(safe(record.transactionId), colX[2] + 14, rowY);
+
+  doc.setTextColor(...heading);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.5);
+  doc.text(fmt(amount), colX[3] + colWidths[3] - 14, rowY, { align: "right" });
+
+  // Totals box
+  const totalsTop = tableTop + tableHeaderHeight + tableRowHeight + 20;
+  const totalsWidth = 220;
+  const totalsX = pageWidth - marginX - totalsWidth;
+  const totalsHeight = 84;
+
+  doc.setDrawColor(...border);
+  doc.setFillColor(...surface);
+  doc.roundedRect(totalsX, totalsTop, totalsWidth, totalsHeight, 8, 8, "FD");
+
+  const totalsRow = (label: string, value: string, y: number, grand = false) => {
+    doc.setFont("helvetica", grand ? "bold" : "normal");
+    doc.setFontSize(grand ? 11.5 : 9.5);
+    doc.setTextColor(grand ? heading[0] : muted[0], grand ? heading[1] : muted[1], grand ? heading[2] : muted[2]);
+    doc.text(label, totalsX + 16, y);
+    if (grand) {
+      doc.setTextColor(...brand);
+      doc.setFontSize(13);
+    }
+    doc.text(value, totalsX + totalsWidth - 16, y, { align: "right" });
+  };
+
+  totalsRow("Subtotal", fmt(subtotal), totalsTop + 22);
+  totalsRow("Tax", fmt(tax), totalsTop + 40);
+  doc.setDrawColor(...border);
+  doc.line(totalsX + 16, totalsTop + 50, totalsX + totalsWidth - 16, totalsTop + 50);
+  totalsRow("Total Due", fmt(total), totalsTop + 70, true);
+
+  // Thank-you note
+  const thanksTop = totalsTop + totalsHeight + 24;
+  doc.setFillColor(240, 249, 247);
+  doc.setDrawColor(brand[0], brand[1], brand[2]);
+  doc.roundedRect(marginX, thanksTop, contentWidth, 32, 8, 8, "FD");
+  doc.setTextColor(...brandDark);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text("Thank you for your business. This invoice is computer-generated and does not require a signature.", marginX + 14, thanksTop + 20);
+
+  // Footer
+  const footerTop = thanksTop + 56;
+  doc.setDrawColor(...border);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(marginX, footerTop, pageWidth - marginX, footerTop);
+  doc.setLineDashPattern([], 0);
+  doc.setTextColor(...faint);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.text(`Generated by ${APP_FULL_NAME}`, marginX, footerTop + 16);
+  doc.text("Need help? support@medleads.ai", pageWidth - marginX, footerTop + 16, { align: "right" });
+
+  doc.save(`invoice-${invoiceNo}.pdf`);
 };
 
 export default function BillingPage() {
@@ -518,7 +464,6 @@ export default function BillingPage() {
             }
 
             const gradient = PLAN_GRADIENTS[idx % PLAN_GRADIENTS.length];
-            const features = plan.features ?? [];
 
             return (
               <div
@@ -538,7 +483,7 @@ export default function BillingPage() {
                   <div className="relative flex items-start justify-between">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-white/85">Plan</p>
-                      <h4 className="mt-0.5 text-xl font-bold leading-tight">{plan.name}</h4>
+                      <h4 className="mt-0.5 text-xl font-bold leading-tight !text-white">{plan.name}</h4>
                     </div>
                     {isExpiredCurrent && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-red-500/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-white/30">
@@ -555,9 +500,6 @@ export default function BillingPage() {
                     <span className="text-3xl font-bold">{formatCurrency(price)}</span>
                     <span className="text-xs text-white/85">/ {period === "yearly" ? "yr" : "mo"}</span>
                   </div>
-                  <p className="relative mt-1 text-[11px] font-semibold text-white">
-                    An additional $30 will be charged for each appointment booked
-                  </p>
                 </div>
 
                 {/* Body */}
@@ -585,10 +527,10 @@ export default function BillingPage() {
                       What&apos;s included
                     </p>
                     <ul className="space-y-1.5">
-                      {features.length === 0 && (
+                      {combinedFeatures(plan).length === 0 && (
                         <li className="text-xs text-slate-400">No features listed.</li>
                       )}
-                      {features.slice(0, 6).map((f, i) => (
+                      {combinedFeatures(plan).map((f, i) => (
                         <li key={`${f}-${i}`} className="flex items-start gap-2 text-[13px] text-slate-700">
                           <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-primary" />
                           <span>{f}</span>
@@ -680,7 +622,7 @@ export default function BillingPage() {
               size="small"
               icon={<ArrowDownToLine size={13} />}
               disabled={record.status !== "paid"}
-              onClick={() => downloadInvoiceHtml(record)}
+              onClick={() => downloadInvoicePdf(record)}
             >
               Download
             </Button>
