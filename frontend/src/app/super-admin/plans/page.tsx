@@ -1,25 +1,15 @@
 "use client";
 
-import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Switch, Tooltip } from "antd";
+import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Space, Switch, Tag, Tooltip } from "antd";
 
-import { SquarePen, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, SquarePen, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DataTable } from "@/components/DataTable";
 import { PageSection } from "@/components/PageSection";
 import { superadminService } from "@/services/superadmin.service";
 import { formatCurrency } from "@/lib/utils";
 import type { PlanFeatureFlags, PlanRecord } from "@/utils/types";
-
-// Boolean feature-flag keys shown as toggles in the plan editor.
-// dedicated_clinic_page is handled separately as a graded select.
-const BOOLEAN_FEATURE_FIELDS: Array<{ key: keyof PlanFeatureFlags; label: string }> = [
-  { key: "whatsapp_multi_connection", label: "Multiple WhatsApp Connections" },
-  { key: "chapter_instagram_integration", label: "Chapter & Instagram Integration" },
-  { key: "instagram_realtime_fetch", label: "Instagram Real-Time Data Fetch" },
-  { key: "chapter_creation", label: "Chapter Creation" },
-  { key: "video_like", label: "Video Like Feature" },
-  { key: "automatic_website_generation", label: "Automatic Website Generation" },
-];
+import { BOOLEAN_FEATURE_FIELDS, CLINIC_PAGE_LABELS } from "@/constants/planFeatures";
 
 interface PlanFormValues {
   name: string;
@@ -216,6 +206,36 @@ export default function PlansPage() {
       ),
     },
     {
+      title: "Feature Access",
+      key: "feature_access",
+      render: (_: unknown, row: PlanRecord) => {
+        const flags = row.feature_flags ?? {};
+        return (
+          <div className="flex flex-col gap-1">
+            {BOOLEAN_FEATURE_FIELDS.map(({ key, label }) => {
+              const enabled = !!flags[key];
+              return (
+                <div key={key} className="flex items-center gap-1.5 text-xs">
+                  {enabled ? (
+                    <CheckCircle2 size={13} className="shrink-0 text-emerald-500" />
+                  ) : (
+                    <XCircle size={13} className="shrink-0 text-slate-300" />
+                  )}
+                  <span className={enabled ? "text-slate-700" : "text-slate-400"}>{label}</span>
+                </div>
+              );
+            })}
+            <div className="mt-0.5 flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">Clinic Page:</span>
+              <Tag color={flags.dedicated_clinic_page === "full_access" ? "green" : flags.dedicated_clinic_page === "video_upload_only" ? "blue" : "default"}>
+                {CLINIC_PAGE_LABELS[flags.dedicated_clinic_page ?? "none"]}
+              </Tag>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       title: "Actions",
       key: "actions",
       width: 120,
@@ -285,43 +305,63 @@ export default function PlansPage() {
         okText={editingPlan ? "Save Changes" : "Create Plan"}
         confirmLoading={saving}
         destroyOnClose
+        width={560}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="name" label="Plan name" rules={[{ required: true, message: "Plan name is required." }]}>
-            <Input />
+          <Row gutter={12}>
+            <Col span={14}>
+              <Form.Item name="name" label="Plan name" rules={[{ required: true, message: "Plan name is required." }]}>
+                <Input size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={10}>
+              <Form.Item name="period" label="Default Period" rules={[{ required: true, message: "Period is required." }]}>
+                <Select
+                  size="large"
+                  options={[
+                    { label: "Monthly", value: "monthly" },
+                    { label: "Yearly", value: "yearly" },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="monthly_price" label="Monthly Price">
+                <InputNumber className="!w-full" size="large" min={0} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="yearly_price" label="Yearly Price">
+                <InputNumber className="!w-full" size="large" min={0} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="features" label="Features" className="mb-3">
+            <Input.TextArea rows={3} placeholder="CRM, AI Chat, Campaigns..." />
           </Form.Item>
 
-          <Form.Item name="period" label="Default Period" rules={[{ required: true, message: "Period is required." }]}>
+          <div className="mb-1.5 text-sm font-semibold text-slate-700">Feature Access</div>
+
+          <Row gutter={[12, 4]} className="mb-1">
+            {BOOLEAN_FEATURE_FIELDS.map(({ key, label }) => (
+              <Col span={12} key={key}>
+                <div className="mb-1 flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-3">
+                  <span className="text-xs text-slate-600">{label}</span>
+                  <Form.Item name={key} valuePropName="checked" noStyle>
+                    <Switch />
+                  </Form.Item>
+                </div>
+              </Col>
+            ))}
+          </Row>
+
+          <Form.Item name="dedicated_clinic_page" label="Dedicated Clinic Page" className="mb-0">
             <Select
-              options={[
-                { label: "Monthly", value: "monthly" },
-                { label: "Yearly", value: "yearly" },
-              ]}
-            />
-          </Form.Item>
-
-          <Form.Item name="monthly_price" label="Monthly Price">
-            <InputNumber className="!w-full" min={0} />
-          </Form.Item>
-
-          <Form.Item name="yearly_price" label="Yearly Price">
-            <InputNumber className="!w-full" min={0} />
-          </Form.Item>
-
-          <Form.Item name="features" label="Features">
-            <Input.TextArea rows={4} placeholder="CRM, AI Chat, Campaigns..." />
-          </Form.Item>
-
-          <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">Feature Access</div>
-
-          {BOOLEAN_FEATURE_FIELDS.map(({ key, label }) => (
-            <Form.Item key={key} name={key} label={label} valuePropName="checked" className="mb-2">
-              <Switch />
-            </Form.Item>
-          ))}
-
-          <Form.Item name="dedicated_clinic_page" label="Dedicated Clinic Page">
-            <Select
+              size="large"
               options={[
                 { label: "Not Available", value: "none" },
                 { label: "Video Upload Only", value: "video_upload_only" },
