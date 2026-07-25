@@ -4,7 +4,7 @@ const { APP_NAME } = require("../constants/brand");
 
 const MODULE = "PaymentHistoryController";
 const getStripeCurrency = () => "usd";
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_ZqfIQ4iOtp7QUH1K37YY4SDB1hSwJWXt";
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || null;
 
 let stripeClient = null;
 
@@ -431,7 +431,7 @@ exports.confirmStripeCheckoutSession = async (req, res) => {
 exports.stripeWebhook = async (req, res) => {
   try {
     const stripe = getStripeClient();
-    if (!stripe) {
+    if (!stripe || !STRIPE_WEBHOOK_SECRET) {
       return res.status(500).json({ success: false, message: "Stripe webhook is not configured." });
     }
 
