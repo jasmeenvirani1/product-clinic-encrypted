@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Campaign, Conversation, Lead, User, AISetting, Plan } = require("../models");
+const { Campaign, Conversation, Lead, User, AISetting } = require("../models");
 const log = require("../utils/logger");
 const { sendOutbound, sendOutboundTemplate, isChannelConnected } = require("../services/channelService");
 
@@ -257,51 +257,6 @@ exports.send = async (req, res) => {
     }
 
     const tenantId = req.user.tenant_id || req.user.id;
-
-    // Check plan campaign credit. Prefer the credit granted when the
-    // plan was activated (yearly plans grant 12 × monthly), and fall
-    // back to the plan's monthly campaign_count for legacy users.
-    //
-    // Rules:
-    //   - No plan or no campaign credit defined → block.
-    //   - planLimit <= 0 → no allowance → block.
-    //   - planLimit > 0  → enforce against used count.
-    const tenantAdmin = await User.findOne({
-      where: req.user.tenant_id ? { id: req.user.tenant_id } : { id: req.user.id },
-      include: [{ model: Plan, as: "Plan", attributes: ["campaign_count"] }],
-    });
-
-    const accessCampaigns = tenantAdmin?.plan_access?.campaign_count;
-    const planCampaigns   = tenantAdmin?.Plan?.campaign_count;
-    const hasAccessCampaigns = accessCampaigns !== undefined && accessCampaigns !== null && Number.isFinite(Number(accessCampaigns));
-    const hasPlanCampaigns   = planCampaigns   !== undefined && planCampaigns   !== null && Number.isFinite(Number(planCampaigns));
-    const hasPlan = !!tenantAdmin?.Plan || !!tenantAdmin?.plan_access?.plan_id;
-
-    if (!hasPlan || (!hasAccessCampaigns && !hasPlanCampaigns)) {
-      return res.status(403).json({
-        success: false,
-        message: "No active plan with campaign credits. Please purchase a plan before running campaigns.",
-      });
-    }
-
-    const planLimit = hasAccessCampaigns ? Number(accessCampaigns) : Number(planCampaigns);
-
-    if (!(planLimit > 0)) {
-      return res.status(403).json({
-        success: false,
-        message: "Your current plan does not include campaign credits. Upgrade to a plan that supports campaigns.",
-      });
-    }
-
-    const usedCampaigns = await Campaign.count({
-      where: { tenant_id: tenantId, status: { [Op.in]: ["active", "completed"] } },
-    });
-    if (usedCampaigns >= planLimit) {
-      return res.status(403).json({
-        success: false,
-        message: `Campaign limit reached. Your plan allows ${planLimit} campaign(s). Upgrade your plan to run more campaigns.`,
-      });
-    }
     const leadTenantId = req.user.tenant_id;
 
     // Load tenant channel credentials

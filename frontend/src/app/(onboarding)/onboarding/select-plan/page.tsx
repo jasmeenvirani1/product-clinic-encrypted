@@ -141,11 +141,6 @@ export default function SelectPlanPage() {
                     <span className="text-3xl font-bold text-slate-900">{formatCurrency(Number(price(plan)))}</span>
                     <span className="mb-1 text-sm text-slate-400">/ {period === "yearly" ? "yr" : "mo"}</span>
                   </div>
-                  {plan.campaign_count != null && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      {plan.campaign_count === 0 ? "Unlimited campaigns" : `${plan.campaign_count} campaigns/mo`}
-                    </p>
-                  )}
                 </div>
                 <ul className="mb-6 flex-1 space-y-2">
                   {(plan.features ?? []).map((f, i) => (

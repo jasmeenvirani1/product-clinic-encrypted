@@ -194,6 +194,16 @@ export interface SubscriptionRecord {
   latestPaymentStatus?: string;
 }
 
+export interface PlanFeatureFlags {
+  whatsapp_multi_connection?: boolean;
+  dedicated_clinic_page?: "none" | "video_upload_only" | "full_access";
+  chapter_instagram_integration?: boolean;
+  instagram_realtime_fetch?: boolean;
+  chapter_creation?: boolean;
+  video_like?: boolean;
+  automatic_website_generation?: boolean;
+}
+
 export interface PlanRecord {
   id: string | number;
   name: string;
@@ -201,8 +211,8 @@ export interface PlanRecord {
   monthly_price?: number;
   yearly_price?: number;
   period?: "monthly" | "yearly";
-  campaign_count?: number;
   features: string[];
+  feature_flags?: PlanFeatureFlags;
 }
 
 export interface SupportTicket {
@@ -252,9 +262,6 @@ export interface BillingSummary {
   history: PaymentRecord[];
   allPlans?: PlanRecord[];
   purchasedPlan?: PlanRecord | null;
-  campaignLimit?: number | null;
-  campaignUsed?: number;
-  campaignRemaining?: number | null;
 }
 
 export interface TeamMember {

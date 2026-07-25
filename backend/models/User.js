@@ -82,6 +82,16 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: {},
     },
+    // Per-user feature-flag overrides, layered over the base Plan's
+    // feature_flags in getEffectiveFeatures(). Used primarily for the
+    // Custom plan case, where entitlements are configured per account
+    // rather than fixed per plan tier. Only keys that differ from the
+    // base plan need to be present (shallow merge, not whole replace).
+    feature_overrides: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
+    },
     trial_ends_at: {
       type: DataTypes.DATE,
       allowNull: true,

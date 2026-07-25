@@ -1,5 +1,6 @@
 const { Plan } = require("../models");
 const log = require("../utils/logger");
+const { validateFeatureFlags } = require("../constants/planFeatures");
 
 const MODULE = "PlanController";
 
@@ -60,7 +61,7 @@ const resolvePrices = ({ price, monthly_price, yearly_price, period }) => {
 
 exports.create = async (req, res) => {
   try {
-    const { plan_name, price, monthly_price, yearly_price, period, campaign_count, features } = req.body;
+    const { plan_name, price, monthly_price, yearly_price, period, features, feature_flags } = req.body;
 
     log.info(MODULE, "create", {
       userId: req.user.id,
@@ -69,7 +70,6 @@ exports.create = async (req, res) => {
       price,
       monthly_price,
       yearly_price,
-      campaign_count,
     });
 
     if (!plan_name) {
@@ -81,11 +81,9 @@ exports.create = async (req, res) => {
       return res.status(400).json({ success: false, message: prices.error });
     }
 
-    const parsedCampaignCount = campaign_count === undefined
-      ? { value: 0 }
-      : parseNonNegativeNumber(campaign_count, "campaign_count");
-    if (parsedCampaignCount.error) {
-      return res.status(400).json({ success: false, message: parsedCampaignCount.error });
+    const parsedFeatureFlags = validateFeatureFlags(feature_flags);
+    if (parsedFeatureFlags.error) {
+      return res.status(400).json({ success: false, message: parsedFeatureFlags.error });
     }
 
     const normalizedName = plan_name.trim();
@@ -102,8 +100,8 @@ exports.create = async (req, res) => {
       existingAny.monthly_price = prices.value.monthly_price;
       existingAny.yearly_price = prices.value.yearly_price;
       existingAny.period = prices.value.period;
-      existingAny.campaign_count = parsedCampaignCount.value;
       existingAny.features = normalizeFeatures(features);
+      existingAny.feature_flags = parsedFeatureFlags.value;
       existingAny.is_active = true;
       existingAny.is_deleted = false;
       await existingAny.save();
@@ -121,8 +119,8 @@ exports.create = async (req, res) => {
       monthly_price: prices.value.monthly_price,
       yearly_price: prices.value.yearly_price,
       period: prices.value.period,
-      campaign_count: parsedCampaignCount.value,
       features: normalizeFeatures(features),
+      feature_flags: parsedFeatureFlags.value,
       is_active: true,
     });
 
@@ -191,7 +189,7 @@ exports.update = async (req, res) => {
       return res.status(404).json({ success: false, message: "Plan not found." });
     }
 
-    const { plan_name, price, monthly_price, yearly_price, period, campaign_count, features, is_active } = req.body;
+    const { plan_name, price, monthly_price, yearly_price, period, features, feature_flags, is_active } = req.body;
 
     if (plan_name !== undefined) {
       const nextName = String(plan_name).trim();
@@ -225,16 +223,18 @@ exports.update = async (req, res) => {
       plan.period = prices.value.period;
     }
 
-    if (campaign_count !== undefined) {
-      const parsedCampaignCount = parseNonNegativeNumber(campaign_count, "campaign_count");
-      if (parsedCampaignCount.error) {
-        return res.status(400).json({ success: false, message: parsedCampaignCount.error });
-      }
-      plan.campaign_count = parsedCampaignCount.value;
-    }
-
     if (features !== undefined) {
       plan.features = normalizeFeatures(features);
+    }
+
+    if (feature_flags !== undefined) {
+      const parsedFeatureFlags = validateFeatureFlags(feature_flags);
+      if (parsedFeatureFlags.error) {
+        return res.status(400).json({ success: false, message: parsedFeatureFlags.error });
+      }
+      // Shallow-merge into existing feature_flags so a partial payload
+      // (e.g. just { video_like: true }) doesn't wipe other keys.
+      plan.feature_flags = { ...(plan.feature_flags || {}), ...parsedFeatureFlags.value };
     }
 
     if (is_active !== undefined) {

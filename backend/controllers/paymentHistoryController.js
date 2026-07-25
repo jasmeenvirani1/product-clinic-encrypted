@@ -77,18 +77,10 @@ function addByPeriod(date, period) {
 }
 
 function buildPlanAccess(plan, period) {
-  // The plan's campaign_count is the per-month allowance. If the user
-  // bought the yearly variant we grant the equivalent of 12 months
-  // (12 × monthly count) up-front. campaign_count === 0 means
-  // "Unlimited" — leave it as 0 in that case.
-  const monthly = Number(plan.campaign_count || 0);
-  const totalCampaigns = monthly === 0 ? 0 : (period === "yearly" ? monthly * 12 : monthly);
   return {
     plan_id: plan.id,
     plan_name: plan.plan_name,
     period,
-    campaign_count: totalCampaigns,
-    campaign_count_per_month: monthly,
     features: Array.isArray(plan.features) ? plan.features : [],
   };
 }

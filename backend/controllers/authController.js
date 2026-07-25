@@ -2,10 +2,11 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
-const { User, Role, Plan, OtpCode, RoleMenuPermission, Menu, Permission, Campaign } = require("../models");
+const { User, Role, Plan, OtpCode, RoleMenuPermission, Menu, Permission } = require("../models");
 const { generateOtp, hashOtp, verifyOtp } = require("../utils/otp");
 const { sendOtpEmail } = require("../utils/mailer");
 const log = require("../utils/logger");
+const { getEffectiveFeatures } = require("../services/planFeatureService");
 
 const MODULE = "AuthController";
 const OTP_EXPIRY = parseInt(process.env.OTP_EXPIRY_MINUTES || "10", 10);
@@ -57,7 +58,6 @@ const mapUserPlanContext = (user) => {
     expires_at: user.plan_expires_at || null,
     is_expired: isExpired,
     access: user.plan_access || {
-      campaign_count: user.Plan?.campaign_count ?? 0,
       features: user.Plan?.features || [],
     },
     plan: user.Plan
@@ -233,8 +233,8 @@ exports.login = async (req, res) => {
             "period",
             "monthly_price",
             "yearly_price",
-            "campaign_count",
             "features",
+            "feature_flags",
             "is_active",
             "is_deleted",
           ],
@@ -494,28 +494,9 @@ exports.me = async (req, res) => {
 
     const menuPermissions = await getMenuPermissions(req.user.role_id);
 
-    const tenantId = req.user.tenant_id || req.user.id;
-    // Prefer the credit stored on the user when the plan was activated
-    // (which already accounts for yearly plans being 12× the monthly
-    // campaign_count). Fall back to the plan's monthly count for
-    // legacy users who pre-date the yearly multiplier.
-    const grantedCampaigns = Number(req.user.plan_access?.campaign_count);
-    const campaignLimit = Number.isFinite(grantedCampaigns)
-      ? grantedCampaigns
-      : (req.user.Plan?.campaign_count ?? 0);
-    let campaignUsed = 0;
-    if (campaignLimit > 0) {
-      const { Op } = require("sequelize");
-      campaignUsed = await Campaign.count({
-        where: { tenant_id: tenantId, status: { [Op.in]: ["active", "completed"] } },
-      });
-    }
-
     const planContext = {
       ...mapUserPlanContext(req.user),
-      campaign_limit: campaignLimit,
-      campaign_used: campaignUsed,
-      campaign_remaining: campaignLimit > 0 ? Math.max(0, campaignLimit - campaignUsed) : null,
+      feature_flags: getEffectiveFeatures(req.user),
     };
 
     log.info(MODULE, "me", { userId: req.user.id, message: "Profile fetched" });

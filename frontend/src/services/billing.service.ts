@@ -1,5 +1,5 @@
 import { api } from "../utils/API";
-import type { BillingSummary, PaymentRecord, PlanRecord } from "../utils/types";
+import type { BillingSummary, PaymentRecord, PlanFeatureFlags, PlanRecord } from "../utils/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 interface ApiResponse<T> {
@@ -15,8 +15,8 @@ interface BackendPlan {
   monthly_price: number | string;
   yearly_price: number | string;
   period: "monthly" | "yearly";
-  campaign_count: number;
   features: unknown;
+  feature_flags?: PlanFeatureFlags;
 }
 
 interface BackendPayment {
@@ -48,12 +48,9 @@ interface AuthMeResponse {
     expires_at: string | null;
     access?: {
       plan_name?: string;
-      campaign_count?: number;
       features?: string[];
     };
-    campaign_limit?: number | null;
-    campaign_used?: number;
-    campaign_remaining?: number | null;
+    feature_flags?: PlanFeatureFlags;
     plan?: {
       id: number;
       name: string;
@@ -88,8 +85,8 @@ const mapPlan = (p: BackendPlan): PlanRecord => ({
   monthly_price: Number(p.monthly_price ?? 0),
   yearly_price: Number(p.yearly_price ?? 0),
   period: p.period,
-  campaign_count: Number(p.campaign_count ?? 0),
   features: toStringArray(p.features),
+  feature_flags: p.feature_flags,
 });
 
 const mapPayment = (p: BackendPayment): PaymentRecord => ({
@@ -166,9 +163,6 @@ export const billingService = {
       history,
       allPlans,
       purchasedPlan,
-      campaignLimit: planContext?.campaign_limit ?? null,
-      campaignUsed: planContext?.campaign_used ?? 0,
-      campaignRemaining: planContext?.campaign_remaining ?? null,
     };
   },
 };

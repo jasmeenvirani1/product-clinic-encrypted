@@ -33,15 +33,22 @@ const Plan = sequelize.define(
       allowNull: false,
       defaultValue: "monthly",
     },
-    campaign_count: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
     features: {
       type: DataTypes.JSONB,
       allowNull: false,
       defaultValue: [],
+    },
+    // Plan-wise feature gating (whatsapp_multi_connection,
+    // dedicated_clinic_page, chapter_instagram_integration,
+    // instagram_realtime_fetch, chapter_creation, video_like,
+    // automatic_website_generation). See backend/constants/planFeatures.js
+    // for the canonical key list/defaults and
+    // backend/services/planFeatureService.js for resolution. Resolved live
+    // via getEffectiveFeatures(user), not snapshotted onto User.
+    feature_flags: {
+      type: DataTypes.JSONB,
+      allowNull: false,
+      defaultValue: {},
     },
     // Monthly AI-reply credit cap. null = unlimited (e.g. Enterprise); a number
     // = cap. Consumed via User.credits_used. Enforced by creditService.

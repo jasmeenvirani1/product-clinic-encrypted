@@ -410,17 +410,10 @@ export default function BillingPage() {
   const currentPlan = summary?.purchasedPlan ?? null;
   const allPlans = summary?.allPlans ?? [];
 
-  // const campaignRemainingLabel = (() => {
-  //   if (summary?.campaignLimit == null) return "—";
-  //   if (summary.campaignLimit <= 0)     return "Not included";
-  //   return `${summary.campaignRemaining ?? 0} / ${summary.campaignLimit}`;
-  // })();
-
   const kpis = [
-    { label: "Monthly Spend",       value: summary?.monthlySpend ?? "—",  icon: CreditCard, iconColor: "!text-emerald-500", iconBg: "bg-emerald-50" },
-    { label: "Next Renewal",        value: summary?.renewalDate ?? "—",   icon: Calendar,   iconColor: "!text-violet-500",  iconBg: "bg-violet-50"  },
-    { label: "Current Plan",        value: summary?.currentPlan ?? "—",   icon: Zap,        iconColor: "!text-amber-500",   iconBg: "bg-amber-50"   },
-    // { label: "Campaigns Remaining", value: campaignRemainingLabel,         icon: Megaphone,  iconColor: "!text-blue-500",    iconBg: "bg-blue-50"    },
+    { label: "Monthly Spend", value: summary?.monthlySpend ?? "—", icon: CreditCard, iconColor: "!text-emerald-500", iconBg: "bg-emerald-50" },
+    { label: "Next Renewal",  value: summary?.renewalDate ?? "—",  icon: Calendar,   iconColor: "!text-violet-500",  iconBg: "bg-violet-50"  },
+    { label: "Current Plan",  value: summary?.currentPlan ?? "—",  icon: Zap,        iconColor: "!text-amber-500",   iconBg: "bg-amber-50"   },
   ];
 
   const filteredHistory = useMemo(() => {

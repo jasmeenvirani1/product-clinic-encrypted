@@ -11,7 +11,7 @@ router.get("/plans", async (req, res) => {
   try {
     const plans = await Plan.findAll({
       where: { is_deleted: false, is_active: true },
-      attributes: ["id", "plan_name", "price", "monthly_price", "yearly_price", "period", "campaign_count", "features"],
+      attributes: ["id", "plan_name", "price", "monthly_price", "yearly_price", "period", "features", "feature_flags"],
       order: [["price", "ASC"]],
     });
     return res.status(200).json({ success: true, data: plans });

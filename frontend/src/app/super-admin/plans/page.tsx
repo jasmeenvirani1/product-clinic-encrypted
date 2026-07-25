@@ -1,6 +1,6 @@
 "use client";
 
-import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Tooltip } from "antd";
+import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Switch, Tooltip } from "antd";
 
 import { SquarePen, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,15 +8,32 @@ import { DataTable } from "@/components/DataTable";
 import { PageSection } from "@/components/PageSection";
 import { superadminService } from "@/services/superadmin.service";
 import { formatCurrency } from "@/lib/utils";
-import type { PlanRecord } from "@/utils/types";
+import type { PlanFeatureFlags, PlanRecord } from "@/utils/types";
+
+// Boolean feature-flag keys shown as toggles in the plan editor.
+// dedicated_clinic_page is handled separately as a graded select.
+const BOOLEAN_FEATURE_FIELDS: Array<{ key: keyof PlanFeatureFlags; label: string }> = [
+  { key: "whatsapp_multi_connection", label: "Multiple WhatsApp Connections" },
+  { key: "chapter_instagram_integration", label: "Chapter & Instagram Integration" },
+  { key: "instagram_realtime_fetch", label: "Instagram Real-Time Data Fetch" },
+  { key: "chapter_creation", label: "Chapter Creation" },
+  { key: "video_like", label: "Video Like Feature" },
+  { key: "automatic_website_generation", label: "Automatic Website Generation" },
+];
 
 interface PlanFormValues {
   name: string;
   period: "monthly" | "yearly";
   monthly_price?: number;
   yearly_price?: number;
-  campaign_count?: number;
   features?: string;
+  whatsapp_multi_connection?: boolean;
+  dedicated_clinic_page?: "none" | "video_upload_only" | "full_access";
+  chapter_instagram_integration?: boolean;
+  instagram_realtime_fetch?: boolean;
+  chapter_creation?: boolean;
+  video_like?: boolean;
+  automatic_website_generation?: boolean;
 }
 
 const parseFeatures = (value?: string): string[] => {
@@ -69,19 +86,27 @@ export default function PlansPage() {
       monthly_price: 0,
       yearly_price: 0,
       features: "",
+      dedicated_clinic_page: "none",
     });
     setModalOpen(true);
   };
 
   const openEditModal = (plan: PlanRecord) => {
     setEditingPlan(plan);
+    const flags = plan.feature_flags ?? {};
     form.setFieldsValue({
       name: plan.name,
       period: plan.period ?? "monthly",
       monthly_price: Number(plan.monthly_price ?? (plan.period === "monthly" ? plan.price : 0) ?? 0),
       yearly_price: Number(plan.yearly_price ?? (plan.period === "yearly" ? plan.price : 0) ?? 0),
-      campaign_count: plan.campaign_count ?? 0,
       features: (plan.features ?? []).join(", "),
+      whatsapp_multi_connection: flags.whatsapp_multi_connection ?? false,
+      dedicated_clinic_page: flags.dedicated_clinic_page ?? "none",
+      chapter_instagram_integration: flags.chapter_instagram_integration ?? false,
+      instagram_realtime_fetch: flags.instagram_realtime_fetch ?? false,
+      chapter_creation: flags.chapter_creation ?? false,
+      video_like: flags.video_like ?? false,
+      automatic_website_generation: flags.automatic_website_generation ?? false,
     });
     setModalOpen(true);
   };
@@ -96,12 +121,21 @@ export default function PlansPage() {
         period: "monthly" | "yearly";
         monthly_price?: number;
         yearly_price?: number;
-        campaign_count?: number;
         features: string[];
+        feature_flags: PlanFeatureFlags;
       } = {
         name: values.name,
         period: values.period,
         features: parseFeatures(values.features),
+        feature_flags: {
+          whatsapp_multi_connection: !!values.whatsapp_multi_connection,
+          dedicated_clinic_page: values.dedicated_clinic_page ?? "none",
+          chapter_instagram_integration: !!values.chapter_instagram_integration,
+          instagram_realtime_fetch: !!values.instagram_realtime_fetch,
+          chapter_creation: !!values.chapter_creation,
+          video_like: !!values.video_like,
+          automatic_website_generation: !!values.automatic_website_generation,
+        },
       };
 
       if (values.monthly_price !== undefined && values.monthly_price !== null) {
@@ -110,10 +144,6 @@ export default function PlansPage() {
 
       if (values.yearly_price !== undefined && values.yearly_price !== null) {
         payload.yearly_price = Number(values.yearly_price);
-      }
-
-      if (values.campaign_count !== undefined && values.campaign_count !== null) {
-        payload.campaign_count = Number(values.campaign_count);
       }
 
       if (editingPlan) {
@@ -172,11 +202,6 @@ export default function PlansPage() {
       title: "Default Period",
       key: "period",
       render: (_: unknown, row: PlanRecord) => row.period ?? "monthly",
-    },
-    {
-      title: "Campaign Limit",
-      key: "campaign_count",
-      render: (_: unknown, row: PlanRecord) => row.campaign_count ?? 0,
     },
     {
       title: "Features",
@@ -283,12 +308,26 @@ export default function PlansPage() {
             <InputNumber className="!w-full" min={0} />
           </Form.Item>
 
-          <Form.Item name="campaign_count" label="Campaign Limit">
-            <InputNumber className="!w-full" min={0} placeholder="0 = unlimited" />
-          </Form.Item>
-
           <Form.Item name="features" label="Features">
             <Input.TextArea rows={4} placeholder="CRM, AI Chat, Campaigns..." />
+          </Form.Item>
+
+          <div className="mb-2 mt-4 text-sm font-semibold text-slate-700">Feature Access</div>
+
+          {BOOLEAN_FEATURE_FIELDS.map(({ key, label }) => (
+            <Form.Item key={key} name={key} label={label} valuePropName="checked" className="mb-2">
+              <Switch />
+            </Form.Item>
+          ))}
+
+          <Form.Item name="dedicated_clinic_page" label="Dedicated Clinic Page">
+            <Select
+              options={[
+                { label: "Not Available", value: "none" },
+                { label: "Video Upload Only", value: "video_upload_only" },
+                { label: "Full Access", value: "full_access" },
+              ]}
+            />
           </Form.Item>
         </Form>
       </Modal>

@@ -88,7 +88,6 @@ interface PlanData {
   monthly_price: number;
   yearly_price: number;
   period: 'monthly' | 'yearly';
-  campaign_count: number;
   features: string[];
 }
 

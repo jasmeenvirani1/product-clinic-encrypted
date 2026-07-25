@@ -1,5 +1,5 @@
 import { api } from "../utils/API";
-import type { PaymentRecord, PlanRecord, SubscriptionRecord, VideoRecord } from "../utils/types";
+import type { PaymentRecord, PlanFeatureFlags, PlanRecord, SubscriptionRecord, VideoRecord } from "../utils/types";
 import { clone, sleep } from "./helpers";
 import { mockIntegrationKeys, mockUsers } from "./mockData";
 import { formatDate } from "@/lib/utils";
@@ -11,8 +11,8 @@ interface BackendPlanResponse {
   monthly_price: number | string;
   yearly_price: number | string;
   period: "monthly" | "yearly";
-  campaign_count: number;
   features: unknown;
+  feature_flags?: PlanFeatureFlags;
   is_active: boolean;
   is_deleted: boolean;
   createdAt: string;
@@ -77,8 +77,8 @@ interface PlanPayload {
   price?: number;
   monthly_price?: number;
   yearly_price?: number;
-  campaign_count?: number;
   features?: string[];
+  feature_flags?: PlanFeatureFlags;
 }
 
 const toStringArray = (value: unknown): string[] => {
@@ -99,8 +99,8 @@ const mapPlan = (item: BackendPlanResponse): PlanRecord => ({
   monthly_price: Number(item.monthly_price ?? 0),
   yearly_price: Number(item.yearly_price ?? 0),
   period: item.period,
-  campaign_count: Number(item.campaign_count ?? 0),
   features: toStringArray(item.features),
+  feature_flags: item.feature_flags,
 });
 
 const mapPayment = (item: BackendPaymentResponse): PaymentRecord => {
@@ -212,8 +212,8 @@ export const superadminService = {
       price: payload.price,
       monthly_price: payload.monthly_price,
       yearly_price: payload.yearly_price,
-      campaign_count: payload.campaign_count,
       features: payload.features ?? [],
+      feature_flags: payload.feature_flags,
     });
     return mapPlan(data.data);
   },
@@ -225,8 +225,8 @@ export const superadminService = {
       price: payload.price,
       monthly_price: payload.monthly_price,
       yearly_price: payload.yearly_price,
-      campaign_count: payload.campaign_count,
       features: payload.features ?? [],
+      feature_flags: payload.feature_flags,
     });
     return mapPlan(data.data);
   },
