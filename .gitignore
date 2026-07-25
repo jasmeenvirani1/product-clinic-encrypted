@@ -1,0 +1,58 @@
+# dependencies
+**/node_modules/
+.pnp/
+.pnp.*
+
+# env files
+.env
+.env.*
+*.local
+*.local.json
+!.env.example
+!*.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# build outputs
+dist/
+build/
+coverage/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# generated/local app data
+backend/uploads/
+backend/whatsapp-qr/
+backend/.wa-sessions/
+
+# deployment/tool caches
+.vercel/
+.netlify/
+.turbo/
+.cache/
+
+# local archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+
+# AI/editor local state
+.ai/
+.claude/
+**/.claude/
+agents/
+skills/
+CLAUDE.md
+settings.local.json

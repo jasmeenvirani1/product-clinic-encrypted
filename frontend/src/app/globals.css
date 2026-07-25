@@ -1,0 +1,333 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Brand CSS custom properties ───────────────────────────────────────────
+   All raw color values live in src/constants/brand.ts (JS/TS) and here
+   (CSS). Everything else references these variables — never hardcode colors
+   in component rules below.
+──────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Primary — overridden at runtime by ThemeProvider */
+  --color-primary:              #0369A1;
+  --color-primary-rgb:          3, 105, 161;
+  --color-primary-rgb-space:    3 105 161;
+  --color-primary-dark:         #075985;
+  --color-primary-dark-rgb:     7, 89, 133;
+  --color-primary-dark-rgb-space: 7 89 133;
+  --color-primary-hover:        #0284C7;
+  --color-primary-deep:         #0c4a6e;
+  --color-primary-glow:         rgba(3, 105, 161, 0.12);
+  --color-primary-glow-md:      rgba(3, 105, 161, 0.15);
+
+  /* Secondary */
+  --color-secondary:            #6366F1;
+
+  /* Surfaces */
+  --color-brand-bg:             #F8FAFC;
+  --color-brand-border:         #E2E8F0;
+  --color-brand-border-alt:     #e2e8f0;
+  --color-brand-heading:        #0F172A;
+  --color-text-body:            #334155;
+  --color-text-muted:           #94a3b8;
+  --color-surface-subtle:       #f8fafc;
+
+  /* Sidebar */
+  --color-sidebar-bg:           #ffffff;
+  --color-sidebar-hover:        #f0f9ff;
+  --color-sidebar-active:       #e0f2fe;
+
+  /* Semantic */
+  --color-success:              #22C55E;
+  --color-warning:              #F59E0B;
+  --color-error:                #EF4444;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb:      #cbd5e1;
+  --color-scrollbar-thumb-hover:#94a3b8;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem; /* offset for fixed landing nav so anchored sections aren't hidden */
+  }
+
+  body {
+    @apply text-brand-heading antialiased bg-brand-bg font-body;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-brand-heading;
+  }
+}
+
+@layer components {
+  /* Standard card */
+  .crm-card {
+    @apply rounded-xl border border-brand-border shadow-sm;
+  }
+
+  /* Form labels */
+  .crm-form .ant-form-item-label > label {
+    @apply font-medium text-brand-heading;
+  }
+
+  /* Auth links */
+  .auth-link {
+    @apply font-semibold text-primary hover:text-primary-dark transition-colors;
+  }
+
+  /* Sidebar — override Ant Design's hardcoded white background */
+  .ant-layout-sider {
+    background: var(--color-sidebar-bg) !important;
+  }
+  .ant-layout-sider .ant-menu {
+    background: transparent !important;
+  }
+  .ant-layout-sider .ant-menu-item {
+    color: var(--color-text-body) !important;
+  }
+  .ant-layout-sider .ant-menu-item:hover {
+    background-color: var(--color-sidebar-hover) !important;
+    color: var(--color-primary) !important;
+  }
+  .ant-layout-sider .ant-menu-item-selected {
+    background-color: var(--color-sidebar-active) !important;
+    color: var(--color-primary) !important;
+  }
+  .ant-layout-sider .ant-menu-item-selected .ant-menu-item-icon,
+  .ant-layout-sider .ant-menu-item-selected .ant-menu-title-content a {
+    color: var(--color-primary) !important;
+  }
+
+  /* Sidebar menu items */
+  .crm-menu .ant-menu-item {
+    @apply !rounded-lg;
+  }
+
+  /* Toggle / preference rows */
+  .crm-toggle-row {
+    @apply rounded-lg border border-brand-border bg-white p-4;
+  }
+
+  .crm-app-switch.ant-switch.ant-switch-checked {
+    background: var(--color-primary) !important;
+  }
+
+  .crm-app-switch.ant-switch.ant-switch-checked:hover:not(.ant-switch-disabled) {
+    background: var(--color-primary-hover) !important;
+  }
+
+  /* Section divider inside cards */
+  .crm-section-label {
+    @apply text-xs font-semibold uppercase tracking-wider text-brand-heading/40 font-heading;
+  }
+
+  /* Shared table style used across modules (forced override) */
+  .crm-table.ant-table-wrapper .ant-table {
+    background: #ffffff !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-container {
+    overflow: hidden !important;
+    border-radius: 0 !important;
+    border: 1px solid var(--color-brand-border-alt) !important;
+    background: #ffffff !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-thead > tr > th {
+    background: var(--color-surface-subtle) !important;
+    color: var(--color-brand-heading) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    text-align: left !important;
+    padding: 8px 14px !important;
+    border-bottom: 1px solid var(--color-brand-border-alt) !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-thead > tr > th::before {
+    display: none !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr > td {
+    color: var(--color-text-body) !important;
+    font-size: 14px !important;
+    padding: 14px !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid var(--color-brand-border-alt) !important;
+    background: #ffffff !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr:last-child > td {
+    border-bottom: 0 !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr:hover > td,
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td,
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-hover > td {
+    background: var(--color-surface-subtle) !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-cell {
+    vertical-align: middle !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr > td.crm-emphasis-name {
+    font-weight: 600 !important;
+    color: var(--color-brand-heading) !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-table-tbody > tr > td.crm-emphasis-price {
+    font-weight: 700 !important;
+    color: var(--color-brand-heading) !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-pagination {
+    padding: 14px 4px 4px !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-pagination .ant-pagination-item {
+    border-color: var(--color-brand-border-alt) !important;
+    border-radius: 6px !important;
+  }
+
+  .crm-table.ant-table-wrapper .ant-pagination .ant-pagination-item-active {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary-glow) !important;
+  }
+
+  /* Flush variant — table is flush with its parent card; suppress inner container border */
+  .crm-table-flush.ant-table-wrapper .ant-table-container {
+    border: none !important;
+  }
+
+  /* Sidebar scrollbar: thinner and lighter */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar-thumb) var(--color-surface-subtle);
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-surface-subtle);
+    border-radius: 9999px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-scrollbar-thumb-hover);
+  }
+
+  .crm-rich-content {
+    @apply text-sm leading-7 text-slate-700;
+  }
+
+  .crm-rich-content h1 {
+    @apply mb-4 mt-8 text-3xl font-bold text-slate-900;
+  }
+
+  .crm-rich-content h2 {
+    @apply mb-3 mt-7 text-2xl font-bold text-slate-900;
+  }
+
+  .crm-rich-content h3 {
+    @apply mb-2 mt-6 text-xl font-semibold text-slate-900;
+  }
+
+  .crm-rich-content p {
+    @apply mb-4;
+  }
+
+  .crm-rich-content ul {
+    @apply mb-4 list-disc pl-6;
+  }
+
+  .crm-rich-content ol {
+    @apply mb-4 list-decimal pl-6;
+  }
+
+  .crm-rich-content a {
+    @apply font-semibold text-primary underline underline-offset-2;
+  }
+
+  .crm-rich-content blockquote {
+    @apply my-4 border-l-4 border-slate-200 pl-4 text-slate-500;
+  }
+
+  .tiptap p.is-editor-empty:first-child::before {
+    content: "Start writing page content...";
+    color: var(--color-text-muted);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+}
+
+
+:where(.css-dev-only-do-not-override-1nb6uho).ant-card{
+  @apply rounded-xl  bg-transparent border-0 shadow-sm;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Remove Ant Design focus ring on Select */
+.ant-select-focused .ant-select-selector,
+.ant-select-open .ant-select-selector,
+.ant-select:not(.ant-select-disabled):focus-within .ant-select-selector,
+.ant-select:not(.ant-select-disabled).ant-select-open .ant-select-selector {
+  border-color: var(--color-brand-border) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.ant-input-affix-wrapper-focused,
+.ant-input-affix-wrapper:focus-within,
+.ant-input-focused,
+.ant-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-glow-md) !important;
+  outline: none !important;
+}
+
+.ant-input-number-focused,
+.ant-input-number:focus-within {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-glow-md) !important;
+}
+
+/* Full-width OTP input — stretch the 6 cells edge-to-edge to match the button.
+   Placed outside @layer so it wins over Ant Design's generated cell widths. */
+.otp-full-width .ant-otp {
+  display: flex !important;
+  width: 100% !important;
+  gap: 0.5rem;
+}
+.otp-full-width .ant-otp > * {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.otp-full-width .ant-otp .ant-input {
+  width: 100% !important;
+  height: 3rem;
+  text-align: center;
+  font-size: 1.125rem;
+}

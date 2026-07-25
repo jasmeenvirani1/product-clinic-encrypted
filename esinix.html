@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Esinix - Manage All Your Channels From a Single Screen</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px; background: #fff;
+      border-bottom: 1px solid #e8eaed; position: sticky; top: 0; z-index: 100;
+    }
+    .navbar .logo {
+      font-size: 28px; font-weight: 900; color: #1a56db; letter-spacing: -1.5px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .nav-links { display: flex; gap: 6px; font-size: 14px; font-weight: 500; color: #374151; }
+    .nav-links a { padding: 6px 10px; border-radius: 6px; }
+    .nav-links a:hover { background: #f3f4f6; color: #1a56db; }
+    .nav-links .has-arrow::after { content: " ▾"; font-size: 11px; }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+    .btn-login {
+      font-size: 14px; font-weight: 600; color: #374151; cursor: pointer;
+      border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 16px;
+      background: #fff; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-login:hover { background: #f9fafb; }
+    .btn-trial {
+      background: #1a3a6e; color: #fff; border: none; border-radius: 8px;
+      padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-trial:hover { background: #1e4a8a; }
+
+    /* ── ANNOUNCEMENT BAR ── */
+    .announce-bar {
+      background: #1a56db; color: #fff; text-align: center;
+      padding: 9px 16px; font-size: 13px; font-weight: 600;
+    }
+    .announce-bar a { color: #bfdbfe; text-decoration: underline; }
+
+    /* ── HERO ── */
+    .hero {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 64px 80px 72px; background: #fff;
+      gap: 48px; flex-wrap: wrap; overflow: hidden;
+    }
+    .hero-left { max-width: 460px; flex-shrink: 0; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #eff6ff; color: #1a56db; border: 1px solid #bfdbfe;
+      border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 24px;
+    }
+    .hero-badge .bolt { color: #f59e0b; }
+    .hero h1 {
+      font-size: 52px; font-weight: 900; line-height: 1.1;
+      color: #111827; margin-bottom: 22px; letter-spacing: -1.5px;
+    }
+    .hero h1 .blue { color: #1a56db; }
+    .hero p { font-size: 16px; color: #6b7280; line-height: 1.75; margin-bottom: 28px; }
+    .hero p strong { color: #111827; font-weight: 700; }
+    .hero-checks {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px;
+      margin-bottom: 36px;
+    }
+    .hero-checks span {
+      font-size: 14px; color: #374151; font-weight: 500;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .hero-checks span::before {
+      content: ""; width: 18px; height: 18px; border-radius: 50%;
+      background: #22c55e; flex-shrink: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    }
+    .hero-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: #1a3a6e; color: #fff; border: none; border-radius: 10px;
+      padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { background: #1e4a8a; }
+    .btn-secondary {
+      background: #fff; color: #374151; border: 1.5px solid #d1d5db;
+      border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-secondary:hover { background: #f9fafb; }
+    .btn-secondary .dot { width: 10px; height: 10px; border-radius: 50%; background: #374151; display: inline-block; }
+
+    /* ── HERO MOCKUP ── */
+    .hero-right { position: relative; flex: 1; min-width: 320px; display: flex; justify-content: center; }
+
+    /* floating AI badge */
+    .ai-sent-badge {
+      position: absolute; top: -10px; right: -10px; z-index: 10;
+      background: #fff; border-radius: 12px; padding: 10px 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.12); display: flex; align-items: center; gap: 10px;
+      min-width: 200px;
+    }
+    .ai-sent-badge .ai-ico {
+      width: 36px; height: 36px; border-radius: 10px; background: #e0e7ff;
+      display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+    }
+    .ai-sent-badge .ai-text strong { font-size: 12px; font-weight: 700; color: #111827; display: block; }
+    .ai-sent-badge .ai-text small { font-size: 11px; color: #6b7280; }
+    .ai-sent-badge .ai-auto {
+      display: inline-flex; align-items: center; gap: 4px; background: #d1fae5;
+      color: #065f46; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-top: 3px;
+    }
+
+    /* browser chrome */
+    .browser-wrap {
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 20px 64px rgba(0,0,0,.14); overflow: hidden;
+      width: 100%; max-width: 680px;
+    }
+    .browser-bar {
+      background: #f3f4f6; padding: 10px 16px; display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .browser-dots { display: flex; gap: 5px; }
+    .browser-dots span { width: 11px; height: 11px; border-radius: 50%; }
+    .bd-r { background: #ff5f57; } .bd-y { background: #febc2e; } .bd-g { background: #28c840; }
+    .browser-url {
+      flex: 1; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 5px 12px; font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 6px;
+    }
+    .browser-url .lock { color: #22c55e; font-size: 11px; }
+
+    /* 3-panel CRM */
+    .crm-panels { display: flex; height: 460px; }
+
+    /* left icon rail */
+    .crm-rail {
+      width: 44px; background: #f9fafb; border-right: 1px solid #e5e7eb;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 0; gap: 16px;
+    }
+    .crm-rail .ri {
+      width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 14px; color: #9ca3af; cursor: pointer;
+    }
+    .crm-rail .ri:hover, .crm-rail .ri.active { background: #e0e7ff; color: #4f46e5; }
+
+    /* contact list panel */
+    .crm-list {
+      width: 220px; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column;
+      background: #fff; flex-shrink: 0;
+    }
+    .crm-list-header {
+      padding: 12px 14px 8px; border-bottom: 1px solid #f0f0f0;
+    }
+    .crm-list-header h4 { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .crm-tabs { display: flex; gap: 2px; margin-bottom: 8px; }
+    .crm-tab {
+      font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+      cursor: pointer; color: #6b7280; border: 1px solid transparent;
+    }
+    .crm-tab.active { background: #eff6ff; color: #1a56db; border-color: #bfdbfe; }
+    .crm-search {
+      width: 100%; border: 1px solid #e5e7eb; border-radius: 7px; padding: 6px 10px;
+      font-size: 12px; color: #374151; background: #f9fafb; outline: none;
+    }
+    .crm-contacts { overflow-y: auto; flex: 1; }
+    .crm-contact {
+      display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+      border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .1s;
+    }
+    .crm-contact:hover { background: #f9fafb; }
+    .crm-contact.selected { background: #eff6ff; }
+    .ca { /* contact avatar */
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #fff;
+    }
+    .crm-contact-info { flex: 1; min-width: 0; }
+    .crm-contact-info .cn { font-size: 12px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .crm-contact-info .cm { font-size: 11px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .crm-contact-time { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
+
+    /* floating metric card */
+    .metric-float {
+      position: absolute; bottom: 30px; left: 44px; z-index: 5;
+      background: #fff; border-radius: 12px; padding: 12px 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 160px;
+    }
+    .metric-float .mf-label { font-size: 11px; color: #6b7280; font-weight: 600; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .metric-float .mf-val { font-size: 15px; font-weight: 800; color: #111827; }
+    .metric-float .mf-up { font-size: 11px; color: #22c55e; font-weight: 700; margin-top: 2px; }
+
+    /* conversation panel */
+    .crm-conv {
+      flex: 1; display: flex; flex-direction: column; background: #fff; min-width: 0;
+    }
+    .conv-header {
+      padding: 10px 14px; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .conv-header .ca { width: 34px; height: 34px; font-size: 12px; }
+    .conv-header-info .cn { font-size: 13px; font-weight: 700; color: #111827; }
+    .conv-header-info .cs { font-size: 11px; color: #22c55e; font-weight: 600; }
+    .conv-header-actions { margin-left: auto; display: flex; gap: 6px; }
+    .conv-header-actions span { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; color: #9ca3af; }
+    .conv-header-actions span:hover { background: #f3f4f6; }
+    .conv-messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 8px; background: #f9fafb; }
+    .conv-date-sep { text-align: center; font-size: 10px; color: #9ca3af; font-weight: 600; padding: 4px 0; }
+    .conv-msg { max-width: 75%; }
+    .conv-msg.in { align-self: flex-start; }
+    .conv-msg.out { align-self: flex-end; }
+    .conv-msg .bubble {
+      padding: 9px 12px; border-radius: 12px; font-size: 12px; line-height: 1.55;
+    }
+    .conv-msg.in .bubble { background: #fff; color: #111827; border-bottom-left-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+    .conv-msg.out .bubble { background: #1a56db; color: #fff; border-bottom-right-radius: 3px; }
+    .conv-msg .ts { font-size: 10px; color: #9ca3af; margin-top: 3px; }
+    .conv-msg.out .ts { text-align: right; }
+    .conv-input {
+      padding: 10px 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; background: #fff;
+    }
+    .conv-input .ch-sel {
+      display: flex; align-items: center; gap: 4px; font-size: 12px; color: #374151;
+      font-weight: 600; padding: 5px 8px; border: 1px solid #e5e7eb; border-radius: 7px; cursor: pointer;
+    }
+    .conv-input input {
+      flex: 1; border: none; font-size: 12px; color: #374151; outline: none; background: transparent;
+    }
+    .conv-send {
+      width: 32px; height: 32px; background: #1a56db; border: none; border-radius: 8px;
+      color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* right info panel */
+    .crm-info {
+      width: 180px; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column;
+      background: #fff; flex-shrink: 0; overflow-y: auto;
+    }
+    .crm-info-header {
+      padding: 10px 12px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between;
+      align-items: center;
+    }
+    .crm-info-header span { font-size: 12px; font-weight: 700; color: #111827; }
+    .crm-info-header a { font-size: 12px; color: #6b7280; }
+    .crm-info-body { padding: 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .crm-avatar-lg {
+      width: 52px; height: 52px; border-radius: 50%; background: #7c3aed;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px;
+    }
+    .crm-info-body h5 { font-size: 13px; font-weight: 700; color: #111827; text-align: center; }
+    .crm-info-body .company { font-size: 11px; color: #6b7280; text-align: center; }
+    .badge-qual { background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .crm-details { padding: 0 12px 12px; width: 100%; }
+    .crm-details .det-title { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin: 10px 0 6px; }
+    .crm-details .det-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .crm-details .det-row .dk { font-size: 11px; color: #6b7280; }
+    .crm-details .det-row .dv { font-size: 11px; font-weight: 600; color: #111827; }
+    .crm-details .dv.green { color: #16a34a; }
+    .crm-details .dv.wa { color: #25d366; }
+    .crm-tags { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 12px 12px; }
+    .crm-tags .tag {
+      font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+      background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb;
+    }
+
+    .badge-green { background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-blue  { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-orange{ background: #ffedd5; color: #9a3412; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; justify-content: space-around; align-items: center;
+      padding: 28px 80px; background: #fff;
+      border-top: 1px solid #eee; border-bottom: 1px solid #eee;
+      flex-wrap: wrap; gap: 20px;
+    }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-size: 32px; font-weight: 900; color: #1a1a6e; }
+    .stat-item .lbl { font-size: 13px; color: #777; margin-top: 4px; }
+    .stat-divider { width: 1px; height: 40px; background: #e5e7eb; }
+
+    /* ── INTEGRATIONS LOGOS ── */
+    .integrations-strip {
+      background: #f9fafb; padding: 22px 80px; display: flex;
+      align-items: center; gap: 36px; flex-wrap: wrap; justify-content: center;
+      border-bottom: 1px solid #eee;
+    }
+    .integrations-strip span { font-size: 13px; color: #888; font-weight: 600; white-space: nowrap; }
+    .int-logo {
+      display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700;
+      color: #333; white-space: nowrap;
+    }
+    .int-logo .ico { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .ico-wa  { background: #25d366; color: #fff; }
+    .ico-ig  { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); color: #fff; }
+    .ico-fb  { background: #1877f2; color: #fff; }
+    .ico-tt  { background: #000; color: #fff; font-size: 11px; }
+    .ico-gg  { background: #fff; border: 1px solid #ddd; }
+    .ico-ms  { background: #0084ff; color: #fff; }
+
+    /* ── SECTION WRAPPER ── */
+    .section { padding: 80px 80px; }
+    .section-title { text-align: center; font-size: 36px; font-weight: 900; color: #1a1a2e; margin-bottom: 12px; }
+    .section-title span { color: #4f46e5; }
+    .section-sub { text-align: center; font-size: 16px; color: #666; margin-bottom: 56px; max-width: 640px; margin-left: auto; margin-right: auto; }
+
+    /* ── FEATURES GRID ── */
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    @media(max-width:900px){ .features-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:580px){ .features-grid { grid-template-columns: 1fr; } }
+    .feature-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+      padding: 28px; transition: box-shadow .2s; cursor: default;
+    }
+    .feature-card:hover { box-shadow: 0 8px 32px rgba(79,70,229,.12); border-color: #c7d2fe; }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 10px; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .feature-card h3 { font-size: 16px; font-weight: 800; color: #1a1a2e; margin-bottom: 8px; }
+    .feature-card p  { font-size: 14px; color: #666; line-height: 1.65; }
+
+    /* ── INTEGRATIONS DETAIL ── */
+    .integrations-section { background: #f8f7ff; }
+    .integrations-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; }
+    @media(max-width:900px){ .integrations-grid { grid-template-columns: repeat(2,1fr); } }
+    .int-card {
+      background: #fff; border-radius: 14px; padding: 28px;
+      border: 1px solid #e5e7eb; display: flex; gap: 16px; align-items: flex-start;
+    }
+    .int-card .ico-lg {
+      width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .int-card h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; color: #1a1a2e; }
+    .int-card p  { font-size: 14px; color: #666; line-height: 1.65; }
+
+    /* ── WHY CHOOSE ── */
+    .why-section { background: #fff; }
+    .why-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 28px; }
+    @media(max-width:1000px){ .why-grid { grid-template-columns: repeat(2,1fr); } }
+    @media(max-width:580px) { .why-grid { grid-template-columns: 1fr; } }
+    .why-card {
+      text-align: center; padding: 32px 20px; border: 1px solid #e5e7eb;
+      border-radius: 14px; background: #f9fafb;
+    }
+    .why-card .wi { font-size: 36px; margin-bottom: 14px; }
+    .why-card h3 { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 8px; }
+    .why-card p  { font-size: 13px; color: #666; line-height: 1.6; }
+
+    /* ── MORE WHY CARDS ROW 2 ── */
+    .why-grid2 { display: grid; grid-template-columns: repeat(4,1fr); gap: 28px; margin-top: 28px; }
+    @media(max-width:1000px){ .why-grid2 { grid-template-columns: repeat(2,1fr); } }
+
+    /* ── AI SECTION ── */
+    .ai-section {
+      background: linear-gradient(135deg, #1a1a6e 0%, #312e81 100%);
+      padding: 80px 80px; display: flex; align-items: center;
+      gap: 60px; flex-wrap: wrap;
+    }
+    .ai-left { flex: 1; min-width: 280px; }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.15); color: #fff;
+      border-radius: 20px; padding: 6px 14px; font-size: 12px;
+      font-weight: 700; text-transform: uppercase; margin-bottom: 20px;
+    }
+    .ai-left h2 { font-size: 38px; font-weight: 900; color: #fff; margin-bottom: 20px; line-height: 1.2; }
+    .ai-left h2 span { color: #a5b4fc; }
+    .ai-left p  { font-size: 15px; color: #c7d2fe; line-height: 1.75; margin-bottom: 20px; }
+    .ai-list { list-style: none; }
+    .ai-list li { font-size: 14px; color: #e0e7ff; padding: 6px 0; display: flex; gap: 10px; }
+    .ai-list li::before { content: "✓"; color: #6ee7b7; font-weight: 700; flex-shrink: 0; }
+    .ai-right { flex: 1; min-width: 280px; display: flex; justify-content: center; }
+    .chat-mockup {
+      background: #fff; border-radius: 16px; padding: 20px; max-width: 360px;
+      width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+    }
+    .chat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+    .chat-avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,#4f46e5,#818cf8); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; }
+    .chat-header-info h4 { font-size: 14px; font-weight: 700; }
+    .chat-header-info p  { font-size: 12px; color: #888; }
+    .chat-bubble { margin-bottom: 12px; }
+    .chat-bubble .msg {
+      display: inline-block; padding: 10px 14px; border-radius: 14px;
+      font-size: 13px; line-height: 1.55; max-width: 85%;
+    }
+    .msg-in  { background: #f3f4f6; color: #1a1a2e; border-bottom-left-radius: 4px; }
+    .msg-out { background: #4f46e5; color: #fff; border-bottom-right-radius: 4px; float: right; }
+    .chat-bubble.out { text-align: right; overflow: hidden; }
+    .chat-input {
+      display: flex; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee;
+    }
+    .chat-input input {
+      flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; font-size: 13px;
+    }
+    .chat-send { background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+
+    /* ── AI FEATURES ROW ── */
+    .ai-features { background: #f8f7ff; padding: 80px; }
+    .ai-feats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; }
+    @media(max-width:900px){ .ai-feats-grid { grid-template-columns: repeat(2,1fr); } }
+    .ai-feat-card {
+      background: #fff; border-radius: 14px; padding: 32px 28px;
+      border: 1px solid #e5e7eb;
+    }
+    .ai-feat-card h3 { font-size: 17px; font-weight: 800; color: #1a1a2e; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .ai-feat-card p  { font-size: 14px; color: #555; line-height: 1.7; }
+    .ai-feat-card ul { margin-top: 10px; padding-left: 18px; }
+    .ai-feat-card ul li { font-size: 13px; color: #555; padding: 3px 0; }
+
+    /* ── FAQ ── */
+    .faq-section { background: #fff; padding: 80px; }
+    .faq-item {
+      border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .faq-q {
+      width: 100%; background: #fff; border: none; text-align: left;
+      padding: 20px 24px; font-size: 15px; font-weight: 700; color: #1a1a2e;
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    }
+    .faq-q:hover { background: #f8f7ff; }
+    .faq-q .arrow { font-size: 20px; color: #4f46e5; transition: transform .2s; }
+    .faq-a { padding: 0 24px 20px; font-size: 14px; color: #555; line-height: 1.7; }
+    details[open] .arrow { transform: rotate(45deg); }
+
+    /* ── CTA BANNER ── */
+    .cta-banner {
+      background: #1a1a6e; padding: 60px 80px; text-align: center;
+    }
+    .cta-banner h2 { font-size: 36px; font-weight: 900; color: #fff; margin-bottom: 14px; }
+    .cta-banner p  { font-size: 16px; color: #a5b4fc; margin-bottom: 32px; }
+    .cta-meta { display: flex; justify-content: center; gap: 32px; margin-top: 20px; flex-wrap: wrap; }
+    .cta-meta span { font-size: 13px; color: #c7d2fe; }
+    .cta-meta span::before { content: "✓ "; color: #6ee7b7; font-weight: 700; }
+
+    /* ── FOOTER ── */
+    footer { background: #0f0f1a; padding: 60px 80px 30px; color: #a0aec0; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 50px; flex-wrap: wrap; }
+    @media(max-width:900px){ .footer-grid { grid-template-columns: 1fr 1fr; } }
+    .footer-brand .logo { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -1px; margin-bottom: 12px; }
+    .footer-brand p { font-size: 14px; line-height: 1.7; color: #718096; max-width: 240px; }
+    .footer-col h4 { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 16px; }
+    .footer-col ul { list-style: none; }
+    .footer-col ul li { margin-bottom: 10px; font-size: 13px; }
+    .footer-col ul li a { color: #718096; transition: color .2s; }
+    .footer-col ul li a:hover { color: #fff; }
+    .footer-bottom {
+      border-top: 1px solid #1e2030; padding-top: 24px; display: flex;
+      justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    }
+    .footer-bottom p { font-size: 13px; color: #4a5568; }
+    .footer-bottom a { color: #4a5568; font-size: 13px; }
+    .footer-bottom a:hover { color: #a5b4fc; }
+
+    /* ── BG BANDS ── */
+    .bg-light { background: #f8f7ff; }
+    .bg-white { background: #fff; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="logo">esinix</div>
+  <div class="nav-links">
+    <a href="#">Ana Sayfa</a>
+    <a href="#" class="has-arrow">Ürün</a>
+    <a href="#">Fiyatlandırma</a>
+    <a href="#">Entegrasyonlar</a>
+    <a href="#" class="has-arrow">Sektörel Çözümler</a>
+    <a href="#">Referanslar</a>
+    <a href="#">Blog</a>
+    <a href="#">İletişim</a>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-login">⊕ Giriş Yap</button>
+    <button class="btn-trial">14 Gün Ücretsiz →</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <!-- LEFT -->
+  <div class="hero-left">
+    <div class="hero-badge"><span class="bolt">⚡</span> YAPAY ZEKA DESTEKLİ CRM <span>•</span></div>
+    <h1>Tüm Kanallarınızı<br><span class="blue">Tek Ekranda<br>Yönetin.</span></h1>
+    <p><strong>WhatsApp, Instagram DM, Messenger</strong> ve daha fazlasını tek platformda birleştirin. Yapay zeka destekli otomatik yanıt, akıllı satış takibi ve <strong>7/24 kesintisiz iletişim</strong> — kurulum gerektirmez.</p>
+    <div class="hero-checks">
+      <span>Kullanıcı başına ücret yok</span>
+      <span>14 gün ücretsiz</span>
+      <span>7/24 canlı destek</span>
+      <span>Kurulum gerektirmez</span>
+    </div>
+    <div class="hero-actions">
+      <button class="btn-primary">14 Gün Ücretsiz Başla →</button>
+      <button class="btn-secondary"><span class="dot"></span> Fiyatlandırma</button>
+    </div>
+  </div>
+
+  <!-- RIGHT — Browser + CRM mockup -->
+  <div class="hero-right">
+
+    <!-- Floating AI badge -->
+    <div class="ai-sent-badge">
+      <div class="ai-ico">🤖</div>
+      <div class="ai-text">
+        <strong>AI Yanıtı Gönderildi</strong>
+        <small>WhatsApp • 2 sn önce</small><br>
+        <span class="ai-auto">● Otomatik</span>
+      </div>
+    </div>
+
+    <div class="browser-wrap">
+      <!-- Browser chrome -->
+      <div class="browser-bar">
+        <div class="browser-dots">
+          <span class="bd-r"></span><span class="bd-y"></span><span class="bd-g"></span>
+        </div>
+        <div class="browser-url">
+          <span class="lock">🔒</span> app.esinix.com/conversations
+        </div>
+      </div>
+
+      <!-- 3-panel CRM -->
+      <div class="crm-panels" style="position:relative;">
+
+        <!-- Icon rail -->
+        <div class="crm-rail">
+          <div class="ri active">💬</div>
+          <div class="ri">👥</div>
+          <div class="ri">📊</div>
+          <div class="ri">👤</div>
+          <div class="ri" style="margin-top:auto;">⚙️</div>
+        </div>
+
+        <!-- Contact list -->
+        <div class="crm-list">
+          <div class="crm-list-header">
+            <h4>Team Inbox <span style="display:flex;gap:6px;"><span style="font-size:14px;color:#9ca3af;cursor:pointer;">⚙</span><span style="font-size:16px;color:#9ca3af;cursor:pointer;">+</span></span></h4>
+            <div class="crm-tabs">
+              <div class="crm-tab active">Unread <span style="background:#1a56db;color:#fff;border-radius:10px;padding:1px 5px;font-size:10px;">5</span></div>
+              <div class="crm-tab">All</div>
+              <div class="crm-tab">★</div>
+            </div>
+            <input class="crm-search" type="text" placeholder="🔍 Search..." />
+          </div>
+          <div class="crm-contacts">
+            <div class="crm-contact">
+              <div class="ca" style="background:#7c3aed;">DA</div>
+              <div class="crm-contact-info">
+                <div class="cn">Deniz Akarsu</div>
+                <div class="cm">Yarın görüşürüz 👋</div>
+              </div>
+              <div class="crm-contact-time">5:34 PM</div>
+            </div>
+            <div class="crm-contact">
+              <div class="ca" style="background:#16a34a;">EY</div>
+              <div class="crm-contact-info">
+                <div class="cn">Elif Yıldırım</div>
+                <div class="cm">Kampanya detaylarını bekliyorum</div>
+              </div>
+              <div class="crm-contact-time">Feb 24</div>
+            </div>
+            <div class="crm-contact">
+              <div class="ca" style="background:#ea580c;">MC</div>
+              <div class="crm-contact-info">
+                <div class="cn">Murat Çelik</div>
+                <div class="cm">Kargo nerede acaba?</div>
+              </div>
+              <div class="crm-contact-time">Feb 23</div>
+            </div>
+            <div class="crm-contact">
+              <div class="ca" style="background:#0891b2;">MR</div>
+              <div class="crm-contact-info">
+                <div class="cn">Mehmet Reşit</div>
+                <div class="cm">linkini tekrar atar mısın?</div>
+              </div>
+              <div class="crm-contact-time">Feb 22</div>
+            </div>
+            <div class="crm-contact selected">
+              <div class="ca" style="background:#7c3aed;">CK</div>
+              <div class="crm-contact-info">
+                <div class="cn">Caner Korkmaz</div>
+                <div class="cm">Çarşamba uygun mu?</div>
+              </div>
+              <div class="crm-contact-time">Feb 20</div>
+            </div>
+            <div class="crm-contact">
+              <div class="ca" style="background:#dc2626;">SÖ</div>
+              <div class="crm-contact-info">
+                <div class="cn">Selin Öztürk</div>
+                <div class="cm">Entegrasyon canlıya alındı ✅</div>
+              </div>
+              <div class="crm-contact-time">Feb 18</div>
+            </div>
+            <div class="crm-contact">
+              <div class="ca" style="background:#2563eb;">TB</div>
+              <div class="crm-contact-info">
+                <div class="cn">Tolga Başaran</div>
+                <div class="cm">Fiyat listesini iletim hocam</div>
+              </div>
+              <div class="crm-contact-time">Feb 15</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating metric card -->
+        <div class="metric-float">
+          <div class="mf-label">📈 Bu Ay Dönüşüm</div>
+          <div class="mf-val">+23 yeni müşteri</div>
+          <div class="mf-up">↑ %41 artış</div>
+        </div>
+
+        <!-- Conversation -->
+        <div class="crm-conv">
+          <div class="conv-header">
+            <div class="ca" style="background:#7c3aed;width:34px;height:34px;font-size:12px;">CK</div>
+            <div class="conv-header-info">
+              <div class="cn">Caner Korkmaz</div>
+              <div class="cs">● WhatsApp · Çevrimiçi</div>
+            </div>
+            <div class="conv-header-actions">
+              <span>🔔</span><span>📞</span><span>☆</span><span>⋮</span>
+            </div>
+          </div>
+          <div class="conv-messages">
+            <div class="conv-date-sep">── Bu Hafta ──</div>
+            <div class="conv-msg in">
+              <div class="bubble">Merhaba, bilgi almak istiyorum.</div>
+              <div class="ts">10:00</div>
+            </div>
+            <div class="conv-msg out">
+              <div class="bubble">Merhaba Caner Hanım/Bey!<br>Nasıl yardımcı olabilirim? 😊</div>
+              <div class="ts">10:00 ✓✓</div>
+            </div>
+            <div class="conv-msg in">
+              <div class="bubble">Demo için Çarşamba uygun mu?</div>
+              <div class="ts">10:15</div>
+            </div>
+          </div>
+          <div class="conv-input">
+            <div class="ch-sel">📱 <span style="font-size:10px;">▾</span></div>
+            <input type="text" placeholder="Mesaj yazın..." />
+            <button class="conv-send">➤</button>
+          </div>
+        </div>
+
+        <!-- Right info panel -->
+        <div class="crm-info">
+          <div class="crm-info-header">
+            <span>Contact Info</span>
+            <a href="#">›</a>
+          </div>
+          <div class="crm-info-body">
+            <div class="crm-avatar-lg">CK</div>
+            <h5>Caner Korkmaz</h5>
+            <div class="company">Modern Shop Ltd.</div>
+            <div class="badge-qual">● Qualified</div>
+          </div>
+          <div class="crm-details">
+            <div class="det-title">Detaylar</div>
+            <div class="det-row"><span class="dk">Pipeline</span><span class="dv green">Qualified</span></div>
+            <div class="det-row"><span class="dk">Owner</span><span class="dv">Mehmet V.</span></div>
+            <div class="det-row"><span class="dk">Source</span><span class="dv wa">WhatsApp</span></div>
+            <div class="det-title">İletişim</div>
+            <div class="det-row" style="flex-direction:column;gap:2px;">
+              <span class="dk">deniz@ornekshop.com</span>
+              <span class="dk">+90 595 100 11 01</span>
+            </div>
+          </div>
+          <div class="crm-tags">
+            <span class="tag">Premium</span>
+            <span class="tag">E-Ticaret</span>
+            <span class="tag">Pro</span>
+          </div>
+        </div>
+
+      </div><!-- /crm-panels -->
+    </div><!-- /browser-wrap -->
+  </div><!-- /hero-right -->
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item"><div class="num">100+</div><div class="lbl">Active Users</div></div>
+  <div class="stat-divider"></div>
+  <div class="stat-item"><div class="num">7/24</div><div class="lbl">Customer Support</div></div>
+  <div class="stat-divider"></div>
+  <div class="stat-item"><div class="num">4.9 ⭐</div><div class="lbl">Average Review</div></div>
+  <div class="stat-divider"></div>
+  <div class="stat-item"><div class="num">&lt; 3 seconds</div><div class="lbl">Average Response Time</div></div>
+</div>
+
+<!-- INTEGRATIONS STRIP -->
+<div class="integrations-strip">
+  <span>Integrations:</span>
+  <div class="int-logo"><div class="ico ico-wa">📱</div> WhatsApp</div>
+  <div class="int-logo"><div class="ico ico-ig">📸</div> Instagram DM</div>
+  <div class="int-logo"><div class="ico ico-ms">💬</div> Messenger</div>
+  <div class="int-logo"><div class="ico ico-fb">📘</div> Facebook Ads</div>
+  <div class="int-logo"><div class="ico ico-tt">🎵</div> TikTok Ads</div>
+  <div class="int-logo"><div class="ico ico-gg">🔍</div> Google Ads</div>
+  <a href="#" style="font-size:13px;color:#4f46e5;font-weight:700;">See All →</a>
+</div>
+
+<!-- ── FEATURES SECTION ── -->
+<section class="section bg-white">
+  <h2 class="section-title"><span>Everything</span> you need to grow your business, all in one place.</h2>
+  <p class="section-sub">With Esinix, manage all processes from lead generation to sales, automation to analytics, all on a single platform.</p>
+
+  <div class="features-grid">
+    <!-- 1 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#dbeafe;">👥</div>
+      <h3>Lead Management &amp; CRM</h3>
+      <p>Track all your potential customers in one location. Manage your sales pipeline, see the story in detail, and don't miss any opportunities.</p>
+    </div>
+    <!-- 2 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#d1fae5;">📊</div>
+      <h3>Sales Funnel (Pipeline)</h3>
+      <p>Track your sales opportunities step by step. See where you are at each stage and easily manage the process.</p>
+    </div>
+    <!-- 3 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fce7f3;">📣</div>
+      <h3>Marketing Campaigns</h3>
+      <p>Manage your marketing campaigns via email, SMS, and social media. Reach your target audience at the right time.</p>
+    </div>
+    <!-- 4 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#ffedd5;">📞</div>
+      <h3>DM &amp; Call Center Integration</h3>
+      <p>Manage all your WhatsApp, Instagram DMs, Messenger, and call center on a single screen. Never miss any message.</p>
+    </div>
+    <!-- 5 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#e0e7ff;">💳</div>
+      <h3>Payment &amp; Billing</h3>
+      <p>Manage all your billing processes in one place. Convert quotes to invoices, invoices to payments — automatically.</p>
+    </div>
+    <!-- 6 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fef3c7;">📈</div>
+      <h3>Reporting &amp; Analytics</h3>
+      <p>Monitor your sales and customer interactions with detailed reports. Strengthen your decisions with real data.</p>
+    </div>
+    <!-- 7 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#ede9fe;">🌐</div>
+      <h3>Landing Page &amp; Website</h3>
+      <p>Create high-converting pages and funnels with a drag-and-drop editor. No coding knowledge required.</p>
+    </div>
+    <!-- 8 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#d1fae5;">📋</div>
+      <h3>Survey &amp; Form Builder</h3>
+      <p>Collect qualified leads with customizable forms and surveys. Data is automatically transferred to the CRM.</p>
+    </div>
+    <!-- 9 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#dbeafe;">📅</div>
+      <h3>Online Appointment &amp; Calendar</h3>
+      <p>Let your customers book appointments automatically 24/7 and forget about schedule conflicts. Reduce absences with automatic reminders.</p>
+    </div>
+    <!-- 10 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fce7f3;">🔁</div>
+      <h3>Automatic Monitoring &amp; Nurture</h3>
+      <p>Feed your leads with automated SMS, email, and call streams. Increase conversions without human intervention.</p>
+    </div>
+    <!-- 11 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fef3c7;">🤖</div>
+      <h3>AI-Powered Assistant</h3>
+      <p>Automatically answer customer questions, schedule appointments, and automate follow-ups. It operates 24/7.</p>
+    </div>
+    <!-- 12 -->
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#d1fae5;">🛠️</div>
+      <h3>Easy Installation &amp; 24/7 Support</h3>
+      <p>Ready to use in minutes. Import from your previous website with a single click. Our expert support team is available every step of the way.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN INTEGRATIONS ── -->
+<section class="section integrations-section">
+  <h2 class="section-title">Main <span>Integrations</span></h2>
+  <p class="section-sub">Connect the platforms your customers use most to one powerful hub.</p>
+  <div class="integrations-grid">
+    <div class="int-card">
+      <div class="ico-lg" style="background:#e7f9f0;">📘</div>
+      <div>
+        <h3>Facebook Ads</h3>
+        <p>Automatically transfer potential customers from Facebook Ads to your CRM system and assist opportunities instantly.</p>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="ico-lg" style="background:#e7f9f0;">📱</div>
+      <div>
+        <h3>WhatsApp</h3>
+        <p>Set WhatsApp messages down to your CRM screen. Manage all chats on a single screen and never miss a conversation.</p>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="ico-lg" style="background:#fff0f6;">📸</div>
+      <div>
+        <h3>Instagram DM</h3>
+        <p>Combine Instagram DM conversations in your CRM. Ensure more organized communication and a stronger customer experience.</p>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="ico-lg" style="background:#fff8e1;">🎵</div>
+      <div>
+        <h3>TikTok Ads</h3>
+        <p>Instantly transfer customer data from TikTok ads to your CRM and start turning marketing investments into sales.</p>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="ico-lg" style="background:#e8f0fe;">💬</div>
+      <div>
+        <h3>Facebook Messenger</h3>
+        <p>Centralize all Messenger conversations. Enable teams to respond faster and ensure uninterrupted follow-up.</p>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="ico-lg" style="background:#fce8e6;">🔍</div>
+      <div>
+        <h3>Google Ads</h3>
+        <p>Connect your Google Ads investments to your CRM. Establish data-driven communication with your customers from the very first contact.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHY CHOOSE ESINIX ── -->
+<section class="section why-section">
+  <h2 class="section-title">Why Choose <span>Esinix?</span></h2>
+  <p class="section-sub">No user fees. There's no hidden cost. All features included your team in the plan you choose.</p>
+
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="wi">💰</div>
+      <h3>Predictable Prices</h3>
+      <p>No per-user fees. There's no hidden cost. All features included for your entire team in the plan you choose.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">🔗</div>
+      <h3>Integrated Channels</h3>
+      <p>Manage all your CRM data, WhatsApp, Messenger, email, and calls from a single screen without switching tabs.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">⚡</div>
+      <h3>Powerful Automations</h3>
+      <p>Direct your sales team's energy towards high-value work by eliminating manual tasks.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">🤖</div>
+      <h3>AI-Powered</h3>
+      <p>AI trained with your own data instantly answers customer questions, schedules appointments, and automatically manages the process.</p>
+    </div>
+  </div>
+
+  <div class="why-grid2">
+    <div class="why-card">
+      <div class="wi">🎯</div>
+      <h3>Lead Capture &amp; Management</h3>
+      <p>Automatically transfer potential customers to your CRM system and track them from a single location.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">📊</div>
+      <h3>Sales Funnel (Pipeline)</h3>
+      <p>Track your sales opportunities step by step, see the visual funnel and never miss a follow-up.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">📅</div>
+      <h3>Appointment Management</h3>
+      <p>Automate the appointment scheduling process for your clients. Never miss a meeting with calendar integration.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">📣</div>
+      <h3>Multichannel Campaigns</h3>
+      <p>Run campaigns simultaneously via email, SMS, and social media. Reach the right audience at the right time.</p>
+    </div>
+  </div>
+
+  <div class="why-grid2">
+    <div class="why-card">
+      <div class="wi">📈</div>
+      <h3>Reporting &amp; Analytics</h3>
+      <p>Monitor your data with real-time reports, and base your decisions on data.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">💳</div>
+      <h3>Payment &amp; Billing</h3>
+      <p>Convert your quotes into invoices with a single click. Simplify your team's financial tracking effortlessly.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">🔒</div>
+      <h3>Secure &amp; SSL Protected</h3>
+      <p>All data is protected by SSL encryption. Payments are processed safely via Stripe's infrastructure.</p>
+    </div>
+    <div class="why-card">
+      <div class="wi">🛠️</div>
+      <h3>Easy Installation &amp; 24/7 Support</h3>
+      <p>Activate in minutes. No technical knowledge required. Our support team is available every step of the way.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── AI SECTION ── -->
+<section class="ai-section">
+  <div class="ai-left">
+    <div class="ai-badge">🤖 AI-POWERED CRM</div>
+    <h2>Transform customer communication <span>with AI.</span></h2>
+    <p>AI presence on all your channels simultaneously — WhatsApp, Instagram DMs, and Social Media — improves communication speed, improves customer satisfaction, and enhances operational efficiency.</p>
+    <p>Our AI provides 24/7 uninterrupted responses to customer inquiries on WhatsApp, Instagram DMs, Messenger, and more — including live chat.</p>
+    <ul class="ai-list">
+      <li>24/7 Uninterrupted Communication</li>
+      <li>Multilingual Support across global customers</li>
+      <li>Increased Sales Conversion with smart messaging</li>
+      <li>Automatic Lead Capture in your CRM and sales</li>
+    </ul>
+  </div>
+  <div class="ai-right">
+    <div class="chat-mockup">
+      <div class="chat-header">
+        <div class="chat-avatar">AI</div>
+        <div class="chat-header-info">
+          <h4>Esinix AI Assistant</h4>
+          <p>Online • Responding instantly</p>
+        </div>
+      </div>
+      <div class="chat-bubble">
+        <div class="msg msg-in">Can I manage appointment bookings?</div>
+      </div>
+      <div class="chat-bubble out">
+        <div class="msg msg-out">Yes! Esinix automatically schedules appointments 24/7 without human intervention. 📅</div>
+      </div>
+      <div class="chat-bubble">
+        <div class="msg msg-in">Does it work on WhatsApp too?</div>
+      </div>
+      <div class="chat-bubble out">
+        <div class="msg msg-out">Absolutely! WhatsApp, Instagram DM, Facebook Messenger and more — all in one screen. 🚀</div>
+      </div>
+      <div class="chat-input">
+        <input type="text" placeholder="Type a message..." />
+        <button class="chat-send">Send</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AI FEATURES ── -->
+<section class="ai-features">
+  <h2 class="section-title">Manage all processes on a <span>single platform.</span></h2>
+  <p class="section-sub" style="margin-bottom:40px;">Everything you need to automate customer communication and boost revenue.</p>
+  <div class="ai-feats-grid">
+    <div class="ai-feat-card">
+      <h3>🤖 AI-Powered Customer Conversations</h3>
+      <p>Our AI provides 24/7 uninterrupted responses to customer inquiries on all channels, improving communication speed and customer satisfaction.</p>
+      <ul>
+        <li>24/7 Uninterrupted Communication</li>
+        <li>Multilingual Support</li>
+        <li>Increased Sales Conversion</li>
+        <li>Automatic Lead Capture</li>
+      </ul>
+    </div>
+    <div class="ai-feat-card">
+      <h3>📊 Multi-Step Automation</h3>
+      <p>Set up fully automated flows, from lead to sale. Monitor every opportunity in the visual funnel, don't miss a single one.</p>
+      <ul>
+        <li>Pipeline Tracking</li>
+        <li>Appointment Management</li>
+        <li>Real-time reporting</li>
+      </ul>
+    </div>
+    <div class="ai-feat-card">
+      <h3>📈 Sales &amp; Campaign Performance</h3>
+      <p>Track all sales data and customer performance across campaigns with actionable insights and detailed reports.</p>
+      <ul>
+        <li>Real-time Analytics Dashboard</li>
+        <li>Campaign Performance Metrics</li>
+        <li>Revenue Forecasting</li>
+      </ul>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:center;gap:32px;margin-top:40px;flex-wrap:wrap;font-size:14px;color:#555;">
+    <span>✅ No installation required</span>
+    <span>✅ Try it free for 14 days</span>
+    <span>✅ 24/7 live support</span>
+    <span>✅ No fees per user</span>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="faq-section">
+  <h2 class="section-title">Questions <span>you have in mind</span></h2>
+  <p class="section-sub">Take a quick look at our frequently asked questions. We're always here for more.</p>
+
+  <details class="faq-item" open>
+    <summary class="faq-q">Can I start using Esinix immediately? <span class="arrow">+</span></summary>
+    <div class="faq-a">Yes. Your account will be activated within minutes of completing your purchase. You can start using it immediately with ready-made pipeline, automation, and appointment templates, without having to set up anything from scratch.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Is there a trial period or demo? <span class="arrow">+</span></summary>
+    <div class="faq-a">Yes, we offer a 14-day free trial with full access to all features. No credit card required to get started.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Will I receive technical support after making the payment? <span class="arrow">+</span></summary>
+    <div class="faq-a">Yes, 24/7 live support is included in every plan. You can reach us via live chat, email, or phone at any time.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">How is payment security ensured? <span class="arrow">+</span></summary>
+    <div class="faq-a">All payments are processed securely via Stripe with SSL encryption. We never store credit card information on our servers.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Is there a user limit? <span class="arrow">+</span></summary>
+    <div class="faq-a">No! Esinix does not charge per user. All plans include unlimited team members, making it cost-effective as your team grows.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Can I use it on mobile devices as well? <span class="arrow">+</span></summary>
+    <div class="faq-a">Yes, Esinix is fully responsive and works on iOS and Android devices. A dedicated mobile app is also available.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">After purchasing, can I customize the system to suit my own needs? <span class="arrow">+</span></summary>
+    <div class="faq-a">Absolutely. You can fully customize pipelines, automation workflows, forms, landing pages, and messaging templates to match your business processes.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">How long will it take to see the first results? <span class="arrow">+</span></summary>
+    <div class="faq-a">Most users see measurable improvements in response time and lead conversion within the first week of using Esinix, especially with the AI assistant and automation flows enabled.</div>
+  </details>
+
+  <div style="margin-top:40px;text-align:center;">
+    <p style="color:#666;font-size:15px;margin-bottom:16px;">Still have questions? Our team is here for you with 24/7 live support.</p>
+    <button class="btn-primary" style="padding:14px 36px;">📬 Contact us</button>
+  </div>
+</section>
+
+<!-- ── CTA BANNER ── -->
+<div class="cta-banner">
+  <h2>Start growing your business today.</h2>
+  <p>Join 500+ businesses already using Esinix to automate their sales and communication.</p>
+  <button class="btn-trial" style="font-size:16px;padding:16px 40px;border-radius:12px;background:#fff;color:#1a1a6e;">
+    Start 14-Day Free Trial →
+  </button>
+  <div class="cta-meta">
+    <span>No credit card required</span>
+    <span>Cancel anytime</span>
+    <span>24/7 live support</span>
+    <span>No per-user fees</span>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="logo">esinix</div>
+      <p>Integrated innovative solutions for modern businesses. Manage all channels from a single screen.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Esinix</h4>
+      <ul>
+        <li><a href="#">Home</a></li>
+        <li><a href="#">About Us</a></li>
+        <li><a href="#">Partner</a></li>
+        <li><a href="#">Career</a></li>
+        <li><a href="#">Communication</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Features</h4>
+      <ul>
+        <li><a href="#">Artificial Intelligence</a></li>
+        <li><a href="#">Automation</a></li>
+        <li><a href="#">WhatsApp</a></li>
+        <li><a href="#">Marketing</a></li>
+        <li><a href="#">WhatsApp Cases</a></li>
+        <li><a href="#">Social CRM</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>CRM</h4>
+      <ul>
+        <li><a href="#">CRM</a></li>
+        <li><a href="#">Pipeline</a></li>
+        <li><a href="#">Builder</a></li>
+        <li><a href="#">Campaign</a></li>
+        <li><a href="#">Reputation</a></li>
+        <li><a href="#">Tracking</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#">WhatsApp</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">Facebook</a></li>
+        <li><a href="#">TikTok</a></li>
+        <li><a href="#">Google</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 Esinix — All Rights Reserved</p>
+    <div style="display:flex;gap:24px;">
+      <a href="#">Terms of Service</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Cookie Policy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
