@@ -944,7 +944,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Single card: description (left) + image (right) travel together, one problem visible at a time. */}
-              <div className="relative mx-auto w-full max-w-4xl lg:h-[min(24rem,55vh)] lg:overflow-hidden">
+              <div className="relative mx-auto w-full max-w-6xl lg:h-[min(24rem,55vh)] lg:overflow-hidden">
                 {isDesktop ? (
                   t.problemItems.map((item, i) => {
                     // Continuous scrub: card i slides from 110% (below, hidden) to 0% (in place, covering earlier cards)
