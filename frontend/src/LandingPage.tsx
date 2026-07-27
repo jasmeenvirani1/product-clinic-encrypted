@@ -469,7 +469,10 @@ const IntegrationDiagram = ({
 
         const isMiddleRow = row === 2;
         const nodeR = 5;
-        const dotRadius = hubRadius;
+        const nodeStrokeWidth = 1.5;
+        // Push the dot's center out by its own visual radius (r + half the stroke)
+        // so the whole dot sits outside the ring, tangent to its border, not straddling it.
+        const dotRadius = hubRadius + nodeR + nodeStrokeWidth / 2;
 
         let endX: number, endY: number, dotX: number, dotY: number;
         if (isMiddleRow) {
