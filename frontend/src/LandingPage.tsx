@@ -408,7 +408,7 @@ const IndustryCard = ({
       transition={{ duration: 0.5, delay: (index % 4) * 0.06 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="rounded-2xl border border-slate-200 p-5 flex flex-col shadow-sm shadow-slate-900/5 transition-colors duration-300 hover:shadow-lg hover:border-transparent"
+      className="rounded-2xl border border-slate-200 p-5 flex flex-col shadow-lg shadow-slate-900/10 transition-colors duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:border-transparent"
       style={{ background: hovered ? NAVY_DARK : '#fff' }}
     >
       <span
