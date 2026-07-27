@@ -822,10 +822,10 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     <div className="min-h-screen bg-white font-sans selection:bg-[var(--color-primary)] selection:text-white overflow-x-clip" style={{ color: BODY }}>
       {/* ══════════════ NAV ══════════════ */}
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
-        <div className="w-full max-w-6xl bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-4 pr-3 h-14 flex items-center justify-between gap-3">
-          <a href="#home" className="flex items-center gap-2 no-underline shrink-0">
-            <LogoMark size="sm" />
-            <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
+        <div className="w-full max-w-6xl bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-5 pr-3.5 h-16 flex items-center justify-between gap-3">
+          <a href="#home" className="flex items-center gap-2.5 no-underline shrink-0">
+            <LogoMark size="md" />
+            <span className="font-heading text-xl font-bold tracking-tight text-slate-900">
               {APP_NAME}
             </span>
           </a>
@@ -835,7 +835,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <a
                 key={link.label}
                 href={link.href}
-                className="px-3.5 py-1.5 rounded-full text-[14.5px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
               >
                 {link.label}
               </a>
@@ -845,18 +845,18 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={goLogin}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[14.5px] font-semibold text-white transition-all hover:brightness-110 shadow-md"
+              className="hidden sm:inline-flex items-center gap-1.5 h-11 px-5 rounded-full text-base font-semibold text-white transition-all hover:brightness-110 shadow-md"
               style={{ background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.2)}` }}
             >
-              {t.navCta} <ArrowRight size={14} />
+              {t.navCta} <ArrowRight size={16} />
             </button>
 
             <button
-              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors"
+              className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors"
               onClick={() => setMobileMenuOpen((p) => !p)}
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
