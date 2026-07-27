@@ -668,7 +668,23 @@ const IntegrationDiagram = ({
         }
         @media (max-width: 859px) {
           .integration-wires { display: none; }
-          .integration-hub-wrap { order: -1; margin-bottom: 8px; }
+          .integration-hub-wrap { order: -1; margin-bottom: 16px; }
+          .integration-ring { width: 200px; height: 200px; }
+          .integration-hub { width: 168px; height: 168px; padding: 10px; gap: 8px; }
+          .integration-bot { width: 56px; height: 44px; border-radius: 16px; gap: 8px; }
+          .integration-bot::before { top: -10px; height: 8px; }
+          .integration-bot::after { top: -14px; width: 5px; height: 5px; }
+          .integration-bot-ear { width: 5px; height: 12px; }
+          .integration-bot-eyes { gap: 8px; }
+          .integration-bot-eyes span { width: 8px; height: 8px; }
+          .integration-bot-mouth { width: 20px; bottom: 7px; }
+          .integration-hub-title { font-size: 1rem; }
+          .integration-hub-subtitle { font-size: 0.75rem; max-width: 130px; }
+          .integration-card { padding: 14px 16px; gap: 12px; }
+          .integration-card-icon { width: 44px; height: 44px; border-radius: 12px; }
+          .integration-card-name { font-size: 0.95rem; }
+          .integration-card-status { font-size: 0.72rem; }
+          .integration-card-flows { font-size: 0.76rem; }
         }
       `}</style>
 
