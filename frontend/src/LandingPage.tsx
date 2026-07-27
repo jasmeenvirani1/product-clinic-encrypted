@@ -256,6 +256,7 @@ const t = {
     integrationBadge: 'Integration',
     integrationTitle: 'Connects with the tools you already run on.',
     integrationHub: 'AI WORKFORCE',
+    integrationHubSubtitle: 'Your Intelligent Automation Layer',
     integrationLeft: ['WhatsApp', 'Instagram', 'Telegram', 'Gmail', 'Google Calendar'],
     integrationRight: ['Salesforce', 'HubSpot', 'Slack', 'Shopify', 'Microsoft Teams'],
 
@@ -396,18 +397,36 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
 );
 
 // ─── Integration hub-and-spoke diagram ─────────────────────────────────────────
-// Animated SVG wires connect each integration card to the center hub. Node
-// circles are filled with the section background so wires visually terminate
-// at the ring edge instead of passing through it, and must be appended to the
-// SVG before the traveling pulse dot so the pulse stays on top at the ring.
+// Direct port of the standalone ai-workforce-diagram.html prototype: same fixed
+// px dimensions (260px card columns, 260x260 hub circle, 320x320 ring), same
+// CSS-drawn robot face (antenna + blinking eyes + ears + mouth), same wire-drawing
+// math. Node circles are filled with the page background so wires visually
+// terminate at the ring edge instead of passing through it, and are appended to
+// the SVG before the traveling pulse dot so the pulse stays on top at the ring.
 const ROW_ANGLES = [50, 25, 0, -25, -50]; // degrees above/below horizontal, symmetric per row
+
+// Flow count per app, keyed by the display name coming from t.integrationLeft / t.integrationRight.
+const INTEGRATION_FLOWS: Record<string, number> = {
+  WhatsApp: 12,
+  Instagram: 9,
+  Telegram: 9,
+  Gmail: 10,
+  'Google Calendar': 1,
+  Salesforce: 9,
+  HubSpot: 10,
+  Slack: 18,
+  Shopify: 9,
+  'Microsoft Teams': 9,
+};
 
 const IntegrationDiagram = ({
   hubLabel,
+  hubSubtitle,
   left,
   right,
 }: {
   hubLabel: string;
+  hubSubtitle: string;
   left: readonly string[];
   right: readonly string[];
 }) => {
@@ -513,67 +532,103 @@ const IntegrationDiagram = ({
     return () => window.removeEventListener('resize', drawWires);
   }, [left, right]);
 
-  const Card = ({ name, side, row }: { name: string; side: 'left' | 'right'; row: number }) => (
-    <div
-      data-integration-card
-      data-side={side}
-      data-row={row}
-      className="relative z-[2] flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm"
-      style={{ background: '#fff', borderColor: '#e7e9ee' }}
-    >
-      <div>
-        <div className="text-[13px] font-bold" style={{ color: HEADING }}>{name}</div>
-        <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#1aa35c' }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#1aa35c' }} />
-          Connected
+  const Card = ({ name, side, row }: { name: string; side: 'left' | 'right'; row: number }) => {
+    const flows = INTEGRATION_FLOWS[name] ?? 0;
+    return (
+      <div
+        data-integration-card
+        data-side={side}
+        data-row={row}
+        className="integration-card relative z-[2] flex items-center rounded-2xl border"
+      >
+        <div className="min-w-0">
+          <div className="integration-card-name">{name}</div>
+          <div className="integration-card-status">Connected</div>
+          <div className="integration-card-flows">{flows} Active {flows === 1 ? 'Flow' : 'Flows'}</div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div ref={diagramRef} className="relative grid grid-cols-1 md:grid-cols-[260px_1fr_260px] items-center gap-3 min-h-[560px]">
+    <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px]">
       <style>{`
+        .integration-diagram { grid-template-columns: 1fr; gap: 18px; }
+        @media (min-width: 860px) {
+          .integration-diagram { grid-template-columns: 260px 1fr 260px; gap: 0 12px; }
+        }
+        .integration-col { display: flex; flex-direction: column; gap: 18px; position: relative; z-index: 2; }
+        .integration-card {
+          gap: 14px; background: #fff; border-color: #e7e9ee; padding: 14px 16px;
+          box-shadow: 0 1px 2px rgba(20,22,30,0.04), 0 6px 16px rgba(20,22,30,0.05);
+        }
+        .integration-card-name { font-weight: 600; font-size: 0.95rem; line-height: 1.2; color: ${HEADING}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .integration-card-status { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #1aa35c; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .integration-card-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #1aa35c; flex: none; }
+        .integration-card-flows { font-size: 0.76rem; color: ${BODY}; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+        .integration-hub-wrap { position: relative; z-index: 3; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .integration-ring { position: absolute; width: 320px; height: 320px; border-radius: 50%; background: rgba(var(--color-primary-rgb),0.07); }
+        .integration-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(var(--color-primary-rgb),0.14); }
+        .integration-hub {
+          position: relative; width: 260px; height: 260px; border-radius: 50%;
+          background: #fff; border: 1px solid #e7e9ee; box-shadow: 0 1px 2px rgba(20,22,30,0.04), 0 6px 16px rgba(20,22,30,0.05);
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 12px;
+        }
+        .integration-bot { position: relative; width: 76px; height: 58px; border-radius: 22px; background: linear-gradient(160deg, #2b2f3a, #14151a); display: flex; align-items: center; justify-content: center; gap: 11px; box-shadow: inset 0 1px 1px rgba(255,255,255,0.1); }
+        .integration-bot::before { content: ""; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); width: 2px; height: 10px; background: #4c515f; }
+        .integration-bot::after { content: ""; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #4ec1ff; box-shadow: 0 0 6px 1px rgba(78,193,255,0.7); }
+        .integration-bot-ear { position: absolute; top: 50%; width: 6px; height: 16px; border-radius: 3px; background: #2b2f3a; transform: translateY(-50%); }
+        .integration-bot-ear.left { left: -4px; }
+        .integration-bot-ear.right { right: -4px; }
+        .integration-bot-eyes { display: flex; gap: 11px; }
+        .integration-bot-eyes span { width: 11px; height: 11px; border-radius: 50%; background: #4ec1ff; box-shadow: 0 0 9px 1.5px rgba(78,193,255,0.7); animation: integration-bot-blink 2.2s ease-in-out infinite; }
+        .integration-bot-eyes span:nth-child(2) { animation-delay: 0.08s; }
+        .integration-bot-mouth { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 28px; height: 3px; border-radius: 2px; background: #323744; }
+        @keyframes integration-bot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
+        .integration-hub-title { font-size: 1.3rem; font-weight: 800; letter-spacing: 0.02em; color: ${HEADING}; }
+        .integration-hub-subtitle { font-size: 0.86rem; color: ${BODY}; line-height: 1.35; max-width: 160px; }
+
         .integration-wire { fill: none; stroke: #c7cbf5; stroke-width: 2.4; }
         .integration-node { fill: #fff; stroke: #b9beee; stroke-width: 1.5; }
         .integration-pulse { fill: var(--color-primary); filter: drop-shadow(0 0 3px var(--color-primary)); }
-        @keyframes integration-bot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
-        .integration-eye { animation: integration-bot-blink 2.2s ease-in-out infinite; }
-        .integration-eye:nth-child(2) { animation-delay: 0.08s; }
-        @keyframes integration-ring-pulse { 0% { transform: scale(0.85); opacity: .55; } 100% { transform: scale(1.35); opacity: 0; } }
-        .integration-ring::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; background: radial-gradient(circle, rgba(var(--color-primary-rgb),0.14), transparent 70%); animation: integration-ring-pulse 2.6s ease-out infinite; }
+
         @media (prefers-reduced-motion: reduce) {
-          .integration-eye, .integration-ring::after, .integration-pulse { animation: none !important; }
+          .integration-bot-eyes span, .integration-pulse { animation: none !important; }
+        }
+        @media (max-width: 859px) {
+          .integration-wires { display: none; }
+          .integration-hub-wrap { order: -1; margin-bottom: 8px; }
         }
       `}</style>
 
-      <div className="flex flex-col gap-4">
+      <svg ref={svgRef} className="integration-wires absolute inset-0 w-full h-full pointer-events-none z-[1] overflow-visible" />
+
+      <div className="integration-col">
         {left.map((name, i) => (
           <Card key={name} name={name} side="left" row={i} />
         ))}
       </div>
 
-      <div className="relative flex items-center justify-center py-10 md:py-0">
-        <div ref={ringRef} className="integration-ring absolute w-[220px] h-[220px] rounded-full" />
-        <div
-          ref={hubRef}
-          className="relative z-[2] flex flex-col items-center gap-3 rounded-3xl px-6 py-7 text-center shadow-lg"
-          style={{ background: NAVY_DARK, minWidth: 220 }}
-        >
-          <div className="flex items-center justify-center w-16 h-12 rounded-2xl" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <Bot size={26} className="integration-eye" style={{ color: '#4ec1ff' }} />
+      <div className="integration-hub-wrap">
+        <div ref={ringRef} className="integration-ring" />
+        <div ref={hubRef} className="integration-hub">
+          <div className="integration-bot">
+            <div className="integration-bot-ear left" />
+            <div className="integration-bot-eyes"><span /><span /></div>
+            <div className="integration-bot-mouth" />
+            <div className="integration-bot-ear right" />
           </div>
-          <div className="text-white font-heading text-sm font-bold tracking-wide uppercase">{hubLabel}</div>
+          <div className="integration-hub-title">{hubLabel}</div>
+          <div className="integration-hub-subtitle">{hubSubtitle}</div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="integration-col">
         {right.map((name, i) => (
           <Card key={name} name={name} side="right" row={i} />
         ))}
       </div>
-
-      <svg ref={svgRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1] overflow-visible" />
     </div>
   );
 };
@@ -1164,7 +1219,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             </motion.div>
 
             <motion.div {...fadeInUp} className="flex justify-center">
-              <IntegrationDiagram hubLabel={t.integrationHub} left={t.integrationLeft} right={t.integrationRight} />
+              <IntegrationDiagram
+                hubLabel={t.integrationHub}
+                hubSubtitle={t.integrationHubSubtitle}
+                left={t.integrationLeft}
+                right={t.integrationRight}
+              />
             </motion.div>
           </div>
         </section>
