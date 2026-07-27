@@ -469,7 +469,7 @@ const IntegrationDiagram = ({
 
         const isMiddleRow = row === 2;
         const nodeR = 5;
-        const dotRadius = hubRadius + nodeR * 0.6;
+        const dotRadius = hubRadius;
 
         let endX: number, endY: number, dotX: number, dotY: number;
         if (isMiddleRow) {
