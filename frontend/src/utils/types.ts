@@ -57,6 +57,7 @@ export interface User {
   trialEndsAt?: string | null;
   trialDaysLeft?: number | null;
   isPlanExpired?: boolean;
+  featureFlags?: PlanFeatureFlags; // resolved effective flags from GET /auth/me
 }
 
 export interface Tenant {
@@ -202,6 +203,7 @@ export interface PlanFeatureFlags {
   chapter_creation?: boolean;
   video_like?: boolean;
   automatic_website_generation?: boolean;
+  specialities?: boolean;
 }
 
 export interface PlanRecord {

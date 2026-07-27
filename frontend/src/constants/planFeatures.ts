@@ -9,6 +9,7 @@ export const BOOLEAN_FEATURE_FIELDS: Array<{ key: keyof PlanFeatureFlags; label:
   { key: "chapter_creation", label: "Chapter Creation" },
   { key: "video_like", label: "Video Like Feature" },
   { key: "automatic_website_generation", label: "Automatic Website Generation" },
+  { key: "specialities", label: "Specialities" },
 ];
 
 export const CLINIC_PAGE_LABELS: Record<NonNullable<PlanFeatureFlags["dedicated_clinic_page"]>, string> = {

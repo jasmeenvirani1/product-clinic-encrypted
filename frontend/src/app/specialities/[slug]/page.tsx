@@ -1,0 +1,152 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { APP_FULL_NAME, APP_NAME_AI, APP_TAGLINE } from "@/constants/brand";
+
+interface PublicSpecialityDetail {
+  id: number;
+  slug: string;
+  name: string;
+  icon: string | null;
+  short_description: string | null;
+  detail_content: Record<string, unknown> | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  canonical_url: string | null;
+}
+
+interface DetailBlock {
+  type?: string;
+  text?: string;
+  items?: string[];
+  [key: string]: unknown;
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+async function getSpeciality(slug: string): Promise<PublicSpecialityDetail | null> {
+  try {
+    const res = await fetch(`${API_BASE}/public/specialities/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.data ?? null; // data: null on miss — same check covers both cases
+  } catch {
+    return null; // network error/timeout — same "not found" path
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const speciality = await getSpeciality(params.slug);
+  // Fail-open: generic site defaults if fetch failed or slug not found — generateMetadata
+  // cannot short-circuit rendering, so the page body below is the single source of
+  // truth for the 404 decision.
+  const title = speciality?.meta_title || speciality?.name || APP_FULL_NAME;
+  const description = speciality?.meta_description || speciality?.short_description || APP_TAGLINE;
+  const hasOg = !!(speciality?.og_title || speciality?.og_description || speciality?.og_image);
+
+  return {
+    title,
+    description,
+    ...(hasOg
+      ? {
+          openGraph: {
+            title: speciality?.og_title || title,
+            description: speciality?.og_description || description,
+            images: speciality?.og_image ? [speciality.og_image] : undefined,
+          },
+        }
+      : {}),
+    ...(speciality?.canonical_url
+      ? {
+          alternates: {
+            canonical: speciality.canonical_url,
+          },
+        }
+      : {}),
+  };
+}
+
+// Defensive renderer for the schema-less detail_content JSONB column. Supports at
+// minimum a `{ blocks: [{ type: "heading" | "paragraph" | "list", text/items }] }`
+// shape, skipping any block that doesn't match a known shape rather than throwing.
+function renderDetailBlocks(detailContent: Record<string, unknown> | null): React.ReactNode[] | null {
+  const blocks = (detailContent as { blocks?: unknown } | null)?.blocks;
+  if (!Array.isArray(blocks) || blocks.length === 0) return null;
+
+  const rendered: React.ReactNode[] = [];
+
+  blocks.forEach((raw, i) => {
+    const block = raw as DetailBlock;
+    if (!block || typeof block !== "object") return;
+
+    if (block.type === "heading" && typeof block.text === "string" && block.text.trim()) {
+      rendered.push(
+        <h2 key={i} className="text-2xl font-bold text-slate-900 mt-8 mb-3 first:mt-0">
+          {block.text}
+        </h2>,
+      );
+    } else if (block.type === "paragraph" && typeof block.text === "string" && block.text.trim()) {
+      rendered.push(
+        <p key={i} className="text-slate-700 leading-relaxed mb-4">
+          {block.text}
+        </p>,
+      );
+    } else if (block.type === "list" && Array.isArray(block.items) && block.items.length > 0) {
+      rendered.push(
+        <ul key={i} className="list-disc pl-6 mb-4 text-slate-700 space-y-1.5">
+          {block.items
+            .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+            .map((item, j) => (
+              <li key={j}>{item}</li>
+            ))}
+        </ul>,
+      );
+    }
+    // Unrecognized block shapes are silently skipped, not thrown.
+  });
+
+  return rendered.length > 0 ? rendered : null;
+}
+
+export default async function SpecialityDetailPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const speciality = await getSpeciality(params.slug);
+  if (!speciality) notFound();
+
+  const renderedBlocks = renderDetailBlocks(speciality.detail_content);
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-4xl px-6 py-12">
+        <Link href="/" className="text-sm font-semibold text-primary hover:text-primary-dark">
+          Back to {APP_NAME_AI}
+        </Link>
+        <article className="mt-8 border border-slate-200 bg-white p-8 shadow-sm rounded-2xl">
+          <h1 className="text-3xl font-bold text-slate-900">{speciality.name}</h1>
+          {speciality.short_description && (
+            <p className="mt-3 text-lg text-slate-600 leading-relaxed">{speciality.short_description}</p>
+          )}
+          <div className="mt-8">
+            {renderedBlocks ?? (
+              !speciality.short_description && (
+                <p className="text-slate-500">More details coming soon.</p>
+              )
+            )}
+          </div>
+        </article>
+      </div>
+    </main>
+  );
+}

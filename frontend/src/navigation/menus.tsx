@@ -168,7 +168,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import type { MenuEntry, MenuPermission, Role } from "../utils/types";
+import type { MenuEntry, MenuPermission, PlanFeatureFlags, Role } from "../utils/types";
 
 // ─── Super-admin static menu ─────────────────────────────────────────
 export const superAdminMenu: MenuEntry[] = [
@@ -207,6 +207,7 @@ export const appMenu: MenuEntry[] = [
   { key: "app-billing",       label: "Billing",         icon: <CreditCard size={18} />,      path: "/app/billing",       roles: ["tenant_admin"] },
   { key: "users",             label: "Users",           icon: <Users size={18} />,           path: "/app/users",         roles: ["tenant_admin"] },
   { key: "app-theme-settings", label: "Theme Settings", icon: <Palette size={18} />,        path: "/app/theme-settings", roles: ["tenant_admin"] },
+  { key: "app-specialities",  label: "Specialities",    icon: <Stethoscope size={18} />,     path: "/app/specialities",  roles: ["tenant_admin"] },
   { key: "app-support",       label: "Support",         icon: <LifeBuoy size={18} />,        path: "/app/support",       roles: ["tenant_admin", "staff_user"] },
   { key: "app-guide",         label: "User's Guide",    icon: <PlayCircle size={18} />,      path: "/app/guide",         roles: ["tenant_admin", "staff_user"] },
   { key: "app-won-leads",     label: "Won Leads",       icon: <Award size={18} />,           path: "/app/won-leads",     roles: ["tenant_admin"] },
@@ -390,13 +391,24 @@ function getIcon(iconName: string | null | undefined): JSX.Element {
   return <LayoutDashboard size={18} />;
 }
 
+// Menus that must additionally be gated by the tenant's resolved plan feature flags,
+// on top of the existing RBAC "view" permission check. Keyed by menu slug -> the
+// PlanFeatureFlags key that must be truthy for the menu item to appear in the sidebar.
+// Add one entry here for each future plan-gated menu item.
+const MENU_FEATURE_REQUIREMENTS: Partial<Record<string, keyof PlanFeatureFlags>> = {
+  "app-specialities": "specialities",
+};
+
 /**
  * Build a sidebar menu from backend menuPermissions.
- * Only menus where the user has at least "view" permission are shown.
+ * Only menus where the user has at least "view" permission are shown, and menus
+ * listed in MENU_FEATURE_REQUIREMENTS are additionally hidden when the tenant's
+ * plan does not include the required feature flag.
  */
 export function buildMenuFromPermissions(
   menuPermissions: MenuPermission[],
-  role: Role
+  role: Role,
+  featureFlags?: PlanFeatureFlags
 ): MenuEntry[] {
   const getSidebarLabel = (slug: string, defaultLabel: string) => {
     if (slug === "app-conversations") return "Chats";
@@ -422,6 +434,13 @@ export function buildMenuFromPermissions(
 
       // Guide menu requires view_all permission to appear in sidebar
       if (slug === "app-guide" && !mp.permissions.includes("view_all")) {
+        return false;
+      }
+
+      // Plan feature-gating: hide menus whose required feature flag isn't enabled
+      // on the tenant's resolved plan, even if the role has "view" permission.
+      const requiredFeature = MENU_FEATURE_REQUIREMENTS[slug];
+      if (requiredFeature && !featureFlags?.[requiredFeature]) {
         return false;
       }
 

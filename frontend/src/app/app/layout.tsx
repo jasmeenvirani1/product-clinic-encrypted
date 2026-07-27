@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const menuPermissions = useAppSelector((state) => state.auth.menuPermissions);
   const permissionsLoading = useAppSelector((state) => state.auth.permissionsLoading);
   const token           = useAppSelector((state) => state.auth.token);
-  const { user, role }  = useCurrentUser();
+  const { user, role, featureFlags } = useCurrentUser();
   const dispatch        = useAppDispatch();
   const router          = useRouter();
 
@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Build sidebar strictly from backend permissions — no static fallback.
   // An empty array means the user has no permissions (or they haven't loaded yet).
-  const menu = buildMenuFromPermissions(menuPermissions ?? [], role ?? "staff_user");
+  const menu = buildMenuFromPermissions(menuPermissions ?? [], role ?? "staff_user", featureFlags);
 
   return (
     <Layout className="min-h-screen bg-slate-50">

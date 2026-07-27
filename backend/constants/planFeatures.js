@@ -18,6 +18,7 @@ const BOOLEAN_FEATURE_KEYS = [
   "chapter_creation",
   "video_like",
   "automatic_website_generation",
+  "specialities",
 ];
 
 // dedicated_clinic_page is graded — an enum, not a boolean.
@@ -44,6 +45,7 @@ const FEATURE_DEFAULTS = Object.freeze({
   chapter_creation: false,
   video_like: false,
   automatic_website_generation: false,
+  specialities: false,
 });
 
 // Per-plan defaults, exactly per the product's plan table. "Custom" has no
@@ -58,6 +60,7 @@ const PLAN_FEATURE_PRESETS = Object.freeze({
     chapter_creation: false,
     video_like: false,
     automatic_website_generation: false,
+    specialities: false,
   }),
   Professional: Object.freeze({
     whatsapp_multi_connection: false,
@@ -67,6 +70,7 @@ const PLAN_FEATURE_PRESETS = Object.freeze({
     chapter_creation: false,
     video_like: true,
     automatic_website_generation: false,
+    specialities: true,
   }),
   Enterprise: Object.freeze({
     whatsapp_multi_connection: true,
@@ -76,6 +80,7 @@ const PLAN_FEATURE_PRESETS = Object.freeze({
     chapter_creation: true,
     video_like: true,
     automatic_website_generation: true,
+    specialities: true,
   }),
   // Custom is configurable per-account. This preset is only used as a
   // starting point (e.g. defaulting a newly created Custom plan row to the
@@ -89,6 +94,7 @@ const PLAN_FEATURE_PRESETS = Object.freeze({
     chapter_creation: true,
     video_like: true,
     automatic_website_generation: true,
+    specialities: true,
   }),
 });
 

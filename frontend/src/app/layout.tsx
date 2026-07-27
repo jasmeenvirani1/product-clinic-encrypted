@@ -19,10 +19,57 @@ const dmSans = DM_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: APP_FULL_NAME,
-  description: APP_TAGLINE,
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+interface SeoSettingRow {
+  meta_title: string | null;
+  meta_description: string | null;
+  og_title: string | null;
+  og_description: string | null;
+  og_image: string | null;
+  canonical_url: string | null;
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  let seo: SeoSettingRow | null = null;
+
+  try {
+    const res = await fetch(`${API_BASE}/public/seo-settings/landing`, { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      seo = json?.data ?? null;
+    }
+  } catch {
+    // Network error, timeout, or DB down — fail open to static defaults below.
+    seo = null;
+  }
+
+  const title = seo?.meta_title || APP_FULL_NAME;
+  const description = seo?.meta_description || APP_TAGLINE;
+
+  const hasOg = !!(seo?.og_title || seo?.og_description || seo?.og_image);
+
+  return {
+    title,
+    description,
+    ...(hasOg
+      ? {
+          openGraph: {
+            title: seo?.og_title || title,
+            description: seo?.og_description || description,
+            images: seo?.og_image ? [seo.og_image] : undefined,
+          },
+        }
+      : {}),
+    ...(seo?.canonical_url
+      ? {
+          alternates: {
+            canonical: seo.canonical_url,
+          },
+        }
+      : {}),
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChevronUp, Gauge, HelpCircle, KeyRound, LayoutList, LogOut, Palette, ShieldCheck, Sparkles, User } from "lucide-react";
+import { Bot, ChevronUp, Gauge, Globe, HelpCircle, KeyRound, LayoutList, LogOut, Palette, ShieldCheck, Sparkles, Stethoscope, User } from "lucide-react";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { logout } from "../store/slices/authSlice";
@@ -78,6 +78,18 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
           icon: <HelpCircle size={14} />,
           label: profileLabel("landingFaq", "Landing FAQ"),
           href: "/super-admin/landing-faq",
+        },
+        {
+          key: "specialities",
+          icon: <Stethoscope size={14} />,
+          label: profileLabel("specialities", "Specialities"),
+          href: "/super-admin/specialities",
+        },
+        {
+          key: "seo-settings",
+          icon: <Globe size={14} />,
+          label: profileLabel("seoSettings", "SEO Settings"),
+          href: "/super-admin/seo-settings",
         },
         {
           key: "ai-models",

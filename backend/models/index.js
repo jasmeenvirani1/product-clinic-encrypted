@@ -24,6 +24,8 @@ const CustomField = require("./CustomField");
 const TenantFieldPreference = require("./TenantFieldPreference");
 const HeroContent = require("./HeroContent");
 const LandingFaq = require("./LandingFaq");
+const SeoSetting = require("./SeoSetting");
+const Speciality = require("./Speciality");
 const AiModel = require("./AiModel");
 const Notification = require("./Notification");
 const WhatsAppSession = require("./WhatsAppSession");
@@ -159,6 +161,8 @@ module.exports = {
   TenantFieldPreference,
   HeroContent,
   LandingFaq,
+  SeoSetting,
+  Speciality,
   AiModel,
   Notification,
   WhatsAppSession,

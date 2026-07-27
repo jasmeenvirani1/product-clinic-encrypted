@@ -1,5 +1,5 @@
 import { api } from "../utils/API";
-import type { MenuPermission, Role, User } from "../utils/types";
+import type { MenuPermission, PlanFeatureFlags, Role, User } from "../utils/types";
 
 const ROLE_HOME: Record<string, string> = {
   super_admin:  "/super-admin/dashboard",
@@ -119,13 +119,20 @@ export const authService = {
     const { user: bu, menuPermissions, planContext } = data.data as {
       user: BackendUser;
       menuPermissions: MenuPermission[];
-      planContext?: { is_on_trial?: boolean; trial_ends_at?: string | null; trial_days_left?: number | null; is_expired?: boolean };
+      planContext?: {
+        is_on_trial?: boolean;
+        trial_ends_at?: string | null;
+        trial_days_left?: number | null;
+        is_expired?: boolean;
+        feature_flags?: PlanFeatureFlags;
+      };
     };
     const user = toFrontendUser(bu);
     user.isOnTrial     = planContext?.is_on_trial    ?? false;
     user.trialEndsAt   = planContext?.trial_ends_at  ?? null;
     user.trialDaysLeft = planContext?.trial_days_left ?? null;
     user.isPlanExpired = planContext?.is_expired      ?? false;
+    user.featureFlags  = planContext?.feature_flags  ?? {};
     return { user, menuPermissions: menuPermissions ?? [] };
   },
 

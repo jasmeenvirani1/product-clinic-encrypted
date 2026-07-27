@@ -24,6 +24,7 @@ interface PlanFormValues {
   chapter_creation?: boolean;
   video_like?: boolean;
   automatic_website_generation?: boolean;
+  specialities?: boolean;
 }
 
 const parseFeatures = (value?: string): string[] => {
@@ -97,6 +98,7 @@ export default function PlansPage() {
       chapter_creation: flags.chapter_creation ?? false,
       video_like: flags.video_like ?? false,
       automatic_website_generation: flags.automatic_website_generation ?? false,
+      specialities: flags.specialities ?? false,
     });
     setModalOpen(true);
   };
@@ -125,6 +127,7 @@ export default function PlansPage() {
           chapter_creation: !!values.chapter_creation,
           video_like: !!values.video_like,
           automatic_website_generation: !!values.automatic_website_generation,
+          specialities: !!values.specialities,
         },
       };
 

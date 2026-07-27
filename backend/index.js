@@ -52,6 +52,9 @@ app.use("/api/super-admin/custom-fields", require("./routes/customFieldRoutes"))
 app.use("/api/field-preferences",          require("./routes/fieldPreferenceRoutes"));
 app.use("/api/super-admin/hero-content",   require("./routes/heroContentRoutes"));
 app.use("/api/super-admin/landing-faqs",   require("./routes/landingFaqRoutes"));
+app.use("/api/super-admin/seo-settings",   require("./routes/seoSettingRoutes"));
+app.use("/api/super-admin/specialities",   require("./routes/specialityRoutes"));
+app.use("/api/tenant/specialities",        require("./routes/tenantSpecialityRoutes"));
 app.use("/api/ai-models",                  require("./routes/aiModelRoutes"));
 app.use("/api/super-admin/ai-models",      require("./routes/superAdminAiModelRoutes"));
 

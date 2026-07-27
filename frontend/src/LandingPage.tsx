@@ -6,6 +6,7 @@ import { Spin } from 'antd';
 import { APP_NAME, COPYRIGHT_YEAR } from './constants/brand';
 import { LogoMark } from './components/LogoMark';
 import type { LucideIcon } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import {
   MessageSquare,
   Bot,
@@ -62,6 +63,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { HeroSlider, DEFAULT_HERO_CONTENT } from '@/components/hero/HeroSlider';
 import type { HeroContent } from '@/services/hero.service';
+import { specialityService, type Speciality } from '@/services/speciality.service';
 
 // ─── Design tokens (driven by Theme Management) ─────────────────────────────────
 // These read the live CSS custom properties written by ThemeProvider
@@ -374,6 +376,9 @@ const howIcon: Record<string, React.ReactNode> = {
   rocket: <Rocket size={26} />,
 };
 
+// Legacy static-fallback keys only — matches the OLD internal key set used by the
+// static `t.industries` fallback data (pre-Speciality-feature), NOT real Lucide
+// icon names. Kept for backward compatibility; do not remove.
 const industryIcon: Record<string, React.ReactNode> = {
   dental: <BadgePlus size={22} />,
   hair: <Sparkles size={22} />,
@@ -383,6 +388,25 @@ const industryIcon: Record<string, React.ReactNode> = {
   skin: <Heart size={22} />,
   eye: <Eye size={22} />,
   mind: <Brain size={22} />,
+};
+
+// Fallback for API-sourced `icon` values that don't match any key above (icon is
+// freeform text in the admin form, not constrained to this static key set).
+const DEFAULT_INDUSTRY_ICON = <Building2 size={22} />;
+
+// Resolves a Speciality's `icon` value to a rendered icon element.
+// API-sourced specialities store `icon` as a real Lucide component name string
+// (from ICON_OPTIONS, e.g. "Sparkles"), so we try a dynamic Lucide lookup first.
+// The old static fallback data (`t.industries`) still uses legacy static keys
+// (e.g. "dental"), which aren't real Lucide names, so that resolves via the
+// legacy `industryIcon` map instead. Anything unresolvable falls back to the
+// default icon.
+const resolveIndustryIcon = (iconName: string): React.ReactNode => {
+  const ResolvedIcon = (LucideIcons as unknown as Record<string, LucideIcon>)[iconName];
+  if (ResolvedIcon) {
+    return <ResolvedIcon size={22} />;
+  }
+  return industryIcon[iconName] ?? DEFAULT_INDUSTRY_ICON;
 };
 
 // ─── Industry / speciality card ────────────────────────────────────────────────
@@ -396,7 +420,7 @@ const IndustryCard = ({
   onCta,
   ctaLabel,
 }: {
-  ind: { icon: string; t: string; d: string };
+  ind: { icon: string; t: string; d: string; slug: string | null };
   index: number;
   onCta: () => void;
   ctaLabel: string;
@@ -415,7 +439,7 @@ const IndustryCard = ({
         className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300"
         style={{ background: hovered ? 'rgba(255,255,255,0.15)' : TINT, color: hovered ? '#fff' : NAVY }}
       >
-        {industryIcon[ind.icon]}
+        {resolveIndustryIcon(ind.icon)}
       </span>
       <h4 className="font-bold text-[16.5px] mb-2 transition-colors duration-300" style={{ color: hovered ? '#fff' : HEADING }}>{ind.t}</h4>
       <p className="text-[14.5px] leading-relaxed mb-5 flex-1 transition-colors duration-300" style={{ color: hovered ? 'rgba(255,255,255,0.7)' : BODY }}>{ind.d}</p>
@@ -730,6 +754,9 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   const [landingVideo, setLandingVideo] = React.useState<{ file_path: string; title?: string } | null>(null);
   const [landingFaqs, setLandingFaqs] = React.useState<{ q: string; a: string }[]>([]);
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
+  const [specialities, setSpecialities] = React.useState<
+    Pick<Speciality, 'slug' | 'icon' | 'name' | 'short_description'>[]
+  >([]);
 
   // Pinned scroll story: section fills the screen and pins; scroll progress steps items 1..N, then releases.
   // STEP_VH = scroll runway per item (in vh). Lower = snappier / less empty scrolling before release.
@@ -862,6 +889,16 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         }
       })
       .catch(() => {});
+
+    // Super-admin-managed specialities (the public master list). Falls back to the
+    // static t.industries copy below if this is empty or the fetch fails, so the
+    // industries section never breaks.
+    specialityService
+      .getPublic()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setSpecialities(data);
+      })
+      .catch(() => {});
   }, []);
 
   const goLogin = () => router.push('/login');
@@ -894,6 +931,20 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
       };
     });
   }, [plans]);
+
+  // Map API specialities onto the industries section; fall back to static copy
+  // (with the goLogin CTA) if the API list is empty or the fetch failed.
+  const industryItems = React.useMemo(() => {
+    if (specialities.length === 0) {
+      return t.industries.map((ind) => ({ ...ind, slug: null as string | null }));
+    }
+    return specialities.map((s) => ({
+      icon: s.icon ?? '',
+      t: s.name,
+      d: s.short_description ?? '',
+      slug: s.slug,
+    }));
+  }, [specialities]);
 
   const privacyPage = footerPages.find((p) => p.slug === 'privacy-policy');
   const termsPage = footerPages.find((p) => p.slug === 'terms-and-conditions');
@@ -1323,8 +1374,14 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.industriesTitle}</h2>
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-              {t.industries.map((ind, i) => (
-                <IndustryCard key={ind.t} ind={ind} index={i} onCta={goLogin} ctaLabel={t.industriesCta} />
+              {industryItems.map((ind, i) => (
+                <IndustryCard
+                  key={ind.slug ?? ind.t}
+                  ind={ind}
+                  index={i}
+                  onCta={ind.slug ? () => router.push(`/specialities/${ind.slug}`) : goLogin}
+                  ctaLabel={t.industriesCta}
+                />
               ))}
             </div>
           </div>
