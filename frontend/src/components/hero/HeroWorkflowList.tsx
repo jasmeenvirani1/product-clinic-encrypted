@@ -63,8 +63,8 @@ export function HeroWorkflowList({ steps, stepIntervalMs = 1500, active = true, 
   }, [steps.length, stepIntervalMs, active]);
 
   return (
-    <div className="relative min-h-[300px] pt-1">
-      <h3 className="font-heading text-lg font-semibold mb-5" style={{ color: NAVY }}>
+    <div className="relative min-h-[300px] lg:min-h-[220px] pt-1">
+      <h3 className="font-heading text-xl font-semibold mb-5" style={{ color: NAVY }}>
         Automated Workflow
       </h3>
 
@@ -82,7 +82,7 @@ export function HeroWorkflowList({ steps, stepIntervalMs = 1500, active = true, 
               className="flex items-center gap-3 rounded-xl px-4 py-3"
             >
               <span
-                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold"
+                className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[14.5px] font-bold"
                 style={
                   isActive
                     ? { background: "rgba(255,255,255,0.2)", color: "#fff" }
@@ -92,7 +92,7 @@ export function HeroWorkflowList({ steps, stepIntervalMs = 1500, active = true, 
                 {step.order}
               </span>
               <span
-                className="text-[14px] font-medium"
+                className="text-[15.5px] font-medium"
                 style={{ color: isActive ? "#fff" : "var(--color-brand-heading)" }}
               >
                 {step.label}

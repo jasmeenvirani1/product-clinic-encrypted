@@ -388,7 +388,7 @@ const industryIcon: Record<string, React.ReactNode> = {
 // ─── Section eyebrow (pill) ─────────────────────────────────────────────────────
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <div
-    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.18em] mb-4"
+    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-[0.18em] mb-4"
     style={{ background: PILL, color: NAVY }}
   >
     <span className="w-1.5 h-1.5 rounded-full" style={{ background: NAVY }} />
@@ -825,7 +825,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         <div className="w-full max-w-6xl bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-4 pr-3 h-14 flex items-center justify-between gap-3">
           <a href="#home" className="flex items-center gap-2 no-underline shrink-0">
             <LogoMark size="sm" />
-            <span className="font-heading text-base font-bold tracking-tight text-slate-900">
+            <span className="font-heading text-lg font-bold tracking-tight text-slate-900">
               {APP_NAME}
             </span>
           </a>
@@ -835,7 +835,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <a
                 key={link.label}
                 href={link.href}
-                className="px-3.5 py-1.5 rounded-full text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                className="px-3.5 py-1.5 rounded-full text-[14.5px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
               >
                 {link.label}
               </a>
@@ -845,7 +845,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={goLogin}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[13px] font-semibold text-white transition-all hover:brightness-110 shadow-md"
+              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[14.5px] font-semibold text-white transition-all hover:brightness-110 shadow-md"
               style={{ background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.2)}` }}
             >
               {t.navCta} <ArrowRight size={14} />
@@ -868,7 +868,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                className="px-4 py-2.5 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
               >
                 {link.label}
               </a>
@@ -876,7 +876,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <div className="mt-2 pt-3 border-t border-slate-100">
               <button
                 onClick={() => { goLogin(); setMobileMenuOpen(false); }}
-                className="w-full h-11 rounded-xl text-sm font-semibold text-white"
+                className="w-full h-11 rounded-xl text-base font-semibold text-white"
                 style={{ background: NAVY }}
               >
                 {t.navCta}
@@ -898,35 +898,35 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13.5px] font-semibold"
                   style={{ background: TINT, color: NAVY }}
                 >
-                  <Sparkles size={13} /> {t.heroBadge1}
+                  <Sparkles size={15} /> {t.heroBadge1}
                 </span>
                 <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13.5px] font-semibold"
                   style={{ background: TINT, color: NAVY }}
                 >
-                  <ShieldCheck size={13} /> {t.heroBadge2}
+                  <ShieldCheck size={15} /> {t.heroBadge2}
                 </span>
               </div>
-              <h1 className="font-heading text-[1.75rem] sm:text-4xl lg:text-[2.9rem] 2xl:text-[3.4rem] font-semibold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
+              <h1 className="font-heading text-[1.9rem] sm:text-5xl lg:text-[3.1rem] 2xl:text-[3.6rem] font-semibold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
                 <span className="block whitespace-nowrap">{t.heroTitle1}</span>
                 <span className="block whitespace-nowrap">{t.heroTitle2}</span>
                 <span className="block whitespace-nowrap">{t.heroTitle3}</span>
               </h1>
-              <p className="text-[15px] leading-relaxed mb-7 max-w-sm" style={{ color: BODY }}>{t.heroSubtitle}</p>
+              <p className="text-[16.5px] leading-relaxed mb-7 max-w-sm" style={{ color: BODY }}>{t.heroSubtitle}</p>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={goLogin}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-[14px] font-semibold transition-all hover:brightness-110 shadow-lg"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-[15.5px] font-semibold transition-all hover:brightness-110 shadow-lg"
                   style={{ background: NAVY, boxShadow: `0 10px 24px ${navyAlpha(0.2)}` }}
                 >
                   {t.heroCta1}
                 </button>
                 <a
                   href="#solution"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-[14px] font-semibold border transition-colors"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-[15.5px] font-semibold border transition-colors"
                   style={{ color: HEADING, borderColor: '#d5dde6', background: '#fff' }}
                 >
                   <span className="w-6 h-6 rounded-full flex items-center justify-center text-white" style={{ background: NAVY }}>
@@ -940,8 +940,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <div className="mt-10 pt-7 border-t border-slate-200 flex flex-wrap gap-x-8 gap-y-4 sm:gap-x-14">
                 {t.stats.map((s) => (
                   <div key={s.label}>
-                    <div className="font-heading text-xl sm:text-[1.75rem] font-extrabold" style={{ color: NAVY }}>{s.val}</div>
-                    <div className="text-[12px] mt-1" style={{ color: BODY }}>{s.label}</div>
+                    <div className="font-heading text-2xl sm:text-[1.9rem] font-extrabold" style={{ color: NAVY }}>{s.val}</div>
+                    <div className="text-[13.5px] mt-1" style={{ color: BODY }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -997,8 +997,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-2xl mx-auto mb-8 lg:mb-5">
                 <div className="flex justify-center"><Eyebrow>{t.problemBadge}</Eyebrow></div>
-                <h2 className="font-heading text-2xl sm:text-3xl lg:text-[1.9rem] xl:text-4xl font-semibold tracking-tight mb-2" style={{ color: NAVY }}>{t.problemTitle}</h2>
-                <p className="text-sm sm:text-[15px] leading-relaxed" style={{ color: BODY }}>{t.problemSubtitle}</p>
+                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-5xl font-semibold tracking-tight mb-2" style={{ color: NAVY }}>{t.problemTitle}</h2>
+                <p className="text-base sm:text-[16.5px] leading-relaxed" style={{ color: BODY }}>{t.problemSubtitle}</p>
               </div>
 
               {/* Single card: description (left) + image (right) travel together, one problem visible at a time. */}
@@ -1022,8 +1022,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                         }}
                       >
                         <div>
-                          <h4 className="font-bold text-lg sm:text-xl" style={{ color: HEADING }}>{item.t}</h4>
-                          <p className="text-sm sm:text-[15px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
+                          <h4 className="font-bold text-xl sm:text-2xl" style={{ color: HEADING }}>{item.t}</h4>
+                          <p className="text-base sm:text-[16.5px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
                         </div>
                         <div className="relative h-full min-h-[12rem] rounded-xl overflow-hidden" style={{ background: TINT }}>
                           <Image src={`/problem-${i + 1}.png`} alt={item.t} fill className="object-contain" />
@@ -1036,8 +1036,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                     {t.problemItems.map((item, i) => (
                       <div key={item.t} className="rounded-2xl border border-slate-200 shadow-lg shadow-slate-900/10 overflow-hidden" style={{ background: CARD_BG }}>
                         <div className="px-5 pt-5">
-                          <h4 className="font-bold text-base mt-1" style={{ color: HEADING }}>{item.t}</h4>
-                          <p className="text-[13px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
+                          <h4 className="font-bold text-lg mt-1" style={{ color: HEADING }}>{item.t}</h4>
+                          <p className="text-[14.5px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
                         </div>
                         <div className="relative aspect-[3/2] mt-3 mx-4 mb-4 rounded-xl overflow-hidden" style={{ background: TINT }}>
                           <Image src={`/problem-${i + 1}.png`} alt={item.t} fill className="object-contain" />
@@ -1064,7 +1064,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-4xl mx-auto mb-5 lg:mb-4">
                 <div className="flex justify-center mb-2"><Eyebrow>{t.solutionBadge}</Eyebrow></div>
-                <h2 className="font-heading text-2xl sm:text-3xl lg:text-[1.9rem] xl:text-3xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.solutionTitle}</h2>
+                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.solutionTitle}</h2>
               </div>
 
               {isDesktop ? (
@@ -1081,8 +1081,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           pointerEvents: i === activeSolution ? 'auto' : 'none',
                         }}
                       >
-                        <h4 className="font-bold text-xl" style={{ color: HEADING }}>{c.t}</h4>
-                        <p className="text-sm leading-relaxed mt-2" style={{ color: BODY }}>{c.d}</p>
+                        <h4 className="font-bold text-2xl" style={{ color: HEADING }}>{c.t}</h4>
+                        <p className="text-base leading-relaxed mt-2" style={{ color: BODY }}>{c.d}</p>
                       </div>
                     ))}
                   </div>
@@ -1126,8 +1126,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                         <Image src={`/solution-${i + 1}.png`} alt={c.t} fill className="object-contain" />
                       </div>
                       <div className="px-5 py-4">
-                        <h4 className="font-bold text-[15px]" style={{ color: HEADING }}>{c.t}</h4>
-                        <p className="text-[13px] leading-relaxed mt-1" style={{ color: BODY }}>{c.d}</p>
+                        <h4 className="font-bold text-[16.5px]" style={{ color: HEADING }}>{c.t}</h4>
+                        <p className="text-[14.5px] leading-relaxed mt-1" style={{ color: BODY }}>{c.d}</p>
                       </div>
                     </div>
                   ))}
@@ -1142,7 +1142,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-12">
               <Eyebrow>{t.howBadge}</Eyebrow>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.howTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.howTitle}</h2>
             </motion.div>
             <div className="grid md:grid-cols-3 gap-6">
               {t.howSteps.map((step, i) => (
@@ -1162,8 +1162,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                     />
                   </div>
                   <div className="px-2 pb-3">
-                    <h4 className="font-bold text-lg mb-2" style={{ color: NAVY }}>{step.t}</h4>
-                    <p className="text-[13px] leading-relaxed" style={{ color: BODY }}>{step.d}</p>
+                    <h4 className="font-bold text-xl mb-2" style={{ color: NAVY }}>{step.t}</h4>
+                    <p className="text-[14.5px] leading-relaxed" style={{ color: BODY }}>{step.d}</p>
                   </div>
                 </motion.div>
               ))}
@@ -1177,12 +1177,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             {/* Left: heading + subtitle + points with progress bars */}
             <motion.div {...fadeInUp}>
               <Eyebrow>{t.resultsBadge}</Eyebrow>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight mb-4" style={{ color: NAVY }}>{t.resultsTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-4" style={{ color: NAVY }}>{t.resultsTitle}</h2>
               <p className="leading-relaxed mb-10 max-w-md" style={{ color: BODY }}>{t.resultsSubtitle}</p>
               <div className="space-y-7">
                 {t.resultsPoints.map((p, i) => (
                   <div key={p}>
-                    <div className="text-[15px] font-medium mb-2.5" style={{ color: HEADING }}>{p}</div>
+                    <div className="text-[16.5px] font-medium mb-2.5" style={{ color: HEADING }}>{p}</div>
                     <div className="h-1.5 rounded-full bg-slate-300/50 overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
@@ -1218,7 +1218,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-10">
               <Eyebrow>{t.integrationBadge}</Eyebrow>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.integrationTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.integrationTitle}</h2>
             </motion.div>
 
             <motion.div {...fadeInUp} className="w-full">
@@ -1237,7 +1237,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center max-w-2xl mx-auto mb-12">
               <div className="flex justify-center"><Eyebrow>{t.industriesBadge}</Eyebrow></div>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.industriesTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.industriesTitle}</h2>
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
               {t.industries.map((ind, i) => (
@@ -1250,11 +1250,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ background: TINT, color: NAVY }}>
                     {industryIcon[ind.icon]}
                   </span>
-                  <h4 className="font-bold text-[15px] mb-2" style={{ color: HEADING }}>{ind.t}</h4>
-                  <p className="text-[13px] leading-relaxed mb-5 flex-1" style={{ color: BODY }}>{ind.d}</p>
+                  <h4 className="font-bold text-[16.5px] mb-2" style={{ color: HEADING }}>{ind.t}</h4>
+                  <p className="text-[14.5px] leading-relaxed mb-5 flex-1" style={{ color: BODY }}>{ind.d}</p>
                   <button
                     onClick={goLogin}
-                    className="mt-auto inline-flex items-center justify-center gap-1.5 text-[13px] font-semibold text-white px-4 py-2.5 rounded-lg transition-all hover:brightness-110 w-full"
+                    className="mt-auto inline-flex items-center justify-center gap-1.5 text-[14.5px] font-semibold text-white px-4 py-2.5 rounded-lg transition-all hover:brightness-110 w-full"
                     style={{ background: NAVY }}
                   >
                     {t.industriesCta} <ArrowRight size={14} />
@@ -1272,18 +1272,18 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               {/* Left: copy */}
               <div className="py-10 lg:py-12 text-white">
                 <div
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest mb-7"
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-widest mb-7"
                   style={{ background: PILL, color: NAVY }}
                 >
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: NAVY }} /> {t.demoBadge}
                 </div>
-                <h2 className="font-heading text-2xl sm:text-[2.1rem] font-semibold leading-[1.18] mb-6" style={{ color: TINT }}>
+                <h2 className="font-heading text-3xl sm:text-[2.25rem] font-semibold leading-[1.18] mb-6" style={{ color: TINT }}>
                   {t.demoTitle1}<br />{t.demoTitle2}
                 </h2>
-                <p className="leading-relaxed mb-9 max-w-lg text-[15px]" style={{ color: 'rgba(255,255,255,0.7)' }}>{t.demoSubtitle}</p>
+                <p className="leading-relaxed mb-9 max-w-lg text-[16.5px]" style={{ color: 'rgba(255,255,255,0.7)' }}>{t.demoSubtitle}</p>
                 <button
                   onClick={goLogin}
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white text-[15px] font-bold transition-all hover:bg-slate-100 shadow-lg"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white text-[16.5px] font-bold transition-all hover:bg-slate-100 shadow-lg"
                   style={{ color: NAVY }}
                 >
                   {t.demoCta}
@@ -1310,7 +1310,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-12">
               <Eyebrow>{t.testimonialsBadge}</Eyebrow>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.testimonialsTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.testimonialsTitle}</h2>
             </motion.div>
             <div className="grid md:grid-cols-3 gap-6">
               {t.testimonials.map((testi, i) => (
@@ -1324,14 +1324,14 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   <div className="flex gap-0.5 mb-4 text-amber-400">
                     {[...Array(5)].map((_, s) => <Star key={s} size={16} fill="currentColor" />)}
                   </div>
-                  <p className="text-[15px] leading-relaxed mb-6 flex-1" style={{ color: HEADING }}>&ldquo;{testi.t}&rdquo;</p>
+                  <p className="text-[16.5px] leading-relaxed mb-6 flex-1" style={{ color: HEADING }}>&ldquo;{testi.t}&rdquo;</p>
                   <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                    <div className="h-10 w-10 rounded-full text-white text-sm font-bold flex items-center justify-center shrink-0" style={{ background: NAVY }}>
+                    <div className="h-10 w-10 rounded-full text-white text-base font-bold flex items-center justify-center shrink-0" style={{ background: NAVY }}>
                       {testi.a}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-bold leading-tight" style={{ color: HEADING }}>{testi.n}</div>
-                      <div className="text-xs leading-tight mt-0.5" style={{ color: BODY }}>{testi.r}</div>
+                      <div className="text-base font-bold leading-tight" style={{ color: HEADING }}>{testi.n}</div>
+                      <div className="text-sm leading-tight mt-0.5" style={{ color: BODY }}>{testi.r}</div>
                     </div>
                   </div>
                 </motion.div>
@@ -1345,7 +1345,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         <section id="pricing" className="scroll-mt-24 py-6 sm:py-8 bg-white">
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center max-w-2xl mx-auto mb-12">
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
 
@@ -1366,17 +1366,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   >
                     {tier.highlight && (
                       <span
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full"
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[11.5px] font-bold uppercase tracking-wider px-4 py-1 rounded-full"
                         style={{ background: NAVY }}
                       >
                         {t.pricingMostPopular}
                       </span>
                     )}
-                    <h3 className="font-heading text-2xl font-semibold mb-1.5" style={{ color: NAVY }}>{tier.name}</h3>
-                    {tier.eyebrow && <p className="text-[13px] mb-5" style={{ color: BODY }}>{tier.eyebrow}</p>}
+                    <h3 className="font-heading text-3xl font-semibold mb-1.5" style={{ color: NAVY }}>{tier.name}</h3>
+                    {tier.eyebrow && <p className="text-[14.5px] mb-5" style={{ color: BODY }}>{tier.eyebrow}</p>}
                     <div className="mb-7">
-                      <span className="font-heading text-4xl font-extrabold" style={{ color: HEADING }}>{tier.priceLabel}</span>
-                      {tier.period && <span className="text-sm ml-1" style={{ color: BODY }}>{tier.period}</span>}
+                      <span className="font-heading text-5xl font-extrabold" style={{ color: HEADING }}>{tier.priceLabel}</span>
+                      {tier.period && <span className="text-base ml-1" style={{ color: BODY }}>{tier.period}</span>}
                     </div>
                     <ul className="space-y-3.5 mb-8 flex-1">
                       {tier.features.map((f) => (
@@ -1386,13 +1386,13 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           ) : (
                             <X size={16} strokeWidth={3} className="shrink-0 text-slate-300" />
                           )}
-                          <span className="text-[14px]" style={{ color: f.on ? HEADING : '#a3adba' }}>{f.label}</span>
+                          <span className="text-[15.5px]" style={{ color: f.on ? HEADING : '#a3adba' }}>{f.label}</span>
                         </li>
                       ))}
                     </ul>
                     <button
                       onClick={goLogin}
-                      className="w-full h-12 rounded-xl font-semibold text-[15px] transition-all"
+                      className="w-full h-12 rounded-xl font-semibold text-[16.5px] transition-all"
                       style={
                         tier.highlight
                           ? { background: NAVY, color: '#fff' }
@@ -1415,13 +1415,13 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             {/* Left: heading + CTA */}
             <motion.div {...fadeInUp}>
               <Eyebrow>{t.faqBadge}</Eyebrow>
-              <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight leading-tight mb-5" style={{ color: NAVY }}>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mb-5" style={{ color: NAVY }}>
                 {t.faqTitle1}<br />{t.faqTitle2}
               </h2>
-              <p className="leading-relaxed mb-8 max-w-xs" style={{ color: BODY }}>{t.faqSub}</p>
+              <p className="leading-relaxed mb-8 max-w-xs text-[16.5px]" style={{ color: BODY }}>{t.faqSub}</p>
               <button
                 onClick={goLogin}
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-[15px] font-semibold transition-all hover:brightness-110 shadow-lg"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-white text-[16.5px] font-semibold transition-all hover:brightness-110 shadow-lg"
                 style={{ background: NAVY, boxShadow: `0 12px 28px ${navyAlpha(0.2)}` }}
               >
                 {t.faqCta} <ArrowRight size={16} />
@@ -1439,7 +1439,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                       className="w-full flex items-center justify-between gap-4 py-5 text-left"
                       aria-expanded={isOpen}
                     >
-                      <span className="text-[15px] font-medium" style={{ color: HEADING }}>{item.q}</span>
+                      <span className="text-[16.5px] font-medium" style={{ color: HEADING }}>{item.q}</span>
                       <span
                         className="w-8 h-8 rounded-full border flex items-center justify-center shrink-0 transition-all"
                         style={{
@@ -1453,7 +1453,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                       </span>
                     </button>
                     {isOpen && (
-                      <div className="pb-5 -mt-1 text-[14px] leading-relaxed max-w-xl" style={{ color: BODY }}>{item.a}</div>
+                      <div className="pb-5 -mt-1 text-[15.5px] leading-relaxed max-w-xl" style={{ color: BODY }}>{item.a}</div>
                     )}
                   </div>
                 );
@@ -1470,22 +1470,22 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-5">
                 <LogoMark size="sm" />
-                <span className="font-heading text-lg font-bold tracking-tight text-white">
+                <span className="font-heading text-xl font-bold tracking-tight text-white">
                   {APP_NAME}
                 </span>
               </div>
-              <p className="text-sm text-white/55 leading-relaxed max-w-[15rem]">{t.footerTagline}</p>
+              <p className="text-base text-white/55 leading-relaxed max-w-[15rem]">{t.footerTagline}</p>
             </div>
 
             {/* Product */}
             <div>
-              <p className="text-[15px] font-semibold text-white mb-5">{t.footerProductTitle}</p>
+              <p className="text-[16.5px] font-semibold text-white mb-5">{t.footerProductTitle}</p>
               <ul className="space-y-3.5">
                 {t.footerProduct.map((item, i) => (
                   <li key={item}>
                     <a
                       href={i === 1 ? '#pricing' : i === 2 ? '#integration' : '#solution'}
-                      className="text-sm text-white transition-colors"
+                      className="text-base text-white transition-colors"
                     >
                       {item}
                     </a>
@@ -1496,11 +1496,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
             {/* Solutions */}
             <div>
-              <p className="text-[15px] font-semibold text-white mb-5">{t.footerSolutionsTitle}</p>
+              <p className="text-[16.5px] font-semibold text-white mb-5">{t.footerSolutionsTitle}</p>
               <ul className="space-y-3.5">
                 {t.footerSolutions.map((item) => (
                   <li key={item}>
-                    <a href="#" className="text-sm text-white transition-colors">{item}</a>
+                    <a href="#" className="text-base text-white transition-colors">{item}</a>
                   </li>
                 ))}
               </ul>
@@ -1508,17 +1508,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
             {/* Newsletter */}
             <div className="col-span-2 md:col-span-1">
-              <p className="text-[15px] font-semibold text-white mb-2">{t.footerNewsletterTitle}</p>
-              <p className="text-xs text-white/50 mb-4">{t.footerNewsletterSub}</p>
+              <p className="text-[16.5px] font-semibold text-white mb-2">{t.footerNewsletterTitle}</p>
+              <p className="text-sm text-white/50 mb-4">{t.footerNewsletterSub}</p>
               <form onSubmit={(e) => e.preventDefault()} className="flex items-center gap-1.5">
                 <input
                   type="email"
                   placeholder={t.footerNewsletterPlaceholder}
-                  className="flex-1 min-w-0 h-11 rounded-lg bg-white px-3.5 text-sm text-slate-700 placeholder:text-slate-400 outline-none"
+                  className="flex-1 min-w-0 h-11 rounded-lg bg-white px-3.5 text-base text-slate-700 placeholder:text-slate-400 outline-none"
                 />
                 <button
                   type="submit"
-                  className="h-11 px-5 rounded-lg text-sm font-semibold shrink-0 transition-all hover:brightness-105"
+                  className="h-11 px-5 rounded-lg text-base font-semibold shrink-0 transition-all hover:brightness-105"
                   style={{ background: TINT, color: NAVY }}
                 >
                   {t.footerNewsletterCta}
@@ -1529,12 +1529,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
           <div className="border-t border-white/10">
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-sm text-white/50">{t.footerCopy}</p>
+              <p className="text-base text-white/50">{t.footerCopy}</p>
               <div className="flex items-center gap-8">
-                <a href={`/pages/${privacyPage?.slug || 'privacy-policy'}`} className="text-sm text-white transition-colors">
+                <a href={`/pages/${privacyPage?.slug || 'privacy-policy'}`} className="text-base text-white transition-colors">
                   {t.footerPrivacy}
                 </a>
-                <a href={`/pages/${termsPage?.slug || 'terms-and-conditions'}`} className="text-sm text-white transition-colors">
+                <a href={`/pages/${termsPage?.slug || 'terms-and-conditions'}`} className="text-base text-white transition-colors">
                   {t.footerTerms}
                 </a>
               </div>

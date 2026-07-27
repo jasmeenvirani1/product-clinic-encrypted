@@ -91,18 +91,18 @@ export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = tru
   const shown = messages.slice(0, visibleCount);
 
   return (
-    <div className="flex flex-col gap-3 min-h-[300px]">
+    <div className="flex flex-col gap-3 min-h-[300px] lg:min-h-[220px]">
       {/* Assistant header */}
       <div className="flex items-center gap-3 pb-3 mb-1 border-b border-slate-100">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-bold"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[14.5px] font-bold"
           style={{ background: NAVY }}
         >
           AI
         </div>
         <div>
-          <div className="text-[14px] font-semibold text-slate-800">{APP_NAME} Assistant</div>
-          <div className="flex items-center gap-1.5 text-[12px] text-slate-400">
+          <div className="text-[15.5px] font-semibold text-slate-800">{APP_NAME} Assistant</div>
+          <div className="flex items-center gap-1.5 text-[13.5px] text-slate-400">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Online
           </div>
         </div>
@@ -124,7 +124,7 @@ export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = tru
                 className={`flex ${isAssistant ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[13.5px] leading-snug ${
+                  className={`max-w-[78%] px-3.5 py-2.5 rounded-2xl text-[15px] leading-snug ${
                     isAssistant
                       ? "text-white rounded-br-md"
                       : "bg-slate-100 text-slate-700 rounded-bl-md"
@@ -133,7 +133,7 @@ export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = tru
                 >
                   <div>{m.text}</div>
                   {m.time ? (
-                    <div className={`text-[10.5px] mt-1 ${isAssistant ? "text-white/70" : "text-slate-400"}`}>
+                    <div className={`text-[12px] mt-1 ${isAssistant ? "text-white/70" : "text-slate-400"}`}>
                       {m.time}
                       {isAssistant ? " ✓✓" : ""}
                     </div>

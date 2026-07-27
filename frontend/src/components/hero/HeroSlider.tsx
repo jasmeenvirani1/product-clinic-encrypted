@@ -11,8 +11,8 @@ const NAVY = "var(--color-primary)";
 const navyAlpha = (a: number) => `rgba(var(--color-primary-rgb), ${a})`;
 
 function BadgeIcon({ icon }: { icon: string }) {
-  if (icon === "rupee") return <IndianRupee size={14} />;
-  return <Check size={14} strokeWidth={3} />;
+  if (icon === "rupee") return <IndianRupee size={16} />;
+  return <Check size={16} strokeWidth={3} />;
 }
 
 /** Fallback content — mirrors the backend DEFAULTS so the box renders even if
@@ -74,7 +74,7 @@ export function HeroSlider({ content, autoRotate = true }: Props) {
       <div className="relative">
         {/* Shadow box */}
         <div
-          className="relative flex flex-col bg-white rounded-3xl p-6 sm:p-7 min-h-[500px] shadow-2xl shadow-slate-900/10 border border-slate-100 overflow-hidden"
+          className="relative flex flex-col bg-white rounded-3xl p-6 sm:p-7 min-h-[500px] lg:min-h-[460px] shadow-2xl shadow-slate-900/10 border border-slate-100 overflow-hidden"
           style={{ boxShadow: `0 24px 60px ${navyAlpha(0.14)}` }}
         >
           <div className="flex-1">
@@ -134,7 +134,7 @@ export function HeroSlider({ content, autoRotate = true }: Props) {
               opacity: { delay: 0.3, duration: 0.4 },
               y: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
             }}
-            className="absolute -top-4 right-6 z-20 flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-lg shadow-slate-900/10 text-[12.5px] font-semibold text-slate-700 border border-slate-100"
+            className="absolute -top-4 right-6 z-20 flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-lg shadow-slate-900/10 text-[14px] font-semibold text-slate-700 border border-slate-100"
           >
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: NAVY }}>
               <BadgeIcon icon={data.floating_badges[0].icon} />
@@ -151,7 +151,7 @@ export function HeroSlider({ content, autoRotate = true }: Props) {
               opacity: { delay: 0.5, duration: 0.4 },
               y: { duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.4 },
             }}
-            className="absolute -bottom-4 -left-4 z-20 flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-lg shadow-slate-900/10 text-[12.5px] font-semibold text-slate-700 border border-slate-100"
+            className="absolute -bottom-4 -left-4 z-20 flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-lg shadow-slate-900/10 text-[14px] font-semibold text-slate-700 border border-slate-100"
           >
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: NAVY }}>
               <BadgeIcon icon={data.floating_badges[1].icon} />
