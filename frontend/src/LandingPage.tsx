@@ -619,23 +619,23 @@ const IntegrationDiagram = ({
   };
 
   return (
-    <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px] w-full max-w-[1180px] mx-auto">
+    <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px] w-full max-w-[1280px] mx-auto">
       <style>{`
         .integration-diagram { grid-template-columns: 1fr; gap: 18px; }
         @media (min-width: 860px) {
-          .integration-diagram { grid-template-columns: 260px 1fr 260px; gap: 0 12px; }
+          .integration-diagram { grid-template-columns: 300px 1fr 300px; gap: 0 16px; }
         }
         .integration-col { display: flex; flex-direction: column; gap: 18px; position: relative; z-index: 2; }
         .integration-card {
-          gap: 14px; background: #fff; border-color: #e7e9ee; padding: 14px 16px;
+          gap: 16px; background: #fff; border-color: #e7e9ee; padding: 18px 20px;
           box-shadow: 0 1px 2px rgba(20,22,30,0.04), 0 6px 16px rgba(20,22,30,0.05);
         }
-        .integration-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .integration-card-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .integration-card-icon img { width: 100%; height: 100%; object-fit: contain; }
-        .integration-card-name { font-weight: 600; font-size: 0.95rem; line-height: 1.2; color: ${HEADING}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .integration-card-status { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600; color: #1aa35c; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .integration-card-name { font-weight: 600; font-size: 1.05rem; line-height: 1.2; color: ${HEADING}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .integration-card-status { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 600; color: #1aa35c; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
         .integration-card-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #1aa35c; flex: none; }
-        .integration-card-flows { font-size: 0.76rem; color: ${BODY}; margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .integration-card-flows { font-size: 0.85rem; color: ${BODY}; margin-top: 3px; font-variant-numeric: tabular-nums; }
 
         .integration-hub-wrap { position: relative; z-index: 3; display: flex; align-items: center; justify-content: center; height: 100%; }
         .integration-ring { position: absolute; width: 320px; height: 320px; border-radius: 50%; background: rgba(var(--color-primary-rgb),0.07); }
