@@ -385,6 +385,51 @@ const industryIcon: Record<string, React.ReactNode> = {
   mind: <Brain size={22} />,
 };
 
+// ─── Industry / speciality card ────────────────────────────────────────────────
+// Direct color swap on hover (white → navy, text → white) — a smooth crossfade
+// via CSS transition-colors, not an opacity fade. Uses local hover state instead
+// of Tailwind group-hover so every color (inline-styled or class-based) reacts
+// consistently — inline styles always win over a group-hover utility class.
+const IndustryCard = ({
+  ind,
+  index,
+  onCta,
+  ctaLabel,
+}: {
+  ind: { icon: string; t: string; d: string };
+  index: number;
+  onCta: () => void;
+  ctaLabel: string;
+}) => {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <motion.div
+      {...fadeInUp}
+      transition={{ duration: 0.5, delay: (index % 4) * 0.06 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="rounded-2xl border border-slate-200 p-5 flex flex-col transition-colors duration-300 hover:shadow-lg hover:border-transparent"
+      style={{ background: hovered ? NAVY_DARK : '#fff' }}
+    >
+      <span
+        className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300"
+        style={{ background: hovered ? 'rgba(255,255,255,0.15)' : TINT, color: hovered ? '#fff' : NAVY }}
+      >
+        {industryIcon[ind.icon]}
+      </span>
+      <h4 className="font-bold text-[16.5px] mb-2 transition-colors duration-300" style={{ color: hovered ? '#fff' : HEADING }}>{ind.t}</h4>
+      <p className="text-[14.5px] leading-relaxed mb-5 flex-1 transition-colors duration-300" style={{ color: hovered ? 'rgba(255,255,255,0.7)' : BODY }}>{ind.d}</p>
+      <button
+        onClick={onCta}
+        className="mt-auto inline-flex items-center justify-center gap-1.5 text-[14.5px] font-semibold text-white px-4 py-2.5 rounded-lg transition-all hover:brightness-110 w-full"
+        style={{ background: hovered ? 'rgba(255,255,255,0.15)' : NAVY }}
+      >
+        {ctaLabel} <ArrowRight size={14} />
+      </button>
+    </motion.div>
+  );
+};
+
 // ─── Section eyebrow (pill) ─────────────────────────────────────────────────────
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   <div
@@ -1241,25 +1286,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
               {t.industries.map((ind, i) => (
-                <motion.div
-                  {...fadeInUp}
-                  transition={{ duration: 0.5, delay: (i % 4) * 0.06 }}
-                  key={ind.t}
-                  className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col hover:shadow-lg transition-all"
-                >
-                  <span className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ background: TINT, color: NAVY }}>
-                    {industryIcon[ind.icon]}
-                  </span>
-                  <h4 className="font-bold text-[16.5px] mb-2" style={{ color: HEADING }}>{ind.t}</h4>
-                  <p className="text-[14.5px] leading-relaxed mb-5 flex-1" style={{ color: BODY }}>{ind.d}</p>
-                  <button
-                    onClick={goLogin}
-                    className="mt-auto inline-flex items-center justify-center gap-1.5 text-[14.5px] font-semibold text-white px-4 py-2.5 rounded-lg transition-all hover:brightness-110 w-full"
-                    style={{ background: NAVY }}
-                  >
-                    {t.industriesCta} <ArrowRight size={14} />
-                  </button>
-                </motion.div>
+                <IndustryCard key={ind.t} ind={ind} index={i} onCta={goLogin} ctaLabel={t.industriesCta} />
               ))}
             </div>
           </div>
