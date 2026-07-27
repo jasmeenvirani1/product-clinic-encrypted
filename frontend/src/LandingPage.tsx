@@ -81,6 +81,16 @@ const CARD_BG = 'color-mix(in srgb, var(--color-secondary) 35%, #fff)'; // theme
 // Primary with alpha, for shadows/glows — uses the rgb var ThemeProvider exposes.
 const navyAlpha = (a: number) => `rgba(var(--color-primary-rgb), ${a})`;
 
+interface PlanFeatureFlags {
+  whatsapp_multi_connection?: boolean;
+  dedicated_clinic_page?: 'none' | 'video_upload_only' | 'full_access';
+  chapter_instagram_integration?: boolean;
+  instagram_realtime_fetch?: boolean;
+  chapter_creation?: boolean;
+  video_like?: boolean;
+  automatic_website_generation?: boolean;
+}
+
 interface PlanData {
   id: number;
   plan_name: string;
@@ -89,7 +99,41 @@ interface PlanData {
   yearly_price: number;
   period: 'monthly' | 'yearly';
   features: string[];
+  feature_flags?: PlanFeatureFlags;
 }
+
+const BOOLEAN_FEATURE_LABELS: Array<{ key: keyof PlanFeatureFlags; label: string }> = [
+  { key: 'whatsapp_multi_connection', label: 'Multiple WhatsApp Connections' },
+  { key: 'chapter_instagram_integration', label: 'Chapter & Instagram Integration' },
+  { key: 'instagram_realtime_fetch', label: 'Instagram Real-Time Data Fetch' },
+  { key: 'chapter_creation', label: 'Chapter Creation' },
+  { key: 'video_like', label: 'Video Like Feature' },
+  { key: 'automatic_website_generation', label: 'Automatic Website Generation' },
+];
+
+const CLINIC_PAGE_FEATURE_LABELS: Record<NonNullable<PlanFeatureFlags['dedicated_clinic_page']>, string> = {
+  none: 'Not Available',
+  video_upload_only: 'Video Upload Only',
+  full_access: 'Full Access',
+};
+
+// Merge the freeform "features" text list with whichever plan-tier
+// feature-access toggles are actually enabled, so the pricing card shows
+// one combined feature list instead of missing the toggle-gated features.
+const combinePlanFeatures = (plan: PlanData): string[] => {
+  const freeform = plan.features ?? [];
+  const flags = plan.feature_flags ?? {};
+
+  const enabledToggles = BOOLEAN_FEATURE_LABELS
+    .filter(({ key }) => !!flags[key])
+    .map(({ label }) => label);
+
+  if (flags.dedicated_clinic_page && flags.dedicated_clinic_page !== 'none') {
+    enabledToggles.push(`Dedicated Clinic Page (${CLINIC_PAGE_FEATURE_LABELS[flags.dedicated_clinic_page]})`);
+  }
+
+  return Array.from(new Set([...freeform, ...enabledToggles]));
+};
 
 interface FooterPageLink {
   id: number;
@@ -351,6 +395,189 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+// ─── Integration hub-and-spoke diagram ─────────────────────────────────────────
+// Animated SVG wires connect each integration card to the center hub. Node
+// circles are filled with the section background so wires visually terminate
+// at the ring edge instead of passing through it, and must be appended to the
+// SVG before the traveling pulse dot so the pulse stays on top at the ring.
+const ROW_ANGLES = [50, 25, 0, -25, -50]; // degrees above/below horizontal, symmetric per row
+
+const IntegrationDiagram = ({
+  hubLabel,
+  left,
+  right,
+}: {
+  hubLabel: string;
+  left: readonly string[];
+  right: readonly string[];
+}) => {
+  const diagramRef = React.useRef<HTMLDivElement | null>(null);
+  const hubRef = React.useRef<HTMLDivElement | null>(null);
+  const ringRef = React.useRef<HTMLDivElement | null>(null);
+  const svgRef = React.useRef<SVGSVGElement | null>(null);
+
+  React.useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ns = 'http://www.w3.org/2000/svg';
+
+    const drawWires = () => {
+      const diagram = diagramRef.current;
+      const hub = hubRef.current;
+      const ring = ringRef.current;
+      const svg = svgRef.current;
+      if (!diagram || !hub || !ring || !svg) return;
+
+      const rect = diagram.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+      svg.innerHTML = '';
+
+      const hubRect = hub.getBoundingClientRect();
+      const hubCenter = {
+        x: hubRect.left - rect.left + hubRect.width / 2,
+        y: hubRect.top - rect.top + hubRect.height / 2,
+      };
+      const ringRect = ring.getBoundingClientRect();
+      const hubRadius = ringRect.width / 2;
+
+      const cards = diagram.querySelectorAll<HTMLElement>('[data-integration-card]');
+
+      cards.forEach((card) => {
+        const side = card.dataset.side;
+        const row = parseInt(card.dataset.row ?? '0', 10);
+        const cRect = card.getBoundingClientRect();
+        const startX = side === 'left' ? cRect.right - rect.left : cRect.left - rect.left;
+        const startY = cRect.top - rect.top + cRect.height / 2;
+
+        const isMiddleRow = row === 2;
+        const nodeR = 5;
+        const dotRadius = hubRadius + nodeR * 0.6;
+
+        let endX: number, endY: number, dotX: number, dotY: number;
+        if (isMiddleRow) {
+          const dir = side === 'left' ? -1 : 1;
+          endX = hubCenter.x + hubRadius * dir;
+          endY = hubCenter.y;
+          dotX = hubCenter.x + dotRadius * dir;
+          dotY = hubCenter.y;
+        } else {
+          const deg = ROW_ANGLES[row];
+          const rad = (deg * Math.PI) / 180;
+          const dir = side === 'left' ? -1 : 1;
+          endX = hubCenter.x + Math.cos(rad) * hubRadius * dir;
+          endY = hubCenter.y - Math.sin(rad) * hubRadius;
+          dotX = hubCenter.x + Math.cos(rad) * dotRadius * dir;
+          dotY = hubCenter.y - Math.sin(rad) * dotRadius;
+        }
+
+        const midX = (startX + endX) / 2;
+
+        const path = document.createElementNS(ns, 'path');
+        const d = isMiddleRow
+          ? `M ${startX} ${startY} L ${dotX} ${dotY}`
+          : `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${dotX} ${dotY}`;
+        path.setAttribute('d', d);
+        path.setAttribute('class', 'integration-wire');
+        svg.appendChild(path);
+
+        const nodeStart = document.createElementNS(ns, 'circle');
+        nodeStart.setAttribute('class', 'integration-node');
+        nodeStart.setAttribute('cx', String(startX));
+        nodeStart.setAttribute('cy', String(startY));
+        nodeStart.setAttribute('r', String(nodeR));
+        svg.appendChild(nodeStart);
+
+        const nodeEnd = document.createElementNS(ns, 'circle');
+        nodeEnd.setAttribute('class', 'integration-node');
+        nodeEnd.setAttribute('cx', String(dotX));
+        nodeEnd.setAttribute('cy', String(dotY));
+        nodeEnd.setAttribute('r', String(nodeR));
+        svg.appendChild(nodeEnd);
+
+        if (!prefersReducedMotion) {
+          const pulse = document.createElementNS(ns, 'circle');
+          pulse.setAttribute('class', 'integration-pulse');
+          pulse.setAttribute('r', '4.2');
+          const anim = document.createElementNS(ns, 'animateMotion');
+          anim.setAttribute('dur', `${2.6 + Math.random() * 1.4}s`);
+          anim.setAttribute('repeatCount', 'indefinite');
+          anim.setAttribute('begin', `${Math.random() * 2}s`);
+          anim.setAttribute('path', d);
+          pulse.appendChild(anim);
+          svg.appendChild(pulse);
+        }
+      });
+    };
+
+    drawWires();
+    window.addEventListener('resize', drawWires);
+    return () => window.removeEventListener('resize', drawWires);
+  }, [left, right]);
+
+  const Card = ({ name, side, row }: { name: string; side: 'left' | 'right'; row: number }) => (
+    <div
+      data-integration-card
+      data-side={side}
+      data-row={row}
+      className="relative z-[2] flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm"
+      style={{ background: '#fff', borderColor: '#e7e9ee' }}
+    >
+      <div>
+        <div className="text-[13px] font-bold" style={{ color: HEADING }}>{name}</div>
+        <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#1aa35c' }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#1aa35c' }} />
+          Connected
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div ref={diagramRef} className="relative grid grid-cols-1 md:grid-cols-[260px_1fr_260px] items-center gap-3 min-h-[560px]">
+      <style>{`
+        .integration-wire { fill: none; stroke: #c7cbf5; stroke-width: 2.4; }
+        .integration-node { fill: #fff; stroke: #b9beee; stroke-width: 1.5; }
+        .integration-pulse { fill: var(--color-primary); filter: drop-shadow(0 0 3px var(--color-primary)); }
+        @keyframes integration-bot-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
+        .integration-eye { animation: integration-bot-blink 2.2s ease-in-out infinite; }
+        .integration-eye:nth-child(2) { animation-delay: 0.08s; }
+        @keyframes integration-ring-pulse { 0% { transform: scale(0.85); opacity: .55; } 100% { transform: scale(1.35); opacity: 0; } }
+        .integration-ring::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; background: radial-gradient(circle, rgba(var(--color-primary-rgb),0.14), transparent 70%); animation: integration-ring-pulse 2.6s ease-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .integration-eye, .integration-ring::after, .integration-pulse { animation: none !important; }
+        }
+      `}</style>
+
+      <div className="flex flex-col gap-4">
+        {left.map((name, i) => (
+          <Card key={name} name={name} side="left" row={i} />
+        ))}
+      </div>
+
+      <div className="relative flex items-center justify-center py-10 md:py-0">
+        <div ref={ringRef} className="integration-ring absolute w-[220px] h-[220px] rounded-full" />
+        <div
+          ref={hubRef}
+          className="relative z-[2] flex flex-col items-center gap-3 rounded-3xl px-6 py-7 text-center shadow-lg"
+          style={{ background: NAVY_DARK, minWidth: 220 }}
+        >
+          <div className="flex items-center justify-center w-16 h-12 rounded-2xl" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <Bot size={26} className="integration-eye" style={{ color: '#4ec1ff' }} />
+          </div>
+          <div className="text-white font-heading text-sm font-bold tracking-wide uppercase">{hubLabel}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {right.map((name, i) => (
+          <Card key={name} name={name} side="right" row={i} />
+        ))}
+      </div>
+
+      <svg ref={svgRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1] overflow-visible" />
+    </div>
+  );
+};
+
 // ─── Component ───────────────────────────────────────────────────────────────────
 const ClinicFlowLanding = (_props: { variant?: string }) => {
   const router = useRouter();
@@ -520,7 +747,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         priceLabel: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : t.pricingCustom,
         period: displayPrice > 0 ? period : '',
         eyebrow: '',
-        features: plan.features.map((f) => ({ label: f, on: true })),
+        features: combinePlanFeatures(plan).map((f) => ({ label: f, on: true })),
         cta: i === midIndex ? t.pricingCtaBook : displayPrice > 0 ? t.pricingCtaStart : t.pricingCtaContact,
         highlight: i === midIndex,
       };
@@ -937,13 +1164,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             </motion.div>
 
             <motion.div {...fadeInUp} className="flex justify-center">
-              <Image
-                src="/integration.png"
-                alt="ClinicFlow connects with the tools you already use"
-                width={1100}
-                height={720}
-                className="w-full h-auto"
-              />
+              <IntegrationDiagram hubLabel={t.integrationHub} left={t.integrationLeft} right={t.integrationRight} />
             </motion.div>
           </div>
         </section>
