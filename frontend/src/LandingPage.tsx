@@ -822,7 +822,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     <div className="min-h-screen bg-white font-sans selection:bg-[var(--color-primary)] selection:text-white overflow-x-clip" style={{ color: BODY }}>
       {/* ══════════════ NAV ══════════════ */}
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
-        <div className="w-full max-w-6xl bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-5 pr-3.5 h-16 flex items-center justify-between gap-3">
+        <div className="w-full max-w-6xl xl:max-w-[78rem] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-5 pr-3.5 h-16 flex items-center justify-between gap-3">
           <a href="#home" className="flex items-center gap-2.5 no-underline shrink-0">
             <LogoMark size="md" />
             <span className="font-heading text-xl font-bold tracking-tight text-slate-900">
