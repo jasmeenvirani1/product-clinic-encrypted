@@ -551,7 +551,7 @@ const IntegrationDiagram = ({
   };
 
   return (
-    <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px]">
+    <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px] w-full max-w-[1180px] mx-auto">
       <style>{`
         .integration-diagram { grid-template-columns: 1fr; gap: 18px; }
         @media (min-width: 860px) {
@@ -1218,7 +1218,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <h2 className="font-heading text-3xl sm:text-4xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.integrationTitle}</h2>
             </motion.div>
 
-            <motion.div {...fadeInUp} className="flex justify-center">
+            <motion.div {...fadeInUp} className="w-full">
               <IntegrationDiagram
                 hubLabel={t.integrationHub}
                 hubSubtitle={t.integrationHubSubtitle}
