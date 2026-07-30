@@ -950,28 +950,78 @@ function mountWhatsAppQr(app, { authMiddleware } = {}) {
     whatsappQr.router({ authMiddleware, resolveAccountId })
   );
 
+  // Build the { sessions, maxSlots } payload for a tenant — merges live
+  // in-memory status (authoritative for qr_pending/connecting) over the
+  // persisted row so the UI reflects the socket's real state. Shared by the
+  // /sessions GET and the /:accountId/remove DELETE so both routes never drift.
+  const buildSessionsPayload = async (tenantId) => {
+    const rows = await WhatsAppSession.findAll({
+      where: { tenant_id: tenantId },
+      order: [["slot", "ASC"]],
+    });
+    const sessions = rows.map((r) => {
+      const live = whatsappQr.getStatus(makeAccountId(tenantId, r.slot));
+      return {
+        slot: r.slot,
+        label: r.label,
+        status: live?.status || r.status,
+        number: live?.number || r.number,
+      };
+    });
+    return { sessions, maxSlots: MAX_SLOTS_PER_TENANT };
+  };
+
   // List all linked-number slots for the logged-in tenant (drives the multi-
   // session UI). Mounted after the portable router so it shares the auth mw.
   app.get("/api/whatsapp-qr/sessions", authMiddleware, async (req, res) => {
     try {
       const tenantId = req.user?.tenant_id || req.user?.id;
       if (!tenantId) return res.status(400).json({ success: false, message: "No tenant" });
-      const rows = await WhatsAppSession.findAll({
-        where: { tenant_id: tenantId },
-        order: [["slot", "ASC"]],
-      });
-      // Merge live in-memory status (authoritative for qr_pending/connecting)
-      // over the persisted row so the UI reflects the socket's real state.
-      const sessions = rows.map((r) => {
-        const live = whatsappQr.getStatus(makeAccountId(tenantId, r.slot));
-        return {
-          slot: r.slot,
-          label: r.label,
-          status: live?.status || r.status,
-          number: live?.number || r.number,
-        };
-      });
-      return res.json({ success: true, sessions, maxSlots: MAX_SLOTS_PER_TENANT });
+      const payload = await buildSessionsPayload(tenantId);
+      return res.json({ success: true, ...payload });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  });
+
+  // Permanently remove a WhatsApp number slot — deletes the DB row entirely
+  // (unlike logout, which only marks the row disconnected and keeps it).
+  // Blocked when the slot is currently connected (must disconnect first) or
+  // when it is the tenant's last remaining slot (at least one must remain).
+  app.delete("/api/whatsapp-qr/:accountId/remove", authMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return res.status(400).json({ success: false, message: "No account" });
+
+      const slot = normalizeSlot(req.params.accountId);
+      const row = await WhatsAppSession.findOne({ where: { tenant_id: tenantId, slot } });
+
+      const accountId = makeAccountId(tenantId, slot);
+      const live = whatsappQr.getStatus(accountId);
+      if (live?.status === "connected") {
+        return res.status(409).json({
+          success: false,
+          message: "Disconnect this WhatsApp number before removing it.",
+        });
+      }
+
+      // A slot the tenant has never connected has no DB row yet — it's still a
+      // real card in the UI, so removing it is a no-op success, not a 404.
+      if (row) {
+        const totalSlots = await WhatsAppSession.count({ where: { tenant_id: tenantId } });
+        if (totalSlots <= 1) {
+          return res.status(409).json({
+            success: false,
+            message: "At least one WhatsApp number must remain.",
+          });
+        }
+
+        await whatsappQr.removeSlot(accountId);
+        await WhatsAppSession.destroy({ where: { tenant_id: tenantId, slot } });
+      }
+
+      const payload = await buildSessionsPayload(tenantId);
+      return res.json({ success: true, removedSlot: slot, ...payload });
     } catch (err) {
       return res.status(500).json({ success: false, message: err.message });
     }

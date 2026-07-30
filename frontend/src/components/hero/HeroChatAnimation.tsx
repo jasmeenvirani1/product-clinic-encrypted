@@ -3,7 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { HeroChatMessage } from "@/services/hero.service";
-import { APP_NAME } from "@/constants/brand";
+import { useThemeColors } from "@/providers/ThemeProvider";
 
 const NAVY = "var(--color-primary)";
 
@@ -25,6 +25,7 @@ interface Props {
  * advance, otherwise it restarts its own loop.
  */
 export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = true, onCycleComplete }: Props) {
+  const { platformName } = useThemeColors();
   const [visibleCount, setVisibleCount] = React.useState(0);
   // Which sender is currently "typing" (null = nobody). Drives the side the
   // typing indicator shows on.
@@ -101,7 +102,7 @@ export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = tru
           AI
         </div>
         <div>
-          <div className="text-[15.5px] font-semibold text-slate-800">{APP_NAME} Assistant</div>
+          <div className="text-[15.5px] font-semibold text-slate-800">{platformName} Assistant</div>
           <div className="flex items-center gap-1.5 text-[13.5px] text-slate-400">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Online
           </div>

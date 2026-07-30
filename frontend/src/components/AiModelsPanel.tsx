@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useState, forwardRef } from "react";
 import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { SquarePen, Plus, Trash2 } from "lucide-react";
+import { SquarePen, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
-import { PageSection } from "@/components/PageSection";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { aiModelService, type AiModel } from "@/services/aiModel.service";
 
-export default function AiModelsPage() {
+export interface AiModelsPanelHandle {
+  /** Open the "Add Model" create dialog — used by a host page's own heading-row button. */
+  openCreate: () => void;
+}
+
+export const AiModelsPanel = forwardRef<AiModelsPanelHandle>(function AiModelsPanel(_props, ref) {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm();
 
@@ -53,6 +57,8 @@ export default function AiModelsPage() {
     form.setFieldsValue({ is_active: true, provider: "OpenAI", sort_order: nextOrder });
     setModalOpen(true);
   };
+
+  useImperativeHandle(ref, () => ({ openCreate }));
 
   const openEdit = (m: AiModel) => {
     setEditing(m);
@@ -186,18 +192,7 @@ export default function AiModelsPage() {
   ];
 
   return (
-    <div className="">
-      <PageSection
-        eyebrow="Super Admin"
-        title="AI Models"
-        description="Manage the AI models available in the settings dropdown. Set name, model id, provider and base URL — selecting a model auto-applies its URL, so no URL is typed by hand."
-        actions={
-          <Button type="primary" icon={<Plus size={14} />} onClick={openCreate}>
-            Add Model
-          </Button>
-        }
-      />
-
+    <div>
       <DataTable
         rowKey="id"
         loading={loading}
@@ -277,4 +272,4 @@ export default function AiModelsPage() {
       </Modal>
     </div>
   );
-}
+});

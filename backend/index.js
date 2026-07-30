@@ -78,6 +78,11 @@ app.use("/api/super-admin/ai-models",      require("./routes/superAdminAiModelRo
 const { authenticate } = require("./middleware/auth");
 require("./services/whatsappQrBootstrap").mountWhatsAppQr(app, { authMiddleware: authenticate });
 
+// Instagram-DM channel (unofficial private-API session — link the clinic's
+// real Instagram account by username/password + 2FA/challenge). No Meta API.
+// Registers /api/instagram-dm/* and restores linked sessions on boot.
+require("./services/instagramDmBootstrap").mountInstagramDm(app, { authMiddleware: authenticate });
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: `${APP_NAME} API is running.` });

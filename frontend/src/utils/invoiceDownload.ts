@@ -1,5 +1,4 @@
 import type { GeneratedInvoice } from "@/services/wonLeads.service";
-import { APP_FULL_NAME } from "@/constants/brand";
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
@@ -46,7 +45,7 @@ const STATUS_PALETTE: Record<string, { bg: string; fg: string; dot: string }> = 
   draft: { bg: "#f8fafc", fg: "#475569", dot: "#94a3b8" },
 };
 
-export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
+export const downloadWonLeadsInvoice = (inv: GeneratedInvoice, platformFullName: string) => {
   const statusKey = (inv.status ?? "sent").toLowerCase();
   const pal = STATUS_PALETTE[statusKey] ?? STATUS_PALETTE.sent;
   const amount = Number(inv.amount ?? 0);
@@ -57,7 +56,7 @@ export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
   const clinicName = safe(inv.Tenant?.clinic_name ?? inv.Tenant?.full_name ?? "Clinic");
   const clinicContactName = safe(inv.Tenant?.full_name ?? clinicName);
   const clinicEmail = safe(inv.Tenant?.email ?? null);
-  const generatedBy = safe(inv.GeneratedBy?.full_name ?? `${APP_FULL_NAME} Admin`);
+  const generatedBy = safe(inv.GeneratedBy?.full_name ?? `${platformFullName} Admin`);
   const notes = inv.notes?.trim() || null;
 
   const html = `<!DOCTYPE html>
@@ -65,7 +64,7 @@ export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invoice ${inv.invoice_number} — ${APP_FULL_NAME}</title>
+<title>Invoice ${inv.invoice_number} — ${platformFullName}</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -314,7 +313,7 @@ export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
     <div class="brand">
       <div class="logo">M</div>
       <div>
-        <div class="brand-name">${APP_FULL_NAME}</div>
+        <div class="brand-name">${platformFullName}</div>
         <div class="brand-sub">AI-Powered Clinic CRM</div>
       </div>
     </div>
@@ -340,7 +339,7 @@ export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
     </div>
     <div class="party">
       <h3>Billed From</h3>
-      <div class="p-name">${APP_FULL_NAME}</div>
+      <div class="p-name">${platformFullName}</div>
       <div class="p-line">support@medleads.ai</div>
       <div class="p-line" style="margin-top:6px;font-size:11px;color:#94a3b8">AI-Powered Clinic CRM Platform</div>
     </div>
@@ -406,14 +405,14 @@ export const downloadWonLeadsInvoice = (inv: GeneratedInvoice) => {
 
   <!-- Thanks -->
   <div class="thanks">
-    This invoice is raised by ${APP_FULL_NAME} for one successfully booked appointment
+    This invoice is raised by ${platformFullName} for one successfully booked appointment
     facilitated through the platform. This document is computer-generated and does not require a signature.
     For billing queries, contact <strong>support@medleads.ai</strong>.
   </div>
 
   <!-- Footer -->
   <div class="footer">
-    <span class="footer-brand">${APP_FULL_NAME}</span>
+    <span class="footer-brand">${platformFullName}</span>
     <span>Invoice #${inv.invoice_number} · Issued ${issueDate}</span>
     <span>support@medleads.ai</span>
   </div>

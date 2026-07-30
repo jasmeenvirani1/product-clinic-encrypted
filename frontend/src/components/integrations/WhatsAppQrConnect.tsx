@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Spin, Tag } from "antd";
-import { MessageCircle, RefreshCw, LogOut, ArrowRight } from "lucide-react";
+import { Alert, Button, Popconfirm, Spin, Tag, Tooltip } from "antd";
+import { MessageCircle, RefreshCw, LogOut, ArrowRight, Trash2 } from "lucide-react";
 import {
   whatsappQrService,
   type WhatsAppQrStatus,
@@ -21,6 +21,10 @@ type Props = {
   title?: string;
   /** Called after a successful logout so a parent list can refresh. */
   onChanged?: () => void;
+  /** Total persisted slots for this tenant — drives the "last card" guard. */
+  totalSlotCount?: number;
+  /** Called after a successful remove so the parent can drop this card immediately. */
+  onRemoved?: (slot: number) => void;
 };
 
 const POLL_MS = 2000;
@@ -35,7 +39,15 @@ const STATUS_LABEL: Record<WhatsAppQrStatus, string> = {
   logged_out: "Logged out — re-scan needed",
 };
 
-export function WhatsAppQrConnect({ conversationsPath, autoRedirect = true, slot = 1, title, onChanged }: Props) {
+export function WhatsAppQrConnect({
+  conversationsPath,
+  autoRedirect = true,
+  slot = 1,
+  title,
+  onChanged,
+  totalSlotCount,
+  onRemoved,
+}: Props) {
   const router = useRouter();
   const [status, setStatus] = useState<WhatsAppQrStatus>("unlinked");
   const [qr, setQr] = useState<string | null>(null);
@@ -133,12 +145,63 @@ export function WhatsAppQrConnect({ conversationsPath, autoRedirect = true, slot
     }
   };
 
+  const handleRemove = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await whatsappQrService.remove(slot);
+      stopPolling();
+      setStatus("unlinked");
+      setQr(null);
+      setNumber(null);
+      notifyIntegrationsChanged();
+      onChanged?.();
+      onRemoved?.(slot);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ?? "Failed to remove this WhatsApp number.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const isConnected = status === "connected";
   const showQr = status === "qr_pending" && qr;
   const isWorking = status === "connecting" || (status === "qr_pending" && !qr);
+  const isLastSlot = (totalSlotCount ?? 0) <= 1;
+  const removeDisabled = isConnected || isLastSlot;
+  const removeDisabledReason = isConnected
+    ? "Disconnect WhatsApp before removing this number."
+    : "At least one WhatsApp number must remain";
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      {!isConnected && (
+        <div className="absolute right-0 top-0">
+          <Popconfirm
+            title="Remove this WhatsApp number?"
+            description="This permanently deletes the slot. You'll need to scan a new QR code to reconnect."
+            okText="Remove"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => void handleRemove()}
+            disabled={removeDisabled}
+          >
+            <Tooltip title={removeDisabled ? removeDisabledReason : undefined}>
+              <span>
+                <Button
+                  danger
+                  size="small"
+                  icon={<Trash2 size={13} />}
+                  loading={busy}
+                  disabled={removeDisabled}
+                >
+                  Remove
+                </Button>
+              </span>
+            </Tooltip>
+          </Popconfirm>
+        </div>
+      )}
       {title && <h4 className="text-[13px] font-semibold text-slate-800">{title}</h4>}
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-slate-600">Status</span>

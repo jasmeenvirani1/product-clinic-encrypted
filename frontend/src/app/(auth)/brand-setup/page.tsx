@@ -124,7 +124,7 @@ export default function BrandSetupPage() {
     setError(null);
     try {
       const override = suggestedColors as Partial<ThemeColors>;
-      await themeService.updateTheme(override);
+      await themeService.updateTheme({ colors: override });
       applyColors(override); // live, instant paint
       goNext();
     } catch {

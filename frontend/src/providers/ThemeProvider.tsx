@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { COLORS } from "@/constants/brand";
+import { APP_NAME, APP_SHORT_NAME, APP_FULL_NAME, COLORS } from "@/constants/brand";
 import { resetThemeVars } from "@/utils/themeVars";
 
 export type ThemeColors = typeof COLORS;
@@ -9,6 +9,10 @@ export type ThemeColors = typeof COLORS;
 interface ThemeContextValue {
   colors: ThemeColors;
   applyColors: (partial: Partial<ThemeColors>) => void;
+  /** Platform name — falls back to the static APP_NAME default until resolved. */
+  platformName: string;
+  platformShortName: string;
+  platformFullName: string;
   /** Re-fetch the authenticated tenant theme (call right after login). */
   refreshTheme: () => void;
   loading: boolean;
@@ -17,6 +21,9 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue>({
   colors: COLORS,
   applyColors: () => {},
+  platformName: APP_NAME,
+  platformShortName: APP_SHORT_NAME,
+  platformFullName: APP_FULL_NAME,
   refreshTheme: () => {},
   loading: true,
 });
@@ -91,8 +98,17 @@ function getAuthToken(): string | null {
   }
 }
 
+interface PlatformNameFields {
+  platformName: string;
+  platformShortName: string;
+  platformFullName: string;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [colors, setColors]   = useState<ThemeColors>(COLORS);
+  const [platformName, setPlatformName]         = useState<string>(APP_NAME);
+  const [platformShortName, setPlatformShortName] = useState<string>(APP_SHORT_NAME);
+  const [platformFullName, setPlatformFullName]   = useState<string>(APP_FULL_NAME);
   const [loading, setLoading] = useState(true);
   // Gates the very first render: children are not shown until the authoritative
   // theme has been applied, so the page never paints with the wrong theme while
@@ -100,13 +116,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // (returning-user) case; this handles the no-cache / first-load case.
   const [ready, setReady] = useState(false);
 
-  // Apply a fetched palette. `cache` controls whether it's written to the
-  // instant-paint cache — only the tenant (logged-in) theme is cached, so the
-  // public/global theme can never flash in on a later logged-in load.
-  const applyFetched = useCallback((incoming: Partial<ThemeColors>, cache = true) => {
+  // Apply a fetched palette (+ platform name fields). `cache` controls whether
+  // it's written to the instant-paint cache — only the tenant (logged-in) theme
+  // is cached, so the public/global theme can never flash in on a later
+  // logged-in load.
+  const applyFetched = useCallback((incoming: Partial<ThemeColors> & Partial<PlatformNameFields>, cache = true) => {
     const merged = { ...COLORS, ...incoming } as ThemeColors;
     setColors(merged);
     applyToDocument(merged);
+    if (incoming.platformName) setPlatformName(incoming.platformName);
+    if (incoming.platformShortName) setPlatformShortName(incoming.platformShortName);
+    if (incoming.platformFullName) setPlatformFullName(incoming.platformFullName);
     if (cache) {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ data: incoming, ts: Date.now() }));
     }
@@ -121,7 +141,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
-        if (json?.success && json.data?.colors) applyFetched(json.data.colors);
+        if (json?.success && json.data?.colors) {
+          applyFetched({
+            ...json.data.colors,
+            platformName: json.data.platformName,
+            platformShortName: json.data.platformShortName,
+            platformFullName: json.data.platformFullName,
+          });
+        }
       })
       .catch(() => { /* keep whatever is applied */ });
   }, [applyFetched]);
@@ -136,11 +163,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = localStorage.getItem(CACHE_KEY);
         if (raw) {
-          const { data, ts } = JSON.parse(raw) as { data: Partial<ThemeColors>; ts: number };
+          const { data, ts } = JSON.parse(raw) as {
+            data: Partial<ThemeColors> & Partial<PlatformNameFields>;
+            ts: number;
+          };
           if (Date.now() - ts < CACHE_TTL && data) {
             const merged = { ...COLORS, ...data };
             setColors(merged);
             applyToDocument(merged);
+            if (data.platformName) setPlatformName(data.platformName);
+            if (data.platformShortName) setPlatformShortName(data.platformShortName);
+            if (data.platformFullName) setPlatformFullName(data.platformFullName);
             setLoading(false);
           }
         }
@@ -153,6 +186,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(CACHE_KEY);
       resetThemeVars();
       setColors(COLORS);
+      setPlatformName(APP_NAME);
+      setPlatformShortName(APP_SHORT_NAME);
+      setPlatformFullName(APP_FULL_NAME);
     }
 
     // 2. Fetch the authoritative theme and apply it:
@@ -164,7 +200,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
         // Cache only the tenant theme (logged in); never the public/global one.
-        if (json?.success && json.data?.colors) applyFetched(json.data.colors, loggedIn);
+        if (json?.success && json.data?.colors) {
+          applyFetched(
+            {
+              ...json.data.colors,
+              platformName: json.data.platformName,
+              platformShortName: json.data.platformShortName,
+              platformFullName: json.data.platformFullName,
+            },
+            loggedIn,
+          );
+        }
       })
       .catch(() => { /* keep whatever is applied */ })
       .finally(() => {
@@ -185,7 +231,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ colors, applyColors, refreshTheme: fetchTenantTheme, loading }}>
+    <ThemeContext.Provider
+      value={{
+        colors,
+        applyColors,
+        platformName,
+        platformShortName,
+        platformFullName,
+        refreshTheme: fetchTenantTheme,
+        loading,
+      }}
+    >
       {/* Hold the page hidden (not unmounted) until the theme is applied, so it
           never flashes the wrong theme. When visible the wrapper is layout-
           transparent (display:contents) so full-height layouts are unaffected;

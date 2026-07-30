@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { APP_FULL_NAME, APP_NAME_AI, APP_TAGLINE } from "@/constants/brand";
+import { APP_TAGLINE } from "@/constants/brand";
+import { getPlatformBrand } from "@/lib/getPlatformBrand";
 
 interface PublicSpecialityDetail {
   id: number;
@@ -46,10 +47,11 @@ export async function generateMetadata({
   params: { slug: string };
 }): Promise<Metadata> {
   const speciality = await getSpeciality(params.slug);
+  const brand = await getPlatformBrand();
   // Fail-open: generic site defaults if fetch failed or slug not found — generateMetadata
   // cannot short-circuit rendering, so the page body below is the single source of
   // truth for the 404 decision.
-  const title = speciality?.meta_title || speciality?.name || APP_FULL_NAME;
+  const title = speciality?.meta_title || speciality?.name || brand.fullName;
   const description = speciality?.meta_description || speciality?.short_description || APP_TAGLINE;
   const hasOg = !!(speciality?.og_title || speciality?.og_description || speciality?.og_image);
 
@@ -125,13 +127,14 @@ export default async function SpecialityDetailPage({
   const speciality = await getSpeciality(params.slug);
   if (!speciality) notFound();
 
+  const brand = await getPlatformBrand();
   const renderedBlocks = renderDetailBlocks(speciality.detail_content);
 
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-4xl px-6 py-12">
         <Link href="/" className="text-sm font-semibold text-primary hover:text-primary-dark">
-          Back to {APP_NAME_AI}
+          Back to {brand.name} AI
         </Link>
         <article className="mt-8 border border-slate-200 bg-white p-8 shadow-sm rounded-2xl">
           <h1 className="text-3xl font-bold text-slate-900">{speciality.name}</h1>

@@ -13,16 +13,19 @@ const SIZE: Record<LogoSize, { box: string; text: string; ring: string }> = {
 interface LogoMarkProps {
   size?: LogoSize;
   className?: string;
+  /** Dynamic platform short name (e.g. from useThemeColors() or getPlatformBrand()).
+   *  Falls back to the static APP_SHORT_NAME default if omitted. */
+  shortName?: string;
 }
 
-export function LogoMark({ size = "md", className = "" }: LogoMarkProps) {
+export function LogoMark({ size = "md", className = "", shortName = APP_SHORT_NAME }: LogoMarkProps) {
   const { box, text, ring } = SIZE[size];
   return (
     <div
       className={`${box} ${ring} shrink-0 relative flex items-center justify-center overflow-hidden select-none ${className}`}
       style={{
-        background: "linear-gradient(135deg, #0284C7 0%, #0369A1 50%, #0c4a6e 100%)",
-        boxShadow: "0 2px 8px rgba(3,105,161,0.45), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)",
+        background: "var(--color-primary)",
+        boxShadow: "0 2px 8px rgba(var(--color-primary-rgb), 0.45), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.18)",
       }}
     >
       {/* top-left glass shine */}
@@ -39,7 +42,7 @@ export function LogoMark({ size = "md", className = "" }: LogoMarkProps) {
         className={`relative z-10 font-black tracking-tight leading-none text-white ${text}`}
         style={{ textShadow: "0 1px 2px rgba(0,0,0,0.25)", letterSpacing: "-0.03em" }}
       >
-        {APP_SHORT_NAME}
+        {shortName}
       </span>
     </div>
   );

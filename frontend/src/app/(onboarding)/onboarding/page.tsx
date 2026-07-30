@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { App, Button, Card, Input } from "antd";
 import { Building2, CheckCircle2, Instagram, MessageCircle, ArrowRight } from "lucide-react";
-import { APP_NAME } from "@/constants/brand";
+import { useThemeColors } from "@/providers/ThemeProvider";
 import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { aiSettingService } from "@/services/aiSetting.service";
@@ -15,6 +15,7 @@ export default function OnboardingSetupPage() {
   const { message } = App.useApp();
   const router = useRouter();
   const { user } = useAppSelector((s) => s.auth);
+  const { platformName } = useThemeColors();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +56,7 @@ export default function OnboardingSetupPage() {
       }
 
       await Promise.all(promises);
-      void message.success(`Setup complete! Welcome to ${APP_NAME}.`);
+      void message.success(`Setup complete! Welcome to ${platformName}.`);
       router.push("/app/dashboard");
     } catch {
       void message.error("Failed to save. Please try again.");

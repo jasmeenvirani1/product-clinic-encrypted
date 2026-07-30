@@ -121,7 +121,7 @@ exports.sendRegistrationOtp = async (req, res) => {
 // Register: verify OTP & create user
 exports.verifyRegistrationOtp = async (req, res) => {
   try {
-    const { full_name, email, mobile, password, otp, role_id } = req.body;
+    const { full_name, email, mobile, password, otp, role_id, clinic_name } = req.body;
     const idProofFiles = mapUploadedProofs(req.files?.id_proof || []);
     const addressProofFiles = mapUploadedProofs(req.files?.address_proof || []);
     const profilePhoto = mapSingleUploadedFile(req.files?.profile_photo || []);
@@ -175,6 +175,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
       full_name: full_name.trim(),
       email: emailNorm,
       mobile: mobile || null,
+      clinic_name: clinic_name ? clinic_name.trim() : null,
       password_hash: passwordHash,
       role_id: assignedRoleId,
       email_verified: true,
@@ -199,6 +200,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
           full_name: user.full_name,
           email: user.email,
           role_id: user.role_id,
+          clinic_name: user.clinic_name ?? null,
           profile_photo: user.profile_photo,
         },
       },
@@ -280,7 +282,9 @@ exports.login = async (req, res) => {
               id: user.id,
               full_name: user.full_name,
               email: user.email,
+              clinic_name: user.clinic_name ?? null,
               profile_photo: user.profile_photo,
+              logo_url: user.logo ? `/uploads/logos/${user.logo}` : null,
               role: user.Role.name,
             },
             menuPermissions,
@@ -510,6 +514,7 @@ exports.me = async (req, res) => {
           mobile: req.user.mobile,
           clinic_name: req.user.clinic_name ?? null,
           profile_photo: req.user.profile_photo ?? null,
+          logo_url: req.user.logo ? `/uploads/logos/${req.user.logo}` : null,
           role: req.user.Role.name,
         },
         menuPermissions,

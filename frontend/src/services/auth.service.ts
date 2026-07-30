@@ -32,6 +32,7 @@ interface BackendUser {
   mobile?: string | null;
   clinic_name?: string | null;
   profile_photo?: string | null;
+  logo_url?: string | null;
 }
 
 // Decode JWT payload without crypto (edge-safe)
@@ -70,6 +71,7 @@ function toFrontendUser(bu: BackendUser, token?: string): User {
     mobile:     bu.mobile ?? null,
     clinic_name: bu.clinic_name ?? null,
     avatar: bu.profile_photo ?? undefined,
+    logo_url: bu.logo_url ?? null,
   };
 }
 
@@ -206,6 +208,7 @@ export const authService = {
     email: string;
     password: string;
     mobile?: string;
+    clinicName?: string;
     otp: string;
     profile_photo?: File;
   }) {
@@ -213,6 +216,7 @@ export const authService = {
       full_name: payload.name,
       email: payload.email,
       mobile: payload.mobile ?? null,
+      clinic_name: payload.clinicName ?? null,
       password: payload.password,
       otp: payload.otp,
     };
@@ -222,6 +226,7 @@ export const authService = {
           fd.append("full_name", body.full_name);
           fd.append("email", body.email);
           fd.append("mobile", body.mobile ?? "");
+          fd.append("clinic_name", body.clinic_name ?? "");
           fd.append("password", body.password);
           fd.append("otp", body.otp);
           fd.append("profile_photo", payload.profile_photo);

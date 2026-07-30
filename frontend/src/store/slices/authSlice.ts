@@ -145,6 +145,7 @@ export const verifyOtpThunk = createAsyncThunk(
       email: draft.email,
       password: draft.password,
       mobile: draft.mobile,
+      clinicName: draft.clinicName,
       otp: payload.otp,
       profile_photo: draft.profile_photo,
     });

@@ -4,15 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChevronUp, Gauge, Globe, HelpCircle, KeyRound, LayoutList, LogOut, Palette, ShieldCheck, Sparkles, Stethoscope, User } from "lucide-react";
+import { Bot, ChevronUp, Gauge, Globe, HelpCircle, KeyRound, LayoutList, LogOut, Settings, ShieldCheck, Sparkles, Stethoscope, User } from "lucide-react";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { logout } from "../store/slices/authSlice";
 import type { MenuEntry } from "../utils/types";
-import { APP_NAME } from "../constants/brand";
+import { useThemeColors } from "@/providers/ThemeProvider";
 import { LogoMark } from "./LogoMark";
 
 const { Sider } = Layout;
+
+// /uploads/* is served from the API origin root (not under /api) — strip the
+// /api suffix from the configured base URL to build absolute logo URLs.
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/api\/?$/, "");
 
 interface SidebarProps {
   brand: string;
@@ -27,7 +31,9 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
   const dispatch   = useAppDispatch();
   const router     = useRouter();
   const user       = useAppSelector((state) => state.auth.user);
+  const { platformName, platformShortName } = useThemeColors();
   const role       = user?.role ?? "staff_user";
+  const clinicDisplayName = user?.clinic_name || brand;
 
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -50,10 +56,10 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
   const profileMenuItems = role === "super_admin"
     ? [
         {
-          key: "profile",
-          icon: <User size={14} />,
-          label: profileLabel("profile", "Profile"),
-          href: "/super-admin/profile",
+          key: "settings",
+          icon: <Settings size={14} />,
+          label: profileLabel("settings", "Settings"),
+          href: "/super-admin/settings",
         },
         {
           key: "logs",
@@ -90,18 +96,6 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
           icon: <Globe size={14} />,
           label: profileLabel("seoSettings", "SEO Settings"),
           href: "/super-admin/seo-settings",
-        },
-        {
-          key: "ai-models",
-          icon: <Bot size={14} />,
-          label: profileLabel("aiModels", "AI Models"),
-          href: "/super-admin/ai-models",
-        },
-        {
-          key: "theme-settings",
-          icon: <Palette size={14} />,
-          label: profileLabel("themeSettings", "Theme Settings"),
-          href: "/super-admin/theme-settings",
         },
       ]
     : [
@@ -157,19 +151,37 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
         backgroundColor: "var(--color-sidebar-bg)",
       }}
     >
-      {/* Brand */}
+      {/* Brand — shows the clinic's own uploaded logo/name once logged in;
+          falls back to the platform LogoMark + name when neither is set. */}
       <Link
         href="/"
         className="flex h-16 items-center gap-3 px-4"
         style={{ borderBottom: "1px solid var(--color-brand-border)" }}
       >
-        <LogoMark size="md" className="shadow-sm" />
+        {user?.logo_url ? (
+          <img
+            src={user.logo_url.startsWith("http") ? user.logo_url : `${API_ORIGIN}${user.logo_url}`}
+            alt={clinicDisplayName}
+            className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm"
+          />
+        ) : user?.clinic_name ? (
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-black text-white shadow-sm"
+            style={{ backgroundColor: "var(--color-primary)" }}
+          >
+            {clinicDisplayName.charAt(0).toUpperCase()}
+          </div>
+        ) : (
+          <LogoMark size="md" className="shadow-sm" shortName={platformShortName} />
+        )}
         {!collapsed ? (
           <div className="overflow-hidden">
             <p className="truncate text-[11px] font-semibold uppercase tracking-widest text-slate-400">
-              {APP_NAME}
+              {platformName}
             </p>
-            <p className="truncate text-sm font-semibold" style={{ color: "var(--color-brand-heading)" }}>{brand}</p>
+            <p className="truncate text-sm font-semibold" style={{ color: "var(--color-brand-heading)" }}>
+              {clinicDisplayName}
+            </p>
           </div>
         ) : null}
       </Link>

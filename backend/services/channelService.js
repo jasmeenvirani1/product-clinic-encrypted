@@ -1,4 +1,5 @@
 const log = require("../utils/logger");
+const { InstagramSession } = require("../models");
 
 const MODULE = "ChannelService";
 
@@ -48,7 +49,19 @@ const sendOutbound = async (channel, setting, recipientId, text, opts = {}) => {
     return sendWhatsAppText(tenantId, target, text, slot);
   }
 
-  // Instagram (and any other channel) has no live transport here yet.
+  if (channel === "Instagram") {
+    // Instagram goes through the linked instagram-dm session. Lazy require
+    // avoids a circular dependency at module load time (same pattern as WhatsApp).
+    const { sendInstagramText, slotForConversation } = require("./instagramDmBootstrap");
+    const conversation = opts.conversation || null;
+    const tenantId = conversation?.tenant_id || setting?.tenant_id;
+    // Prefer the IG thread id captured on inbound; fall back to the bare recipient id.
+    const target = conversation?.channel_thread_id || recipientId;
+    const slot = conversation ? slotForConversation(conversation) : 1;
+    return sendInstagramText(tenantId, target, text, slot);
+  }
+
+  // Any other channel has no live transport here yet.
   log.warn(MODULE, "sendOutbound", {
     channel,
     recipientId,
@@ -83,10 +96,16 @@ const sendOutboundTemplate = async (channel, setting, recipientId, template) => 
  * @param {object} setting
  * @returns {boolean}
  */
-const isChannelConnected = (channel, setting) => {
+const isChannelConnected = async (channel, setting) => {
   if (!setting) return false;
   if (channel === "WhatsApp") return !!setting.whatsapp_enabled;
-  if (channel === "Instagram") return !!setting.instagram_enabled;
+  if (channel === "Instagram") {
+    if (!setting.instagram_enabled) return false;
+    const live = await InstagramSession.findOne({
+      where: { tenant_id: setting.tenant_id, status: "connected" },
+    });
+    return !!live;
+  }
   return false;
 };
 

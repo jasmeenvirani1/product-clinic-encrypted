@@ -266,7 +266,7 @@ exports.send = async (req, res) => {
     // removed — connection readiness now comes from channelService until the
     // new connection flow provides its own transport.
     if ((campaign.channel === "WhatsApp" || campaign.channel === "Instagram") &&
-        !isChannelConnected(campaign.channel, aiSetting)) {
+        !(await isChannelConnected(campaign.channel, aiSetting))) {
       return res.status(400).json({
         success: false,
         message: `${campaign.channel} is not connected. Please connect it in Settings → Channels.`,

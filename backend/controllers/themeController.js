@@ -1,4 +1,5 @@
 const { ThemeSetting } = require("../models");
+const { APP_NAME, APP_SHORT_NAME } = require("../constants/brand");
 
 const DEFAULT_COLORS = {
   primary:       "#0369A1",
@@ -53,6 +54,38 @@ async function getGlobalColors() {
   return global.colors || {};
 }
 
+// The platform-wide display name — only ever read from the global
+// (tenant_id = null) row. No per-tenant override exists for this field.
+async function getGlobalPlatformName() {
+  const global = await getOrCreate(null);
+  return global.platform_name || null;
+}
+
+// Effective platform name + derived short/full variants, with a fallback to
+// the hardcoded brand defaults if a platform name has never been set.
+async function resolvePlatformName() {
+  const customName = await getGlobalPlatformName();
+
+  // Fresh install / never configured by a super admin: use the existing
+  // static APP_SHORT_NAME constant so the short name exactly matches the
+  // frontend's static pre-fetch default ("CF") — no visible flip once the
+  // API response lands.
+  if (!customName) {
+    return {
+      platformName: APP_NAME,
+      platformShortName: APP_SHORT_NAME,
+      platformFullName: APP_NAME,
+    };
+  }
+
+  // Super admin has set a custom platform name: derive the short name from it.
+  return {
+    platformName: customName,
+    platformShortName: customName.slice(0, 2).toUpperCase(),
+    platformFullName: customName,
+  };
+}
+
 // Effective palette for a tenant: defaults → global overrides → tenant overrides.
 async function resolveColors(tenantId) {
   const globalColors = await getGlobalColors();
@@ -70,7 +103,8 @@ exports.getTheme = async (req, res) => {
   try {
     const tenantId = resolveTenantId(req);
     const colors = await resolveColors(tenantId);
-    return res.json({ success: true, data: { colors } });
+    const platform = await resolvePlatformName();
+    return res.json({ success: true, data: { colors, ...platform } });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -80,7 +114,8 @@ exports.getTheme = async (req, res) => {
 exports.getPublicTheme = async (req, res) => {
   try {
     const colors = await resolveColors(null);
-    return res.json({ success: true, data: { colors } });
+    const platform = await resolvePlatformName();
+    return res.json({ success: true, data: { colors, ...platform } });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -89,17 +124,44 @@ exports.getPublicTheme = async (req, res) => {
 // Authenticated: save overrides onto the caller's own tenant row.
 exports.updateTheme = async (req, res) => {
   try {
-    const { colors } = req.body;
-    if (!colors || typeof colors !== "object") {
+    const { colors, platformName } = req.body;
+    const isSuperAdmin = req.user?.Role && req.user.Role.name === "super_admin";
+
+    if (platformName !== undefined && !isSuperAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Only super_admin can update the platform name.",
+      });
+    }
+
+    if (colors !== undefined && (!colors || typeof colors !== "object")) {
       return res.status(400).json({ success: false, message: "colors object required." });
     }
+    if (colors === undefined && platformName === undefined) {
+      return res.status(400).json({ success: false, message: "colors object required." });
+    }
+
     const tenantId = resolveTenantId(req);
-    const setting = await getOrCreate(tenantId);
-    setting.colors = { ...setting.colors, ...colors };
-    await setting.save();
-    // Return the effective merged palette so the client reflects inheritance too.
+
+    if (colors) {
+      const setting = await getOrCreate(tenantId);
+      setting.colors = { ...setting.colors, ...colors };
+      await setting.save();
+    }
+
+    if (platformName !== undefined) {
+      // Platform name is global-only — always persisted on the tenant_id = null
+      // row, regardless of which row `tenantId` above resolves to.
+      const global = await getOrCreate(null);
+      global.platform_name = platformName || null;
+      await global.save();
+    }
+
+    // Return the effective merged palette + platform name so the client
+    // reflects inheritance/global state too.
     const merged = await resolveColors(tenantId);
-    return res.json({ success: true, data: { colors: merged } });
+    const platform = await resolvePlatformName();
+    return res.json({ success: true, data: { colors: merged, ...platform } });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -113,7 +175,8 @@ exports.resetTheme = async (req, res) => {
     setting.colors = {};
     await setting.save();
     const merged = await resolveColors(tenantId);
-    return res.json({ success: true, data: { colors: merged } });
+    const platform = await resolvePlatformName();
+    return res.json({ success: true, data: { colors: merged, ...platform } });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

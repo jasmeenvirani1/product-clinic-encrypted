@@ -1,7 +1,9 @@
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
-import { APP_NAME, COPYRIGHT_YEAR } from "@/constants/brand";
+import { COPYRIGHT_YEAR } from "@/constants/brand";
 import { LogoMark } from "@/components/LogoMark";
+import { getPlatformBrand } from "@/lib/getPlatformBrand";
 
 const highlights = [
   "Role-based CRM for clinics, teams & AI agents",
@@ -16,16 +18,17 @@ const stats = [
   { label: "Conversion lift",   value: "+19%" },
 ];
 
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default async function AuthLayout({ children }: { children: ReactNode }) {
+  const brand = await getPlatformBrand();
   return (
     <div className="h-screen overflow-hidden bg-slate-50 flex">
       {/* ─── Left panel ─── */}
       <div className="hidden lg:flex lg:w-[50%] xl:w-[50%] flex-col justify-between bg-primary px-12 py-14 text-white">
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          <LogoMark size="md" className="shadow" />
-          <span className="text-lg font-semibold tracking-tight">{APP_NAME}</span>
-        </div>
+        <Link href="/" className="flex items-center gap-3 w-fit no-underline hover:no-underline hover:opacity-100 hover:text-inherit">
+          <LogoMark size="md" className="shadow" shortName={brand.shortName} />
+          <span className="text-lg font-semibold tracking-tight">{brand.name}</span>
+        </Link>
 
         {/* Headline */}
         <div className="space-y-8">
@@ -61,17 +64,17 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-sky-300">© {COPYRIGHT_YEAR} {APP_NAME} · All rights reserved</p>
+        <p className="text-xs text-sky-300">© {COPYRIGHT_YEAR} {brand.name} · All rights reserved</p>
       </div>
 
       {/* ─── Right panel (form) — the only scrollable region ─── */}
       <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
         <div className="w-full max-w-[580px] my-auto">
           {/* Mobile-only logo */}
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <LogoMark size="sm" className="shadow" />
-            <span className="text-base font-semibold text-slate-800">{APP_NAME}</span>
-          </div>
+          <Link href="/" className="mb-8 flex items-center gap-2 w-fit lg:hidden no-underline hover:no-underline hover:opacity-100 hover:text-inherit">
+            <LogoMark size="sm" className="shadow" shortName={brand.shortName} />
+            <span className="text-base font-semibold text-slate-800">{brand.name}</span>
+          </Link>
 
           {/* Form card */}
           <div className="rounded-2xl border border-slate-200 bg-white px-8 py-8 shadow-sm">

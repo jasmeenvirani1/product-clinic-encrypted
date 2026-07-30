@@ -89,6 +89,10 @@ export function WhatsAppMultiConnect({ conversationsPath }: Props) {
             // number shouldn't yank the user away from this settings screen.
             autoRedirect={slot === 1}
             onChanged={() => void load()}
+            totalSlotCount={visibleSlots.length}
+            onRemoved={(removedSlot) =>
+              setVisibleSlots((prev) => prev.filter((s) => s !== removedSlot))
+            }
           />
         </div>
       ))}

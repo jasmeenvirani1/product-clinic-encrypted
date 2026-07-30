@@ -4,8 +4,9 @@ import "./globals.css";
 import { ReduxProvider } from "@/providers/ReduxProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AntdProvider } from "@/providers/AntdProvider";
-import { APP_FULL_NAME, APP_TAGLINE } from "@/constants/brand";
+import { APP_TAGLINE } from "@/constants/brand";
 import { THEME_PRELOAD_SCRIPT } from "@/utils/themePreload";
+import { getPlatformBrand } from "@/lib/getPlatformBrand";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -44,7 +45,8 @@ export async function generateMetadata(): Promise<Metadata> {
     seo = null;
   }
 
-  const title = seo?.meta_title || APP_FULL_NAME;
+  const brand = await getPlatformBrand();
+  const title = seo?.meta_title || brand.fullName;
   const description = seo?.meta_description || APP_TAGLINE;
 
   const hasOg = !!(seo?.og_title || seo?.og_description || seo?.og_image);

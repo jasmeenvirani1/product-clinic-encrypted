@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { App, Button, Card, Spin, Tooltip } from "antd";
-import { RefreshCw, Save, RotateCcw } from "lucide-react";
+import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
+import { App, Button, Card, Input, Spin, Tooltip } from "antd";
+import { Building2, RefreshCw, Save, RotateCcw } from "lucide-react";
 import { PageSection } from "@/components/PageSection";
 import { themeService } from "@/services/theme.service";
 import { useThemeColors, type ThemeColors } from "@/providers/ThemeProvider";
@@ -108,8 +108,36 @@ function ColorSwatch({
   );
 }
 
+export interface ThemeSettingsPanelHandle {
+  /** Save whatever is currently pending (colors + platform name, when embedded). */
+  save: () => Promise<void>;
+  /** Whether there are unsaved changes right now. */
+  hasChanges: () => boolean;
+  /** Discard any unsaved colors/name draft and revert the live preview. */
+  discard: () => void;
+}
+
+interface ThemeSettingsPanelProps {
+  /**
+   * When true, hides this panel's own PageSection header and save/reset/discard
+   * actions — the host page owns a single shared header and Save button instead,
+   * and drives saving via the forwarded ref. Defaults to false so the existing
+   * standalone routes (/app/theme-settings, /super-admin/theme-settings) are
+   * unaffected.
+   */
+  embedded?: boolean;
+  /** Only used when embedded — renders a Platform Name field saved together with colors. */
+  platformName?: string;
+  onPlatformNameChange?: (_value: string) => void;
+  /** Only used when embedded — reports live unsaved-changes state to the host. */
+  onDirtyChange?: (_dirty: boolean) => void;
+}
+
 // ─── Shared panel — rendered by both the super-admin and tenant routes ─────────
-export function ThemeSettingsPanel() {
+export const ThemeSettingsPanel = forwardRef<ThemeSettingsPanelHandle, ThemeSettingsPanelProps>(function ThemeSettingsPanel(
+  { embedded = false, platformName, onPlatformNameChange, onDirtyChange },
+  ref
+) {
   const { message, modal } = App.useApp();
   const { applyColors } = useThemeColors();
 
@@ -117,6 +145,7 @@ export function ThemeSettingsPanel() {
   const [saved, setSaved]     = useState<Partial<ThemeColors>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [nameDraft, setNameDraft] = useState(platformName ?? "");
 
   // Merge: draft takes priority over saved (which already has COLORS defaults from backend)
   const current: Partial<ThemeColors> = { ...COLORS, ...saved, ...draft };
@@ -130,30 +159,57 @@ export function ThemeSettingsPanel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    setNameDraft(platformName ?? "");
+  }, [platformName]);
+
   const setColor = (key: keyof ThemeColors, value: string) => {
     setDraft((p) => ({ ...p, [key]: value }));
     // Live preview
     applyColors({ [key]: value } as Partial<ThemeColors>);
   };
 
+  const nameChanged = embedded && nameDraft.trim() !== (platformName ?? "").trim();
+  const hasChanges = Object.keys(draft).length > 0 || nameChanged;
+
+  useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasChanges]);
+
   const handleSave = async () => {
-    if (Object.keys(draft).length === 0) {
+    if (!hasChanges) {
       message.info("No changes to save.");
       return;
     }
     setSaving(true);
     try {
-      const { colors } = await themeService.updateTheme({ ...saved, ...draft });
+      const payload: { colors?: Partial<ThemeColors>; platformName?: string } = {};
+      if (Object.keys(draft).length > 0) payload.colors = { ...saved, ...draft };
+      if (nameChanged) payload.platformName = nameDraft.trim();
+      const { colors } = await themeService.updateTheme(payload);
       setSaved(colors);
       setDraft({});
       applyColors(colors);
-      message.success("Theme saved successfully!");
+      if (nameChanged) onPlatformNameChange?.(nameDraft.trim());
+      message.success(embedded ? "Platform settings saved successfully!" : "Theme saved successfully!");
     } catch {
-      message.error("Failed to save theme.");
+      message.error("Failed to save changes.");
     } finally {
       setSaving(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    hasChanges: () => hasChanges,
+    discard: () => {
+      setDraft({});
+      setNameDraft(platformName ?? "");
+      applyColors({ ...COLORS, ...saved });
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [hasChanges, draft, nameDraft, saved, platformName]);
 
   const handleReset = () => {
     modal.confirm({
@@ -180,11 +236,10 @@ export function ThemeSettingsPanel() {
 
   const handleDiscard = () => {
     setDraft({});
+    setNameDraft(platformName ?? "");
     applyColors({ ...COLORS, ...saved });
     message.info("Changes discarded.");
   };
-
-  const hasChanges = Object.keys(draft).length > 0;
 
   if (loading) {
     return (
@@ -194,37 +249,52 @@ export function ThemeSettingsPanel() {
 
   return (
     <div>
-    <PageSection
-      title="Theme Settings"
-      description="Customise your workspace colour palette. Changes apply instantly on save."
-      helpMenuSlug={false}
-      actions={
-        <div className="flex items-center gap-2">
-          {hasChanges && (
-            <Button icon={<RefreshCw size={14} />} onClick={handleDiscard}>
-              Discard
+    {!embedded && (
+      <PageSection
+        title="Theme Settings"
+        description="Customise your workspace colour palette. Changes apply instantly on save."
+        helpMenuSlug={false}
+        actions={
+          <div className="flex items-center gap-2">
+            {hasChanges && (
+              <Button icon={<RefreshCw size={14} />} onClick={handleDiscard}>
+                Discard
+              </Button>
+            )}
+            <Button
+              danger
+              icon={<RotateCcw size={14} />}
+              onClick={handleReset}
+              loading={saving}
+            >
+              Reset Defaults
             </Button>
-          )}
-          <Button
-            danger
-            icon={<RotateCcw size={14} />}
-            onClick={handleReset}
-            loading={saving}
-          >
-            Reset Defaults
-          </Button>
-          <Button
-            type="primary"
-            icon={<Save size={14} />}
-            onClick={handleSave}
-            loading={saving}
-            disabled={!hasChanges}
-          >
-            Save Theme
-          </Button>
-        </div>
-      }
-    />
+            <Button
+              type="primary"
+              icon={<Save size={14} />}
+              onClick={handleSave}
+              loading={saving}
+              disabled={!hasChanges}
+            >
+              Save Theme
+            </Button>
+          </div>
+        }
+      />
+    )}
+      {embedded && (
+        <Card size="small" className="mb-6">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Platform Identity</p>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            Platform Name <span className="text-red-500">*</span>
+          </label>
+          <Input
+            prefix={<Building2 size={14} className="text-slate-400" />}
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+          />
+        </Card>
+      )}
       {/* Live preview strip */}
       <Card className="mb-6">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Live Preview</p>
@@ -270,7 +340,7 @@ export function ThemeSettingsPanel() {
         ))}
       </div>
 
-      {hasChanges && (
+      {!embedded && hasChanges && (
         <div className="sticky bottom-4 mt-6">
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 flex items-center justify-between shadow-lg">
             <p className="text-sm font-semibold text-amber-700">
@@ -287,4 +357,4 @@ export function ThemeSettingsPanel() {
       )}
     </div>
   );
-}
+});

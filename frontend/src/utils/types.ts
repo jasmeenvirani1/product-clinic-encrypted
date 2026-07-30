@@ -53,6 +53,7 @@ export interface User {
   avatar?: string;
   mobile?: string | null;
   clinic_name?: string | null;
+  logo_url?: string | null;
   isOnTrial?: boolean;
   trialEndsAt?: string | null;
   trialDaysLeft?: number | null;

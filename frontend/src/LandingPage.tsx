@@ -4,6 +4,7 @@
 import React from 'react';
 import { Spin } from 'antd';
 import { APP_NAME, COPYRIGHT_YEAR } from './constants/brand';
+import { useThemeColors } from '@/providers/ThemeProvider';
 import { LogoMark } from './components/LogoMark';
 import type { LucideIcon } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -746,6 +747,7 @@ const IntegrationDiagram = ({
 // ─── Component ───────────────────────────────────────────────────────────────────
 const ClinicFlowLanding = (_props: { variant?: string }) => {
   const router = useRouter();
+  const { platformName, platformShortName } = useThemeColors();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [plans, setPlans] = React.useState<PlanData[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
@@ -958,9 +960,9 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
         <div className="w-full max-w-6xl xl:max-w-[78rem] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-5 pr-3.5 h-16 flex items-center justify-between gap-3">
           <a href="#home" className="flex items-center gap-2.5 no-underline shrink-0">
-            <LogoMark size="md" />
+            <LogoMark size="md" shortName={platformShortName} />
             <span className="font-heading text-xl font-bold tracking-tight text-slate-900">
-              {APP_NAME}
+              {platformName}
             </span>
           </a>
 
@@ -1591,9 +1593,9 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             {/* Brand + tagline */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-5">
-                <LogoMark size="sm" />
+                <LogoMark size="sm" shortName={platformShortName} />
                 <span className="font-heading text-xl font-bold tracking-tight text-white">
-                  {APP_NAME}
+                  {platformName}
                 </span>
               </div>
               <p className="text-base text-white/55 leading-relaxed max-w-[15rem]">{t.footerTagline}</p>

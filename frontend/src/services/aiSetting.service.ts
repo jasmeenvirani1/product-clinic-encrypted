@@ -110,9 +110,81 @@ export const whatsappQrService = {
     const { data } = await api.post<WhatsAppQrState>(`${QR_BASE}/${slot}/logout`, {});
     return data;
   },
+  // Permanently delete a slot (DB row + on-disk session). Distinct from
+  // logout, which only unlinks the number but keeps the card/slot around.
+  async remove(slot = 1): Promise<WhatsAppSessionsResponse> {
+    const { data } = await api.delete<WhatsAppSessionsResponse>(`${QR_BASE}/${slot}/remove`);
+    return data;
+  },
   // List every linked-number slot for the tenant (drives the multi-session UI).
   async sessions(): Promise<WhatsAppSessionsResponse> {
     const { data } = await api.get<WhatsAppSessionsResponse>(`${QR_BASE}/sessions`);
+    return data;
+  },
+};
+
+// ─── Instagram-DM channel (unofficial private-API session — link the ───
+// ─── clinic's real IG login by username/password, NOT Meta's Graph API) ───
+export type InstagramDmStatus =
+  | "unlinked"
+  | "connecting"
+  | "awaiting_2fa"
+  | "awaiting_challenge"
+  | "connected"
+  | "disconnected"
+  | "logged_out"
+  | "banned";
+
+export interface InstagramDmState {
+  success: boolean;
+  status: InstagramDmStatus;
+  ig_username?: string | null;
+  last_error?: string | null;
+}
+
+// One linked IG account for the tenant.
+export interface InstagramSessionInfo {
+  slot: number;
+  label?: string | null;
+  status: InstagramDmStatus;
+  ig_username?: string | null;
+}
+
+export interface InstagramSessionsResponse {
+  success: boolean;
+  sessions: InstagramSessionInfo[];
+  maxSlots: number;
+}
+
+// The backend FORCES the tenant to the logged-in user; the URL param carries
+// the SLOT, same convention as whatsappQrService. Slot defaults to 1.
+const IG_BASE = "/instagram-dm";
+
+export const instagramDmService = {
+  async status(slot = 1): Promise<InstagramDmState> {
+    const { data } = await api.get<InstagramDmState>(`${IG_BASE}/${slot}/status`);
+    return data;
+  },
+  async connect(username: string, password: string, slot = 1): Promise<InstagramDmState> {
+    const { data } = await api.post<InstagramDmState>(`${IG_BASE}/${slot}/connect`, {
+      username,
+      password,
+    });
+    return data;
+  },
+  async submitCode(code: string, slot = 1): Promise<InstagramDmState> {
+    const { data } = await api.post<InstagramDmState>(`${IG_BASE}/${slot}/submit-code`, {
+      code,
+    });
+    return data;
+  },
+  async logout(slot = 1): Promise<{ success: boolean }> {
+    const { data } = await api.post<{ success: boolean }>(`${IG_BASE}/${slot}/logout`, {});
+    return data;
+  },
+  // List every linked-account slot for the tenant (drives the multi-session UI).
+  async sessions(): Promise<InstagramSessionsResponse> {
+    const { data } = await api.get<InstagramSessionsResponse>(`${IG_BASE}/sessions`);
     return data;
   },
 };

@@ -21,6 +21,14 @@ const ThemeSetting = sequelize.define(
       allowNull: false,
       defaultValue: {},
     },
+    // Platform-wide display name (super_admin only). Only meaningful on the
+    // tenant_id = null (global) row — tenant rows leave this null and it is
+    // never merged into tenant theme responses.
+    platform_name: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: null,
+    },
   },
   {
     tableName: "theme_settings",

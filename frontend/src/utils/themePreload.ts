@@ -51,4 +51,11 @@ export const THEME_PRELOAD_SCRIPT = `(function(){try{
   set("--color-success",c.success);
   set("--color-warning",c.warning);
   set("--color-error",c.error);
+  if(c.platformName){
+    window.__PLATFORM_NAME_PRELOAD__={
+      platformName:c.platformName,
+      platformShortName:c.platformShortName||c.platformName,
+      platformFullName:c.platformFullName||c.platformName
+    };
+  }
 }catch(e){}})();`;

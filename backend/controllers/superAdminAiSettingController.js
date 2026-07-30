@@ -1,4 +1,4 @@
-const { PlatformAISetting, AISetting, User } = require("../models");
+const { PlatformAISetting, AISetting, User, InstagramSession } = require("../models");
 const log = require("../utils/logger");
 const { invalidatePlatformAICache } = require("../utils/platformAISettings");
 const { resolveBaseUrlForModel } = require("./aiModelController");
@@ -106,19 +106,30 @@ exports.listTenantSettings = async (req, res) => {
       order: [["updated_at", "DESC"]],
     });
 
-    const data = settings.map((s) => ({
-      tenant_id: s.tenant_id,
-      tenant_name: s.Tenant?.full_name || "—",
-      tenant_email: s.Tenant?.email || "—",
-      is_active: s.Tenant?.is_active ?? false,
-      openai_model: s.openai_model,
-      has_api_key: !!s.openai_api_key,
-      openai_api_key_masked: maskKey(s.openai_api_key),
-      ai_tone: s.ai_tone,
-      has_whatsapp: !!s.whatsapp_enabled,
-      has_instagram: !!s.instagram_enabled,
-      updated_at: s.updated_at,
-    }));
+    // Live Instagram connection state (one row per tenant, slot 1 today) —
+    // has_instagram only reflects the toggle; instagram_status reflects the
+    // real instagram-dm session so the overview table shows honest state.
+    const igSessions = await InstagramSession.findAll({ where: { slot: 1 } });
+    const igStatusByTenant = new Map(igSessions.map((r) => [r.tenant_id, r]));
+
+    const data = settings.map((s) => {
+      const igSession = igStatusByTenant.get(s.tenant_id);
+      return {
+        tenant_id: s.tenant_id,
+        tenant_name: s.Tenant?.full_name || "—",
+        tenant_email: s.Tenant?.email || "—",
+        is_active: s.Tenant?.is_active ?? false,
+        openai_model: s.openai_model,
+        has_api_key: !!s.openai_api_key,
+        openai_api_key_masked: maskKey(s.openai_api_key),
+        ai_tone: s.ai_tone,
+        has_whatsapp: !!s.whatsapp_enabled,
+        has_instagram: !!s.instagram_enabled,
+        instagram_status: igSession?.status || "unlinked",
+        instagram_username: igSession?.ig_username || null,
+        updated_at: s.updated_at,
+      };
+    });
 
     log.info(MODULE, "listTenantSettings", { userId: req.user.id, count: data.length });
     return res.status(200).json({ success: true, data });

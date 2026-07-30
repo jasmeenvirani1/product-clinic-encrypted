@@ -8,9 +8,11 @@ import { DataTable } from "@/components/DataTable";
 import { PageSection } from "@/components/PageSection";
 import { wonLeadsService, type GeneratedInvoice, type WonLead } from "@/services/wonLeads.service";
 import { downloadWonLeadsInvoice } from "@/utils/invoiceDownload";
+import { useThemeColors } from "@/providers/ThemeProvider";
 
 export default function WonLeadsPage() {
   const { message } = App.useApp();
+  const { platformFullName } = useThemeColors();
 
   const [wonLeads, setWonLeads] = useState<WonLead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +98,7 @@ export default function WonLeadsPage() {
                 <Button
                   size="small"
                   icon={<Download size={12} />}
-                  onClick={() => downloadWonLeadsInvoice(inv)}
+                  onClick={() => downloadWonLeadsInvoice(inv, platformFullName)}
                   className="flex items-center gap-1 border-teal-200 text-teal-700 hover:border-teal-400 hover:text-teal-800"
                 >
                   {inv.invoice_number}
