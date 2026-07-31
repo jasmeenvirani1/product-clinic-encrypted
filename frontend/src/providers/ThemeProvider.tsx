@@ -68,7 +68,9 @@ function applyToDocument(c: Partial<ThemeColors>) {
     ? `rgba(${hexToRgbStr(c.primary)}, 0.15)`
     : undefined);
   set("--color-secondary",         c.secondary);
+  set("--color-secondary-accent",  c.secondaryAccent);
   set("--color-brand-bg",          c.brandBg);
+  set("--color-brand-card",        c.brandCard);
   set("--color-brand-border",      c.brandBorder);
   set("--color-brand-border-alt",  c.brandBorder);
   set("--color-brand-heading",     c.brandHeading);

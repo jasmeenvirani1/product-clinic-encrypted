@@ -965,10 +965,11 @@ export default function SuperAdminAiSettingsPage() {
       );
     }
 
-    // Instagram links via unofficial private-API session (username/password +
-    // 2FA/challenge) — show the real connect widget instead of the generic
-    // "coming soon" placeholder. The igEnabled toggle above still gates
-    // whether the AI/inbound pipeline actually treats the channel as live.
+    // Instagram links via the clinic's own Meta Developer App (manual
+    // credentials entry + webhook config) — show the real connect widget
+    // instead of the generic "coming soon" placeholder. The igEnabled toggle
+    // above still gates whether the AI/inbound pipeline actually treats the
+    // channel as live.
     if (isIg) {
       return (
         <div className="space-y-5">
@@ -993,7 +994,7 @@ export default function SuperAdminAiSettingsPage() {
                   )}
                 </div>
                 <p className="mt-0.5 text-[13px] text-white/85">
-                  Link by username/password — no Meta API required
+                  Connect Instagram using your clinic&apos;s own Meta Developer App
                 </p>
               </div>
             </div>

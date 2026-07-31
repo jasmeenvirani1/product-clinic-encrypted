@@ -33,7 +33,16 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+// Capture the raw request body alongside JSON parsing so Meta's Instagram
+// webhook (POST /api/webhooks/instagram) can verify X-Hub-Signature-256
+// against the EXACT bytes Meta sent, not a re-serialized JSON object.
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // Static file serving for uploaded proof documents
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -78,10 +87,14 @@ app.use("/api/super-admin/ai-models",      require("./routes/superAdminAiModelRo
 const { authenticate } = require("./middleware/auth");
 require("./services/whatsappQrBootstrap").mountWhatsAppQr(app, { authMiddleware: authenticate });
 
-// Instagram-DM channel (unofficial private-API session — link the clinic's
-// real Instagram account by username/password + 2FA/challenge). No Meta API.
-// Registers /api/instagram-dm/* and restores linked sessions on boot.
-require("./services/instagramDmBootstrap").mountInstagramDm(app, { authMiddleware: authenticate });
+// Instagram channel (Meta Graph API — each clinic brings their OWN Meta
+// Developer App and pastes their App ID/App Secret/Access Token/Instagram
+// Business Account ID directly; no shared/global Meta App, no OAuth
+// redirect through our backend). Registers /api/instagram-meta/* (credential
+// entry + generated webhook info) and starts the token health-check job.
+// Inbound messages arrive via the per-tenant webhook mounted through
+// /api/webhooks/instagram/:tenantId/:slot (see webhookRoutes.js).
+require("./services/instagramDmBootstrap").mountInstagramMeta(app, { authMiddleware: authenticate });
 
 // Health check
 app.get("/api/health", (req, res) => {

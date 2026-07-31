@@ -8,6 +8,7 @@ const DEFAULT_COLORS = {
   primaryDeep:   "#0c4a6e",
   primaryDeeper: "#082f49",
   secondary:     "#6366F1",
+  secondaryAccent: "#818CF8",
   brandBg:       "#F8FAFC",
   brandCard:     "#FFFFFF",
   brandBorder:   "#E2E8F0",

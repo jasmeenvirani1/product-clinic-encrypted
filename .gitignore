@@ -34,8 +34,6 @@ frontend/next-env.d.ts
 backend/uploads/
 backend/whatsapp-qr/
 backend/.wa-sessions/
-backend/instagram-dm/
-backend/.ig-sessions/
 
 # deployment/tool caches
 .vercel/

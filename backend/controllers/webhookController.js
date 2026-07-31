@@ -1,13 +1,16 @@
 ﻿const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const OpenAI = require("openai");
 const { createOpenAI } = require("../utils/openaiClient");
 const { Op } = require("sequelize");
-const { AISetting, Lead, Conversation, Message, FAQ, User } = require("../models");
+const { AISetting, Lead, Conversation, Message, FAQ, User, InstagramSession } = require("../models");
 const { processHighIntentCapture } = require("../services/leadCapture");
-// Outbound messaging is channel-agnostic now (Meta Graph API removed).
+// Outbound messaging is channel-agnostic — WhatsApp via Baileys/QR, Instagram
+// via Meta's official Graph API.
 const { sendOutbound } = require("../services/channelService");
 const { sendIntentNotification, sendLeadCaptureEscalation, sendNewLeadCreatedEmail } = require("../services/emailService");
+const { createNotification } = require("../services/notificationService");
 const { triggerLeadSummary } = require("../services/leadSummaryService");
 const log = require("../utils/logger");
 const { getPlatformPromptInstructions, getPlatformUseCases, buildUseCasesBlock, getSuperAdminAICredentials } = require("../utils/platformAISettings");
@@ -670,19 +673,14 @@ const getOrCreateConversation = async (lead, channel, tenantId) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// ⚠️ Meta webhook handlers removed (connection-flow change).
-//
-// The WhatsApp Cloud API / Instagram Graph API webhook handlers previously
-// lived here. They performed the Meta verify-token handshake (GET) and parsed
-// Meta's webhook payload shape (POST) before feeding messages into the shared
-// pipeline. That transport is being replaced by a NEW connection flow.
-//
-// The reusable, channel-agnostic pipeline helpers ABOVE this line are kept
-// intact (generateAIResponse, runCaptureFlow, getOrCreateConversation,
-// scheduleBatchedPhotoReply, analyzeIntent, matchFAQ, injectDateHint, …) so
-// the new flow can call them once its inbound transport is defined.
-//
-// Until then, the exported handlers respond 501 Not Implemented.
+// ⚠️ WhatsApp Meta webhook handlers remain removed (WhatsApp uses the
+// self-hosted Baileys/QR transport instead — see whatsappQrBootstrap.js).
+// The Instagram webhook handlers below ARE Meta's Graph API handshake/
+// receive endpoints, but CORRECTED (2026-07-31) to a per-tenant model: each
+// clinic brings their OWN Meta App, so the URL path (:tenantId/:slot)
+// identifies WHICH tenant's row to use — there is no shared/global Meta App
+// or global verify token/app secret anymore (see
+// .ai/sessions/2026-07-31-instagram-dm-meta-migration.md).
 // ─────────────────────────────────────────────────────────────────────────
 
 const notImplemented = (channel, kind) => async (_req, res) => {
@@ -694,9 +692,242 @@ const notImplemented = (channel, kind) => async (_req, res) => {
   });
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+// Instagram — per-tenant Meta Graph API webhook (verification handshake +
+// inbound receive). Tenant is resolved from the URL path, not a hardcoded/
+// single-tenant assumption.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Resolve the (tenant_id, slot) InstagramSession row identified by the
+ *  incoming webhook request's URL path (/api/webhooks/instagram/:tenantId/:slot). */
+const resolveTenantSessionFromPath = async (req) => {
+  const tenantId = parseInt(req.params.tenantId, 10);
+  const slot = parseInt(req.params.slot, 10) || 1;
+  if (!Number.isFinite(tenantId)) return null;
+  return InstagramSession.findOne({ where: { tenant_id: tenantId, slot } });
+};
+
+/** GET /api/webhooks/instagram/:tenantId/:slot — Meta's webhook verification
+ *  handshake. Verified against THAT tenant's own generated verify token
+ *  (each clinic pastes their own verify token into their own Meta App). */
+const instagramVerify = async (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  const session = await resolveTenantSessionFromPath(req);
+  if (!session || !session.webhook_verify_token) {
+    log.warn(MODULE, "instagram:verify", { message: "No tenant session/verify token for this path.", params: req.params });
+    return res.sendStatus(403);
+  }
+
+  if (mode === "subscribe" && token === session.webhook_verify_token) {
+    log.info(MODULE, "instagram:verify", { message: "Webhook verified.", tenantId: session.tenant_id, slot: session.slot });
+    return res.status(200).send(challenge);
+  }
+  log.warn(MODULE, "instagram:verify", { message: "Verification failed — token mismatch.", tenantId: session.tenant_id });
+  return res.sendStatus(403);
+};
+
+/** Constant-time compare of the X-Hub-Signature-256 header against a
+ *  computed HMAC, using THAT tenant's own Meta App Secret (each clinic has
+ *  a different one — there is no shared/global app secret to fall back to). */
+const verifyMetaSignature = (req, appSecret) => {
+  const signature = req.headers["x-hub-signature-256"];
+  if (!signature || !appSecret) return false;
+  const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+  const expected = "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+};
+
+/** Dedupe + normalize + run the SAME channel-agnostic AI/lead pipeline every
+ *  other channel uses, for one inbound Instagram message. `session` is the
+ *  already-resolved tenant's InstagramSession row (resolved by the caller
+ *  from the request's URL path). */
+const handleInstagramInboundMessage = async ({ session, senderId, message }) => {
+  const tenantId = session.tenant_id;
+
+  const setting = await AISetting.findOne({ where: { tenant_id: tenantId } });
+  if (!setting || setting.instagram_enabled === false) return;
+
+  // Dedupe — the same message id is never processed twice.
+  const messageId = message.mid;
+  if (messageId) {
+    const dup = await Message.findOne({
+      where: { metadata: { [Op.contains]: { instagram_message_id: messageId } } },
+    });
+    if (dup) return;
+  }
+
+  let text = message.text || "";
+  const attachments = [];
+  if (Array.isArray(message.attachments)) {
+    for (const attachment of message.attachments) {
+      const att = await ingestInstagramAttachment({ tenantId, attachment, accessToken: session.access_token });
+      if (att) attachments.push(att);
+    }
+  }
+  if (!text && attachments.length === 0) return;
+
+  const placeholderText = attachments.some((a) => a.kind === "image") ? "[image]" : "[attachment]";
+
+  const detectedIntent = analyzeIntent(text, setting);
+
+  const { lead } = await upsertInboundLeadFromMessage({
+    tenantId,
+    channel: "Instagram",
+    primaryIdentifier: senderId,
+    fallbackName: null,
+    text: text || placeholderText,
+    intent: detectedIntent,
+    hasAttachments: attachments.length > 0,
+  });
+
+  const conversation = await getOrCreateConversation(lead, "Instagram", tenantId);
+
+  await Message.create({
+    conversation_id: conversation.id,
+    sender_type: "patient",
+    sender_id: null,
+    receiver_id: null,
+    receiver_type: "user",
+    text: text || placeholderText,
+    attachments,
+    metadata: { instagram_message_id: messageId, from: senderId, source: "ig-webhook" },
+  });
+
+  conversation.unread_count += 1;
+  conversation.last_message_at = new Date();
+  conversation.last_patient_message_at = new Date();
+  // Remember the exact IGSID this message arrived from so replies (AI, manual,
+  // follow-ups) go back to the SAME Instagram thread.
+  if (senderId && conversation.channel_thread_id !== senderId) {
+    conversation.channel_thread_id = senderId;
+  }
+
+  const intent = getPinnedIntent(conversation.intent, detectedIntent);
+  conversation.intent = intent;
+
+  const aiRespondsTo = setting.ai_responds_to_intents || ["low", "medium", "high"];
+  const emailNotifyFor = setting.email_notify_intents || ["high"];
+
+  if (conversation.ai_enabled && aiRespondsTo.includes(intent)) {
+    try {
+      const allHistory = await Message.findAll({
+        where: { conversation_id: conversation.id },
+        order: [["created_at", "ASC"]],
+        attributes: ["sender_type", "text", "metadata"],
+      });
+      const history = allHistory.slice(0, -1); // exclude the just-saved patient turn
+      const imageAttachments = attachments.filter((a) => a.kind === "image" && a.url);
+      const aiInputText = text || (imageAttachments.length > 0 ? "" : text);
+
+      const faqMatch = await matchFAQ(aiInputText, tenantId);
+      const faqAnswer = faqMatch?.answer || null;
+      const promptOverride = setting.prompt_instructions || null;
+
+      let aiText = faqMatch
+        ? faqAnswer || ""
+        : await generateAIResponse(aiInputText, intent, setting, history, imageAttachments, promptOverride);
+
+      await Message.create({
+        conversation_id: conversation.id,
+        sender_type: "ai",
+        sender_id: null,
+        receiver_id: null,
+        receiver_type: "patient",
+        text: aiText,
+        metadata: { intent, auto_reply: true, faq_matched: !!faqMatch, source: "ig-webhook" },
+      });
+
+      if (lead) {
+        const refreshedLead = await Lead.findByPk(lead.id);
+        await maybeMarkLeadWonFromConfirmation({ lead: refreshedLead, conversation, text: aiText });
+      }
+
+      try {
+        if (aiText) {
+          await sendOutbound("Instagram", setting, senderId, aiText, { conversation });
+        }
+      } catch (sendErr) {
+        log.error(MODULE, "instagram:receive:sendFailed", { tenantId, senderId, error: sendErr.message });
+      }
+
+      if (intent === "low" && setting.escalate_low_confidence) conversation.status = "pending";
+    } catch (aiErr) {
+      log.error(MODULE, "instagram:receive:ai", { error: aiErr.message });
+    }
+  }
+
+  if (lead && emailNotifyFor.includes(intent) && setting.notification_email) {
+    try {
+      await sendIntentNotification({
+        toEmail: setting.notification_email,
+        intent,
+        leadName: lead.name,
+        channel: conversation.channel,
+        conversationId: conversation.id,
+      });
+      await createNotification({
+        type: "message",
+        title: `${intent.charAt(0).toUpperCase() + intent.slice(1)} intent conversation`,
+        body: `${lead?.name || "A patient"} sent a ${intent}-intent message via Instagram. Review recommended.`,
+        tenantId: conversation.tenant_id,
+        recipientRole: "tenant_admin",
+        meta: { conversation_id: conversation.id, lead_id: lead?.id, intent },
+      });
+    } catch (mailErr) {
+      log.error(MODULE, "instagram:receive:email", { error: mailErr.message });
+    }
+  }
+
+  if (lead) await enforceLeadScoreStageConsistency(lead);
+  await conversation.save();
+};
+
+/** POST /api/webhooks/instagram/:tenantId/:slot — Meta's inbound message
+ *  delivery. The URL path identifies which tenant's row to use — signature
+ *  verification uses THAT tenant's own Meta App Secret, since each clinic
+ *  brings their own Meta App and there is no shared/global app secret. */
+const instagramReceive = async (req, res) => {
+  const session = await resolveTenantSessionFromPath(req);
+  if (!session || !session.meta_app_secret) {
+    log.warn(MODULE, "instagram:receive", { message: "No tenant session/app secret for this path.", params: req.params });
+    return res.sendStatus(403);
+  }
+
+  // Respond 200 immediately after signature verification passes, per Meta's
+  // requirement (Meta expects a fast ack and will retry/back off otherwise).
+  if (!verifyMetaSignature(req, session.meta_app_secret)) {
+    log.warn(MODULE, "instagram:receive", { message: "Signature verification failed.", tenantId: session.tenant_id });
+    return res.sendStatus(403);
+  }
+
+  const body = req.rawBody ? JSON.parse(req.rawBody.toString("utf8")) : req.body;
+  res.sendStatus(200);
+
+  try {
+    const entries = body?.entry || [];
+    for (const entry of entries) {
+      const messaging = entry.messaging || [];
+      for (const event of messaging) {
+        if (!event.message || event.message.is_echo) continue; // ignore echoes of our own sends
+        const senderId = event.sender?.id;
+        if (!senderId) continue;
+        await handleInstagramInboundMessage({ session, senderId, message: event.message });
+      }
+    }
+  } catch (err) {
+    log.error(MODULE, "instagram:receive", { error: err.message, tenantId: session.tenant_id });
+  }
+};
+
 // Reusable pipeline helpers — consumed by the WhatsApp-QR bootstrap
-// (whatsappQrBootstrap.js) and the in-app conversation controller. These are
-// channel-agnostic; the Meta HTTP handlers below remain 501 stubs.
+// (whatsappQrBootstrap.js), the Instagram webhook receive handler above, and
+// the in-app conversation controller. These are channel-agnostic.
 exports.generateAIResponse = generateAIResponse;
 exports.analyzeIntent = analyzeIntent;
 exports.matchFAQ = matchFAQ;
@@ -706,5 +937,5 @@ exports.scheduleBatchedPhotoReply = scheduleBatchedPhotoReply;
 
 exports.whatsappVerify   = notImplemented("WhatsApp", "verify");
 exports.whatsappReceive  = notImplemented("WhatsApp", "receive");
-exports.instagramVerify  = notImplemented("Instagram", "verify");
-exports.instagramReceive = notImplemented("Instagram", "receive");
+exports.instagramVerify  = instagramVerify;
+exports.instagramReceive = instagramReceive;

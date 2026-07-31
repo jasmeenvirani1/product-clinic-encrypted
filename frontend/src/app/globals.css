@@ -22,9 +22,11 @@
 
   /* Secondary */
   --color-secondary:            #6366F1;
+  --color-secondary-accent:     #818CF8;
 
   /* Surfaces */
   --color-brand-bg:             #F8FAFC;
+  --color-brand-card:           #FFFFFF;
   --color-brand-border:         #E2E8F0;
   --color-brand-border-alt:     #e2e8f0;
   --color-brand-heading:        #0F172A;

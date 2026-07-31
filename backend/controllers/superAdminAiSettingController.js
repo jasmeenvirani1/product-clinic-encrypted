@@ -108,7 +108,9 @@ exports.listTenantSettings = async (req, res) => {
 
     // Live Instagram connection state (one row per tenant, slot 1 today) —
     // has_instagram only reflects the toggle; instagram_status reflects the
-    // real instagram-dm session so the overview table shows honest state.
+    // real per-tenant Meta connection (InstagramSession — each tenant's own
+    // Meta App credentials, not a shared/global app) so the overview table
+    // shows honest state.
     const igSessions = await InstagramSession.findAll({ where: { slot: 1 } });
     const igStatusByTenant = new Map(igSessions.map((r) => [r.tenant_id, r]));
 
@@ -125,7 +127,7 @@ exports.listTenantSettings = async (req, res) => {
         ai_tone: s.ai_tone,
         has_whatsapp: !!s.whatsapp_enabled,
         has_instagram: !!s.instagram_enabled,
-        instagram_status: igSession?.status || "unlinked",
+        instagram_status: igSession?.status || "disconnected",
         instagram_username: igSession?.ig_username || null,
         updated_at: s.updated_at,
       };

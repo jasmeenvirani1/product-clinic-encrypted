@@ -73,13 +73,23 @@ import { specialityService, type Speciality } from '@/services/speciality.servic
 // Theme Settings. CSS vars work in inline styles at any scope (no hook needed),
 // which keeps the module-level <Eyebrow> component working unchanged.
 const NAVY = 'var(--color-primary)';                                   // primary accent
-const NAVY_DARK = 'var(--color-brand-heading)';                        // near-black heading surface
-const NAVY_SOFT = 'var(--color-primary-hover)';                        // lighter primary for gradients
+const NAVY_SOFT = 'var(--color-primary-hover)';                        // lighter primary for gradients / hover surfaces
 const TINT = 'var(--color-secondary)';                                 // secondary — raw brand secondary colour
 const PILL = 'color-mix(in srgb, var(--color-primary) 8%, #fff)';      // eyebrow pill background
 const HEADING = 'var(--color-brand-heading)';                          // heading text
 const BODY = 'var(--color-text-body)';                                 // body / muted text
 const CARD_BG = 'color-mix(in srgb, var(--color-secondary) 35%, #fff)'; // theme-tinted card surface
+const SURFACE = 'var(--color-brand-card)';                             // card/panel surface — themed "white"
+const ACCENT = 'var(--color-secondary-accent)';                        // secondary accent — pill text on primary bands
+// Body copy sitting on a primary-coloured band: a translucent wash of the card
+// surface, so it tracks the theme instead of being hardcoded 70% white.
+const ON_PRIMARY_MUTED = 'color-mix(in srgb, var(--color-brand-card) 70%, transparent)';
+// Unfilled track / hairline on a primary band — faint wash of the card surface.
+const ON_PRIMARY_TRACK = 'color-mix(in srgb, var(--color-brand-card) 25%, transparent)';
+// Integration diagram connectors: pale tints of primary, so the wires match the
+// primary-coloured pulse dot that travels them instead of being fixed indigo.
+const WIRE = 'color-mix(in srgb, var(--color-primary) 28%, #fff)';      // wire stroke
+const WIRE_NODE = 'color-mix(in srgb, var(--color-primary) 38%, #fff)'; // node ring — slightly stronger
 
 // Primary with alpha, for shadows/glows — uses the rgb var ThemeProvider exposes.
 const navyAlpha = (a: number) => `rgba(var(--color-primary-rgb), ${a})`;
@@ -434,7 +444,7 @@ const IndustryCard = ({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="rounded-2xl border border-slate-200 p-5 flex flex-col shadow-lg shadow-slate-900/10 transition-colors duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:border-transparent"
-      style={{ background: hovered ? NAVY_DARK : '#fff' }}
+      style={{ background: hovered ? NAVY_SOFT : '#fff' }}
     >
       <span
         className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-colors duration-300"
@@ -456,12 +466,15 @@ const IndustryCard = ({
 };
 
 // ─── Section eyebrow (pill) ─────────────────────────────────────────────────────
-const Eyebrow = ({ children }: { children: React.ReactNode }) => (
+// `onPrimary` — the pill is sitting on a primary-coloured band (Solution / Results
+// / Demo), so its text and dot switch to the secondary accent instead of primary,
+// which would otherwise be primary-on-primary and barely legible.
+const Eyebrow = ({ children, onPrimary = false }: { children: React.ReactNode; onPrimary?: boolean }) => (
   <div
     className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-[0.18em] mb-4"
-    style={{ background: PILL, color: NAVY }}
+    style={{ background: PILL, color: onPrimary ? ACCENT : NAVY }}
   >
-    <span className="w-1.5 h-1.5 rounded-full" style={{ background: NAVY }} />
+    <span className="w-1.5 h-1.5 rounded-full" style={{ background: onPrimary ? ACCENT : NAVY }} />
     {children}
   </div>
 );
@@ -684,8 +697,8 @@ const IntegrationDiagram = ({
         .integration-hub-title { font-size: 1.3rem; font-weight: 800; letter-spacing: 0.02em; color: ${HEADING}; }
         .integration-hub-subtitle { font-size: 0.86rem; color: ${BODY}; line-height: 1.35; max-width: 160px; }
 
-        .integration-wire { fill: none; stroke: #c7cbf5; stroke-width: 2.4; }
-        .integration-node { fill: #fff; stroke: #b9beee; stroke-width: 1.5; }
+        .integration-wire { fill: none; stroke: ${WIRE}; stroke-width: 2.4; }
+        .integration-node { fill: ${SURFACE}; stroke: ${WIRE_NODE}; stroke-width: 1.5; }
         .integration-pulse { fill: var(--color-primary); filter: drop-shadow(0 0 3px var(--color-primary)); }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1161,7 +1174,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           <h4 className="font-bold text-xl sm:text-2xl" style={{ color: HEADING }}>{item.t}</h4>
                           <p className="text-base sm:text-[16.5px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
                         </div>
-                        <div className="relative h-full min-h-[12rem] rounded-xl overflow-hidden" style={{ background: TINT }}>
+                        <div className="relative h-full min-h-[12rem] rounded-xl overflow-hidden">
                           <Image src={`/problem-${i + 1}.png`} alt={item.t} fill className="object-contain" />
                         </div>
                       </div>
@@ -1175,7 +1188,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           <h4 className="font-bold text-lg mt-1" style={{ color: HEADING }}>{item.t}</h4>
                           <p className="text-[14.5px] leading-relaxed mt-1.5" style={{ color: BODY }}>{item.d}</p>
                         </div>
-                        <div className="relative aspect-[3/2] mt-3 mx-4 mb-4 rounded-xl overflow-hidden" style={{ background: TINT }}>
+                        <div className="relative aspect-[3/2] mt-3 mx-4 mb-4 rounded-xl overflow-hidden">
                           <Image src={`/problem-${i + 1}.png`} alt={item.t} fill className="object-contain" />
                         </div>
                       </div>
@@ -1193,14 +1206,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         <div
           ref={solutionWrapRef}
           id="solution"
-          className="relative bg-white scroll-mt-24"
-          style={isDesktop ? { height: `${SOLUTION_COUNT * SOLUTION_STEP_VH}vh` } : undefined}
+          className="relative scroll-mt-24"
+          style={{
+            background: NAVY,
+            ...(isDesktop ? { height: `${SOLUTION_COUNT * SOLUTION_STEP_VH}vh` } : {}),
+          }}
         >
           <div className="lg:sticky lg:top-16 overflow-hidden pt-10 sm:pt-12 lg:pt-0 pb-10 lg:pb-0 lg:h-[calc(100dvh-4rem)] lg:flex lg:flex-col lg:justify-center">
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-4xl mx-auto mb-5 lg:mb-4">
-                <div className="flex justify-center mb-2"><Eyebrow>{t.solutionBadge}</Eyebrow></div>
-                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.solutionTitle}</h2>
+                <div className="flex justify-center mb-2"><Eyebrow onPrimary>{t.solutionBadge}</Eyebrow></div>
+                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: TINT }}>{t.solutionTitle}</h2>
               </div>
 
               {isDesktop ? (
@@ -1217,8 +1233,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           pointerEvents: i === activeSolution ? 'auto' : 'none',
                         }}
                       >
-                        <h4 className="font-bold text-2xl" style={{ color: HEADING }}>{c.t}</h4>
-                        <p className="text-base leading-relaxed mt-2" style={{ color: BODY }}>{c.d}</p>
+                        <h4 className="font-bold text-2xl" style={{ color: ACCENT }}>{c.t}</h4>
+                        <p className="text-base leading-relaxed mt-2" style={{ color: ON_PRIMARY_MUTED }}>{c.d}</p>
                       </div>
                     ))}
                   </div>
@@ -1233,11 +1249,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                       return (
                         <div
                           key={i}
-                          className="absolute top-0 h-full rounded-2xl overflow-hidden border border-slate-200 transition-[transform,opacity] duration-500 ease-out"
+                          className="absolute top-0 h-full rounded-2xl overflow-hidden transition-[transform,opacity] duration-500 ease-out"
                           style={{
-                            background: TINT,
                             left: 0,
                             width: '62%',
+                            border: `1px solid ${ON_PRIMARY_TRACK}`,
                             transform: isActive
                               ? 'translateX(0%) scale(1)'
                               : isPreview
@@ -1248,7 +1264,18 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                             boxShadow: isActive ? '0 25px 50px -12px rgba(15,23,42,0.25)' : 'none',
                           }}
                         >
-                          <Image src={`/solution-${i + 1}.png`} alt={t.solutionCards[i].t} fill className="object-contain" />
+                          {/* The solution PNGs are opaque (no alpha) with white baked in, so a card
+                              background can't show behind them. Instead the secondary colour is laid
+                              over the image and multiplied: white pixels take the secondary colour,
+                              darker UI pixels stay put. `isolation` keeps the blend inside this card. */}
+                          <div className="absolute inset-0" style={{ isolation: 'isolate' }}>
+                            <Image src={`/solution-${i + 1}.png`} alt={t.solutionCards[i].t} fill className="object-contain" />
+                            <div
+                              aria-hidden
+                              className="absolute inset-0 pointer-events-none"
+                              style={{ background: TINT, mixBlendMode: 'multiply' }}
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -1257,12 +1284,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               ) : (
                 <div className="flex flex-col gap-8">
                   {t.solutionCards.map((c, i) => (
-                    <div key={c.t} className="rounded-2xl bg-white border border-slate-200 shadow-lg shadow-slate-900/10 overflow-hidden">
-                      <div className="relative aspect-[3/2] bg-slate-50">
+                    <div key={c.t} className="rounded-2xl shadow-lg shadow-slate-900/10 overflow-hidden" style={{ background: SURFACE, border: `1px solid ${ON_PRIMARY_TRACK}` }}>
+                      <div className="relative aspect-[3/2]" style={{ isolation: 'isolate' }}>
                         <Image src={`/solution-${i + 1}.png`} alt={c.t} fill className="object-contain" />
+                        <div
+                          aria-hidden
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ background: TINT, mixBlendMode: 'multiply' }}
+                        />
                       </div>
                       <div className="px-5 py-4">
-                        <h4 className="font-bold text-[16.5px]" style={{ color: HEADING }}>{c.t}</h4>
+                        <h4 className="font-bold text-[16.5px]" style={{ color: ACCENT }}>{c.t}</h4>
                         <p className="text-[14.5px] leading-relaxed mt-1" style={{ color: BODY }}>{c.d}</p>
                       </div>
                     </div>
@@ -1308,25 +1340,25 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ RESULTS ══════════════ */}
-        <section className="py-6 sm:py-8" style={{ background: TINT }}>
+        <section className="py-6 sm:py-8" style={{ background: NAVY }}>
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: heading + subtitle + points with progress bars */}
             <motion.div {...fadeInUp}>
-              <Eyebrow>{t.resultsBadge}</Eyebrow>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-4" style={{ color: NAVY }}>{t.resultsTitle}</h2>
-              <p className="leading-relaxed mb-10 max-w-md" style={{ color: BODY }}>{t.resultsSubtitle}</p>
+              <Eyebrow onPrimary>{t.resultsBadge}</Eyebrow>
+              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-4" style={{ color: TINT }}>{t.resultsTitle}</h2>
+              <p className="leading-relaxed mb-10 max-w-md" style={{ color: ON_PRIMARY_MUTED }}>{t.resultsSubtitle}</p>
               <div className="space-y-7">
                 {t.resultsPoints.map((p, i) => (
                   <div key={p}>
-                    <div className="text-[16.5px] font-medium mb-2.5" style={{ color: HEADING }}>{p}</div>
-                    <div className="h-1.5 rounded-full bg-slate-300/50 overflow-hidden">
+                    <div className="text-[16.5px] font-medium mb-2.5" style={{ color: SURFACE }}>{p}</div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: ON_PRIMARY_TRACK }}>
                       <motion.div
                         initial={{ width: 0 }}
                         whileInView={{ width: '100%' }}
                         viewport={{ once: true }}
                         transition={{ duration: 0.9, delay: i * 0.1, ease: 'easeOut' }}
                         className="h-full rounded-full"
-                        style={{ background: NAVY }}
+                        style={{ background: ACCENT }}
                       />
                     </div>
                   </div>
@@ -1336,7 +1368,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
             {/* Right: results chart image */}
             <motion.div {...fadeInUp} className="relative">
-              <div className="rounded-3xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-900/10 bg-white">
+              <div className="rounded-3xl overflow-hidden shadow-xl shadow-slate-900/10" style={{ background: SURFACE, border: `1px solid ${ON_PRIMARY_TRACK}` }}>
                 <Image
                   src="/results.png"
                   alt="Monthly no-show rate — before vs. after ClinicFlow"
@@ -1397,18 +1429,18 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <div className="py-10 lg:py-12 text-white">
                 <div
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-widest mb-7"
-                  style={{ background: PILL, color: NAVY }}
+                  style={{ background: PILL, color: ACCENT }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: NAVY }} /> {t.demoBadge}
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} /> {t.demoBadge}
                 </div>
-                <h2 className="font-heading text-3xl sm:text-[2.25rem] font-semibold leading-[1.18] mb-6" style={{ color: TINT }}>
+                <h2 className="font-heading text-3xl sm:text-[2.25rem] font-semibold leading-[1.18] mb-6" style={{ color: ACCENT }}>
                   {t.demoTitle1}<br />{t.demoTitle2}
                 </h2>
-                <p className="leading-relaxed mb-9 max-w-lg text-[16.5px]" style={{ color: 'rgba(255,255,255,0.7)' }}>{t.demoSubtitle}</p>
+                <p className="leading-relaxed mb-9 max-w-lg text-[16.5px]" style={{ color: ON_PRIMARY_MUTED }}>{t.demoSubtitle}</p>
                 <button
                   onClick={goLogin}
-                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white text-[16.5px] font-bold transition-all hover:bg-slate-100 shadow-lg"
-                  style={{ color: NAVY }}
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-[16.5px] font-bold transition-all hover:brightness-95 shadow-lg"
+                  style={{ background: SURFACE, color: NAVY }}
                 >
                   {t.demoCta}
                 </button>
@@ -1643,7 +1675,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 <button
                   type="submit"
                   className="h-11 px-5 rounded-lg text-base font-semibold shrink-0 transition-all hover:brightness-105"
-                  style={{ background: TINT, color: NAVY }}
+                  style={{ background: ACCENT, color: NAVY }}
                 >
                   {t.footerNewsletterCta}
                 </button>

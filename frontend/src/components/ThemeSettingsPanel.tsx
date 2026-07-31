@@ -25,6 +25,7 @@ const COLOR_GROUPS: Array<{
     label: "Secondary & Accent",
     keys: [
       { key: "secondary", label: "Secondary", desc: "Badge & tag accent colour" },
+      { key: "secondaryAccent", label: "Secondary Accent", desc: "Additional secondary accent colour" },
     ],
   },
   {

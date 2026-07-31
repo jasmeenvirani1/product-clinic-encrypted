@@ -13,7 +13,8 @@ const FALLBACK_PRIMARY = (DEFAULT_COLORS && DEFAULT_COLORS.primary) || "#0369A1"
 // status colours (success/warning/error + their backgrounds), which must stay
 // fixed so status UI keeps its meaning.
 const SUGGESTED_KEYS = [
-  "primary", "primaryDark", "primaryHover", "primaryDeep", "primaryDeeper", "secondary",
+  "primary", "primaryDark", "primaryHover", "primaryDeep", "primaryDeeper",
+  "secondary", "secondaryAccent",
   "brandBg", "brandCard", "brandBorder", "brandHeading",
   "textPrimary", "textSecondary", "textBody", "textMuted",
   "sidebarBg", "sidebarHover", "sidebarActive",
@@ -64,6 +65,9 @@ const buildPaletteFromPrimary = (primary, secondary) => {
     primaryDeep:   shade(primary, -0.40),
     primaryDeeper: shade(primary, -0.58),
     secondary: isValidHex(secondary) ? secondary.toUpperCase() : d.secondary,
+    // Lighter companion to secondary — derived so an AI-suggested palette still
+    // fills this key instead of silently falling back to the static default.
+    secondaryAccent: isValidHex(secondary) ? shade(secondary.toUpperCase(), 0.18) : d.secondaryAccent,
     // Surfaces / text — keep safe defaults for readability.
     brandBg:       d.brandBg,
     brandCard:     d.brandCard,

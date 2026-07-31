@@ -1,171 +1,170 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Form, Input, Spin, Tag } from "antd";
-import { Instagram, LogOut, KeyRound } from "lucide-react";
+import { Alert, Button, Form, Input, Spin, Tag, Tooltip } from "antd";
+import { Instagram, Copy, Check, KeyRound } from "lucide-react";
 import {
-  instagramDmService,
-  type InstagramDmStatus,
+  instagramMetaService,
+  type InstagramMetaStatus,
 } from "@/services/aiSetting.service";
 import { notifyIntegrationsChanged } from "@/utils/integrationEvents";
 
 type Props = {
   /** Where to send the user once Instagram connects (the conversations module). */
   conversationsPath: string;
-  /** Auto-redirect to conversations a few seconds after connecting. */
+  /**
+   * Unused in the credentials-entry flow: connection only becomes "connected"
+   * once Meta's webhook starts delivering pings after the clinic configures
+   * their own Meta App, not immediately on save — so there's no "just
+   * connected" moment to auto-redirect from. Kept in the prop shape only for
+   * call-site compatibility with the previous OAuth-redirect widget.
+   */
   autoRedirect?: boolean;
   /** Which linked account this widget manages (1 = first account). */
   slot?: number;
   /** Optional heading shown above the widget (e.g. "Account 2 · Support"). */
   title?: string;
-  /** Called after a successful logout so a parent list can refresh. */
+  /** Called after a successful disconnect so a parent list can refresh. */
   onChanged?: () => void;
 };
 
-const POLL_MS = 2000;
-const REDIRECT_DELAY_MS = 2500;
-
-const STATUS_LABEL: Record<InstagramDmStatus, string> = {
-  unlinked: "Not connected",
-  connecting: "Connecting…",
-  awaiting_2fa: "Enter 2FA code",
-  awaiting_challenge: "Security checkpoint required",
+const STATUS_LABEL: Record<InstagramMetaStatus, string> = {
+  disconnected: "Not connected",
   connected: "Connected",
-  disconnected: "Disconnected",
-  logged_out: "Logged out — reconnect needed",
-  banned: "Account restricted",
+  error: "Connection error",
 };
 
-export function InstagramConnect({ conversationsPath, autoRedirect = true, slot = 1, title, onChanged }: Props) {
+/** Small inline "click to copy" control, following the copy-on-click pattern
+ * already used elsewhere in this codebase (see leads table's phone column). */
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — no-op */
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-slate-600">{label}</p>
+      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+        <span className="flex-1 truncate font-mono text-xs text-slate-700">{value}</span>
+        <Tooltip title={copied ? "Copied!" : "Copy"}>
+          <Button
+            size="small"
+            type="text"
+            icon={copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+            onClick={() => void handleCopy()}
+          />
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
+export function InstagramConnect({ conversationsPath, slot = 1, title, onChanged }: Props) {
   const router = useRouter();
-  const [status, setStatus] = useState<InstagramDmStatus>("unlinked");
+  const [form] = Form.useForm();
+  const [status, setStatus] = useState<InstagramMetaStatus>("disconnected");
   const [igUsername, setIgUsername] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [hasCredentials, setHasCredentials] = useState(false);
+  const [appSecretMasked, setAppSecretMasked] = useState<string | null>(null);
+  const [accessTokenMasked, setAccessTokenMasked] = useState<string | null>(null);
+  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
+  const [verifyToken, setVerifyToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const redirectedRef = useRef(false);
+  const [loading, setLoading] = useState(true);
 
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const loadWebhookInfo = useCallback(async () => {
+    try {
+      const info = await instagramMetaService.webhookInfo(slot);
+      setWebhookUrl(info.webhook_url);
+      setVerifyToken(info.verify_token);
+    } catch {
+      // webhook info is best-effort display — credentials save can still have succeeded
     }
-  }, []);
+  }, [slot]);
 
-  // `allowRedirect` is true only while an active connect flow is running.
-  // The initial status load passes false, so revisiting an already-connected
-  // settings screen never auto-redirects — only a fresh connect does.
-  const apply = useCallback(
-    (
-      s: { status: InstagramDmStatus; ig_username?: string | null; last_error?: string | null },
-      allowRedirect = false
-    ) => {
+  const loadStatus = useCallback(async () => {
+    try {
+      const s = await instagramMetaService.status(slot);
       setStatus(s.status);
-      if (s.ig_username !== undefined) setIgUsername(s.ig_username ?? null);
+      setIgUsername(s.ig_username ?? null);
       setLastError(s.last_error ?? null);
-      if (s.status === "connected") {
-        stopPolling();
-        notifyIntegrationsChanged(); // refresh the connection banner immediately
-        setPassword("");
-        setCode("");
-        if (allowRedirect && autoRedirect && !redirectedRef.current) {
-          redirectedRef.current = true;
-          setTimeout(() => router.push(conversationsPath), REDIRECT_DELAY_MS);
-        }
-      }
-      if (s.status !== "connecting" && s.status !== "awaiting_2fa" && s.status !== "awaiting_challenge") {
-        stopPolling();
-      }
-    },
-    [autoRedirect, conversationsPath, router, stopPolling]
-  );
+      setHasCredentials(!!s.has_credentials);
+      setAppSecretMasked(s.meta_app_secret_masked ?? null);
+      setAccessTokenMasked(s.access_token_masked ?? null);
+      if (s.status === "connected") notifyIntegrationsChanged();
+      if (s.has_credentials) await loadWebhookInfo();
+    } catch {
+      setStatus("disconnected");
+    } finally {
+      setLoading(false);
+    }
+  }, [slot, loadWebhookInfo]);
 
-  const startPolling = useCallback(() => {
-    stopPolling();
-    pollRef.current = setInterval(async () => {
-      try {
-        const s = await instagramDmService.status(slot);
-        apply(s, true); // polling only runs after a Connect click → redirect allowed
-      } catch {
-        /* transient — keep polling */
-      }
-    }, POLL_MS);
-  }, [apply, stopPolling, slot]);
-
-  // Initial status load — never redirects (allowRedirect defaults to false).
-  // A failure here just means "treat as not connected yet" — don't show a
-  // scary error banner on a page a fresh/never-linked tenant is expected to land on.
   useEffect(() => {
-    let alive = true;
-    instagramDmService
-      .status(slot)
-      .then((s) => alive && apply(s))
-      .catch(() => alive && setStatus("unlinked"));
-    return () => {
-      alive = false;
-      stopPolling();
-    };
-  }, [apply, stopPolling, slot]);
+    void loadStatus();
+  }, [loadStatus]);
 
-  const handleConnect = async () => {
-    if (!username.trim() || !password) {
-      setError("Enter both the Instagram username and password.");
-      return;
-    }
-    setBusy(true);
+  const handleSaveCredentials = async () => {
     setError(null);
-    redirectedRef.current = false;
     try {
-      const s = await instagramDmService.connect(username.trim(), password, slot);
-      apply(s, true);
-      startPolling();
-    } catch {
-      setError("Failed to start Instagram login. Try again.");
+      const values = await form.validateFields();
+      setBusy(true);
+      const s = await instagramMetaService.saveCredentials(
+        {
+          meta_app_id: values.meta_app_id,
+          meta_app_secret: values.meta_app_secret,
+          access_token: values.access_token,
+          ig_business_account_id: values.ig_business_account_id,
+        },
+        slot
+      );
+      setStatus(s.status);
+      setIgUsername(s.ig_username ?? null);
+      setLastError(s.last_error ?? null);
+      setHasCredentials(!!s.has_credentials);
+      setAppSecretMasked(s.meta_app_secret_masked ?? null);
+      setAccessTokenMasked(s.access_token_masked ?? null);
+      form.resetFields(["meta_app_secret", "access_token"]); // never keep secrets in the form after save
+      setShowCredentialsForm(false);
+      if (s.status === "connected") notifyIntegrationsChanged();
+      await loadWebhookInfo();
+      onChanged?.();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (msg) setError(msg);
+      // else: Form.validateFields already surfaced field-level errors, nothing extra to show
     } finally {
       setBusy(false);
     }
   };
 
-  const handleSubmitCode = async () => {
-    if (!code.trim()) {
-      setError("Enter the verification code.");
-      return;
-    }
+  const handleDisconnect = async () => {
     setBusy(true);
     setError(null);
     try {
-      const s = await instagramDmService.submitCode(code.trim(), slot);
-      apply(s, true);
-      if (s.status === "awaiting_2fa" || s.status === "awaiting_challenge") {
-        // still not done — keep the code step open
-      } else {
-        startPolling();
-      }
-    } catch {
-      setError("Failed to verify code. Try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      await instagramDmService.logout(slot);
-      stopPolling();
-      setStatus("unlinked");
+      await instagramMetaService.disconnect(slot);
+      setStatus("disconnected");
       setIgUsername(null);
       setLastError(null);
-      setUsername("");
-      setPassword("");
-      setCode("");
-      notifyIntegrationsChanged(); // show the "not connected" banner immediately
+      setHasCredentials(false);
+      setAppSecretMasked(null);
+      setAccessTokenMasked(null);
+      setWebhookUrl(null);
+      setVerifyToken(null);
+      form.resetFields();
+      notifyIntegrationsChanged();
       onChanged?.();
     } catch {
       setError("Failed to disconnect.");
@@ -175,9 +174,7 @@ export function InstagramConnect({ conversationsPath, autoRedirect = true, slot 
   };
 
   const isConnected = status === "connected";
-  const isBanned = status === "banned";
-  const needsCode = status === "awaiting_2fa" || status === "awaiting_challenge";
-  const isConnecting = status === "connecting";
+  const hasError = status === "error";
 
   return (
     <div className="space-y-4">
@@ -185,114 +182,145 @@ export function InstagramConnect({ conversationsPath, autoRedirect = true, slot 
 
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-slate-600">Status</span>
-        <Tag color={isConnected ? "green" : isBanned ? "red" : needsCode ? "orange" : status === "logged_out" ? "red" : "default"}>
-          {STATUS_LABEL[status]}
-        </Tag>
-        {igUsername && <span className="font-mono text-xs text-slate-400">@{igUsername}</span>}
+        <Tag color={isConnected ? "green" : hasError ? "red" : "default"}>{STATUS_LABEL[status]}</Tag>
+        {isConnected && igUsername && <span className="font-mono text-xs text-slate-400">@{igUsername}</span>}
+        {isConnected && (
+          <Button type="link" size="small" className="!h-auto !px-1 !py-0" onClick={() => router.push(conversationsPath)}>
+            Go to Conversations
+          </Button>
+        )}
       </div>
+
+      {!isConnected && (
+        <Alert
+          type="info"
+          showIcon
+          message="You'll need your own Meta Developer App"
+          description={
+            <div className="space-y-1 text-xs">
+              <p>
+                This clinic connects Instagram using its own Meta Developer App — not a shared
+                MedLeads login. Before entering credentials below, make sure you have:
+              </p>
+              <ul className="ml-4 list-disc space-y-0.5">
+                <li>A Meta Developer App with the <strong>Instagram Graph API</strong> product added</li>
+                <li>An Instagram <strong>Business or Creator account</strong> linked to a Facebook Page</li>
+                <li>A long-lived <strong>Access Token</strong> generated from your Meta App&apos;s dashboard</li>
+              </ul>
+              <p>
+                After saving your credentials below, we&apos;ll show you a webhook URL and verify token —
+                paste those into your Meta App&apos;s webhook settings on developers.facebook.com to start
+                receiving DMs.
+              </p>
+            </div>
+          }
+        />
+      )}
 
       {error && <Alert type="error" message={error} showIcon />}
       {!error && lastError && <Alert type="warning" message={lastError} showIcon />}
 
-      {isConnected ? (
-        <Alert
-          type="success"
-          showIcon
-          message="Instagram is connected"
-          description={
-            <div className="space-y-2">
-              <p className="text-sm">
-                Incoming DMs now appear in your Conversations inbox and the AI replies
-                automatically.
-                {autoRedirect && " Redirecting you to Conversations…"}
-              </p>
-              <Button type="primary" size="small" onClick={() => router.push(conversationsPath)}>
-                Go to Conversations
-              </Button>
-            </div>
-          }
-        />
-      ) : isBanned ? (
-        <Alert
-          type="error"
-          showIcon
-          message="Instagram restricted this account"
-          description="Instagram has flagged, checkpointed, or restricted this account. Reconnecting is unlikely to succeed until the restriction clears on Instagram's side. Consider using a different account, or disconnect and try again later."
-        />
-      ) : needsCode ? (
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <KeyRound size={16} className="text-pink-600" />
-            <p className="text-sm text-slate-600">
-              {status === "awaiting_2fa"
-                ? "Instagram requires a two-factor authentication code. Enter the code sent to the account."
-                : "Instagram requires a security checkpoint. Enter the confirmation code Instagram sent (or approve the login in the Instagram app first, then enter the code)."}
-            </p>
-          </div>
-          <Form layout="vertical" onFinish={() => void handleSubmitCode()}>
-            <Form.Item label="Verification code" className="!mb-3">
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter code"
-                maxLength={10}
-              />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" loading={busy}>
-              Submit code
-            </Button>
-          </Form>
-        </div>
-      ) : isConnecting ? (
+      {loading ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl bg-slate-50 p-8">
           <Spin />
-          <p className="text-xs text-slate-500">Signing in to Instagram…</p>
+          <p className="text-xs text-slate-500">Checking connection status…</p>
         </div>
       ) : (
-        <div className="rounded-2xl bg-slate-50 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Instagram size={16} className="text-pink-600" />
-            <p className="text-sm text-slate-600">
-              Link the clinic&apos;s Instagram account with its username and password — no
-              Meta API setup required.
-            </p>
-          </div>
-          <Form layout="vertical" onFinish={() => void handleConnect()}>
-            <Form.Item label="Instagram username" className="!mb-3">
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="clinic_handle"
-                autoComplete="off"
-              />
-            </Form.Item>
-            <Form.Item label="Instagram password" className="!mb-3">
-              <Input.Password
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                autoComplete="off"
-              />
-            </Form.Item>
-            <Button type="primary" htmlType="submit" loading={busy}>
-              {status === "logged_out" || status === "disconnected"
-                ? "Reconnect Instagram"
-                : "Connect Instagram"}
+        <>
+          {hasCredentials && !showCredentialsForm && (
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-slate-800">Meta credentials saved</p>
+                <p className="text-xs text-slate-500 font-mono">
+                  Secret {appSecretMasked ?? "••••••••"} · Token {accessTokenMasked ?? "••••••••"}
+                </p>
+              </div>
+              <Button size="small" onClick={() => setShowCredentialsForm(true)}>
+                Update
+              </Button>
+            </div>
+          )}
+
+          {!hasCredentials && !showCredentialsForm && (
+            <div className="rounded-2xl bg-slate-50 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Instagram size={16} className="text-pink-600" />
+                <p className="text-sm text-slate-600">
+                  Enter your clinic&apos;s Meta App credentials to connect Instagram DMs.
+                </p>
+              </div>
+              <Button type="primary" icon={<KeyRound size={14} />} onClick={() => setShowCredentialsForm(true)}>
+                Enter Credentials
+              </Button>
+            </div>
+          )}
+
+          {showCredentialsForm && (
+            <Form form={form} layout="vertical" className="crm-form space-y-2">
+              <Form.Item
+                name="meta_app_id"
+                label="Meta App ID"
+                rules={[{ required: true, message: "App ID is required." }]}
+              >
+                <Input placeholder="1234567890123456" />
+              </Form.Item>
+              <Form.Item
+                name="meta_app_secret"
+                label="Meta App Secret"
+                rules={[{ required: !hasCredentials, message: "App Secret is required." }]}
+                extra={hasCredentials ? "Leave blank to keep the currently saved secret." : undefined}
+              >
+                <Input.Password placeholder="App Secret" />
+              </Form.Item>
+              <Form.Item
+                name="access_token"
+                label="Access Token"
+                rules={[{ required: !hasCredentials, message: "Access Token is required." }]}
+                extra={
+                  hasCredentials
+                    ? "Leave blank to keep the currently saved token."
+                    : "A long-lived token generated from your own Meta App's dashboard."
+                }
+              >
+                <Input.Password placeholder="Access Token" />
+              </Form.Item>
+              <Form.Item
+                name="ig_business_account_id"
+                label="Instagram Business Account ID"
+                rules={[{ required: !hasCredentials, message: "Instagram Business Account ID is required." }]}
+                extra={hasCredentials ? undefined : "Find this in your Meta App's Graph API Explorer or your Facebook Page's linked Instagram account settings."}
+              >
+                <Input placeholder="17841400000000000" />
+              </Form.Item>
+              <div className="flex gap-2">
+                <Button type="primary" loading={busy} onClick={() => void handleSaveCredentials()}>
+                  Save Credentials
+                </Button>
+                {hasCredentials && (
+                  <Button onClick={() => setShowCredentialsForm(false)} disabled={busy}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            </Form>
+          )}
+
+          {hasCredentials && (webhookUrl || verifyToken) && (
+            <div className="space-y-3 rounded-2xl bg-slate-50 p-5">
+              <p className="text-xs font-medium text-slate-600">
+                Paste these into your Meta App&apos;s webhook configuration on developers.facebook.com:
+              </p>
+              {webhookUrl && <CopyField label="Callback / Webhook URL" value={webhookUrl} />}
+              {verifyToken && <CopyField label="Verify Token" value={verifyToken} />}
+            </div>
+          )}
+
+          {hasCredentials && (
+            <Button danger size="small" loading={busy} onClick={() => void handleDisconnect()}>
+              Disconnect Instagram
             </Button>
-          </Form>
-        </div>
-      )}
-
-      {isConnected && (
-        <Button danger size="small" icon={<LogOut size={13} />} loading={busy} onClick={() => void handleLogout()}>
-          Disconnect Instagram
-        </Button>
-      )}
-
-      {(isBanned || status === "logged_out") && (
-        <Button size="small" icon={<LogOut size={13} />} loading={busy} onClick={() => void handleLogout()}>
-          Clear session
-        </Button>
+          )}
+        </>
       )}
     </div>
   );

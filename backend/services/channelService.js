@@ -6,14 +6,12 @@ const MODULE = "ChannelService";
 /**
  * Channel-agnostic outbound messaging layer.
  *
- * The previous Meta Graph API integration (WhatsApp Cloud API / Instagram
- * Graph API) has been removed pending a NEW connection flow. These functions
- * are intentional stubs so the rest of the app (webhooks, conversations,
- * campaigns, follow-ups) keeps its pipeline intact while the new transport is
- * wired in.
- *
- * When the new flow is defined, implement the send logic here — every caller
- * already routes through these functions, so no caller-side changes are needed.
+ * WhatsApp goes through the self-hosted Baileys/QR session. Instagram goes
+ * through Meta's Instagram Graph API using each tenant's OWN Meta App
+ * credentials and access token (no shared/global Meta App — see
+ * instagramDmBootstrap.js/instagramMetaRoutes.js) — every caller already
+ * routes through these functions, so no caller-side changes are needed when
+ * a channel's underlying transport changes.
  */
 
 class ChannelNotConnectedError extends Error {
@@ -50,8 +48,9 @@ const sendOutbound = async (channel, setting, recipientId, text, opts = {}) => {
   }
 
   if (channel === "Instagram") {
-    // Instagram goes through the linked instagram-dm session. Lazy require
-    // avoids a circular dependency at module load time (same pattern as WhatsApp).
+    // Instagram goes through Meta's Graph API using the tenant's OWN stored
+    // access token (no shared/global app). Lazy require avoids a circular
+    // dependency at module load time (same pattern as WhatsApp).
     const { sendInstagramText, slotForConversation } = require("./instagramDmBootstrap");
     const conversation = opts.conversation || null;
     const tenantId = conversation?.tenant_id || setting?.tenant_id;
@@ -90,8 +89,12 @@ const sendOutboundTemplate = async (channel, setting, recipientId, template) => 
 
 /**
  * Whether a channel is connected/usable for the given tenant setting.
- * With Meta removed, this is driven purely by the channel toggle until the
- * new connection flow sets its own readiness signal.
+ * WhatsApp is driven purely by the channel toggle. Instagram additionally
+ * requires a connected InstagramSession row with the tenant's own stored
+ * access token. `token_expires_at` is best-effort only (many clinic-supplied
+ * long-lived tokens don't cleanly self-report an expiry) — connectivity is
+ * gated on `status` (flipped to "token_expired" by the health-check job or a
+ * failed send, see instagramDmBootstrap.js), not on this timestamp.
  * @param {"WhatsApp"|"Instagram"} channel
  * @param {object} setting
  * @returns {boolean}
@@ -102,7 +105,10 @@ const isChannelConnected = async (channel, setting) => {
   if (channel === "Instagram") {
     if (!setting.instagram_enabled) return false;
     const live = await InstagramSession.findOne({
-      where: { tenant_id: setting.tenant_id, status: "connected" },
+      where: {
+        tenant_id: setting.tenant_id,
+        status: "connected",
+      },
     });
     return !!live;
   }

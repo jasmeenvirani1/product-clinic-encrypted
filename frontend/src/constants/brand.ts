@@ -18,6 +18,7 @@ export const COLORS = {
 
   // Secondary
   secondary: "#6366F1",
+  secondaryAccent: "#818CF8",
 
   // Brand surfaces
   brandBg:      "#F8FAFC",

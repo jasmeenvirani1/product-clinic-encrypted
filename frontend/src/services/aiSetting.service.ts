@@ -123,68 +123,68 @@ export const whatsappQrService = {
   },
 };
 
-// ─── Instagram-DM channel (unofficial private-API session — link the ───
-// ─── clinic's real IG login by username/password, NOT Meta's Graph API) ───
-export type InstagramDmStatus =
-  | "unlinked"
-  | "connecting"
-  | "awaiting_2fa"
-  | "awaiting_challenge"
-  | "connected"
-  | "disconnected"
-  | "logged_out"
-  | "banned";
+// ─── Instagram Meta channel (BYO Meta Developer App — each clinic brings ───
+// ─── their own App ID/App Secret/Access Token, NOT an OAuth redirect). The ───
+// ─── clinic enters their own credentials, then pastes MedLeads' generated ───
+// ─── webhook URL + verify token into THEIR Meta App's webhook config. ───
+export type InstagramMetaStatus = "disconnected" | "connected" | "error";
 
-export interface InstagramDmState {
+export interface InstagramMetaCredentialsPayload {
+  meta_app_id: string;
+  meta_app_secret: string;
+  access_token: string;
+  ig_business_account_id: string;
+}
+
+export interface InstagramMetaState {
   success: boolean;
-  status: InstagramDmStatus;
+  status: InstagramMetaStatus;
   ig_username?: string | null;
   last_error?: string | null;
+  /** True once credentials have been saved at least once (drives showing the webhook info block). */
+  has_credentials?: boolean;
+  /** Masked view of the saved App Secret, e.g. "••••••cd12" — never the raw value. */
+  meta_app_secret_masked?: string | null;
+  /** Masked view of the saved Access Token. */
+  access_token_masked?: string | null;
+  meta_app_id?: string | null;
+  ig_business_account_id?: string | null;
 }
 
-// One linked IG account for the tenant.
-export interface InstagramSessionInfo {
-  slot: number;
-  label?: string | null;
-  status: InstagramDmStatus;
-  ig_username?: string | null;
-}
-
-export interface InstagramSessionsResponse {
+export interface InstagramMetaWebhookInfo {
   success: boolean;
-  sessions: InstagramSessionInfo[];
-  maxSlots: number;
+  /** The unique callback/webhook URL this clinic pastes into their Meta App's webhook config. */
+  webhook_url: string;
+  /** The unique verify token this clinic pastes into the same Meta App webhook config. */
+  verify_token: string;
 }
 
 // The backend FORCES the tenant to the logged-in user; the URL param carries
-// the SLOT, same convention as whatsappQrService. Slot defaults to 1.
-const IG_BASE = "/instagram-dm";
+// the SLOT, same convention as whatsappQrService/the old instagramOAuthService.
+// Slot defaults to 1 (one Meta App connection per clinic today).
+const IG_META_BASE = "/instagram-meta";
 
-export const instagramDmService = {
-  async status(slot = 1): Promise<InstagramDmState> {
-    const { data } = await api.get<InstagramDmState>(`${IG_BASE}/${slot}/status`);
+export const instagramMetaService = {
+  async status(slot = 1): Promise<InstagramMetaState> {
+    const { data } = await api.get<InstagramMetaState>(`${IG_META_BASE}/${slot}/status`);
     return data;
   },
-  async connect(username: string, password: string, slot = 1): Promise<InstagramDmState> {
-    const { data } = await api.post<InstagramDmState>(`${IG_BASE}/${slot}/connect`, {
-      username,
-      password,
-    });
+  // Clinic manually enters their own Meta App credentials — saved to the
+  // backend, which then generates/returns the per-tenant webhook URL + verify
+  // token (fetched separately via webhookInfo()).
+  async saveCredentials(
+    payload: InstagramMetaCredentialsPayload,
+    slot = 1
+  ): Promise<InstagramMetaState> {
+    const { data } = await api.put<InstagramMetaState>(`${IG_META_BASE}/${slot}/credentials`, payload);
     return data;
   },
-  async submitCode(code: string, slot = 1): Promise<InstagramDmState> {
-    const { data } = await api.post<InstagramDmState>(`${IG_BASE}/${slot}/submit-code`, {
-      code,
-    });
+  async webhookInfo(slot = 1): Promise<InstagramMetaWebhookInfo> {
+    const { data } = await api.get<InstagramMetaWebhookInfo>(`${IG_META_BASE}/${slot}/webhook-info`);
     return data;
   },
-  async logout(slot = 1): Promise<{ success: boolean }> {
-    const { data } = await api.post<{ success: boolean }>(`${IG_BASE}/${slot}/logout`, {});
-    return data;
-  },
-  // List every linked-account slot for the tenant (drives the multi-session UI).
-  async sessions(): Promise<InstagramSessionsResponse> {
-    const { data } = await api.get<InstagramSessionsResponse>(`${IG_BASE}/sessions`);
+  async disconnect(slot = 1): Promise<{ success: boolean }> {
+    const { data } = await api.post<{ success: boolean }>(`${IG_META_BASE}/${slot}/disconnect`, {});
     return data;
   },
 };
