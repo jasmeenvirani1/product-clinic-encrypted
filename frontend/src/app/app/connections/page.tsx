@@ -7,6 +7,7 @@ import { PageSection } from "@/components/PageSection";
 import { aiSettingService, type UpdateAISettingPayload } from "@/services/aiSetting.service";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
+import { channelTabLabel } from "@/components/integrations/ChannelTabLabel";
 
 // ─── Page ───────────────────────────────────────────────────────────
 export default function ConnectionsPage() {
@@ -213,8 +214,8 @@ export default function ConnectionsPage() {
       <Tabs
         defaultActiveKey="whatsapp"
         items={[
-          { key: "whatsapp",  label: "WhatsApp Settings",  children: whatsappTab },
-          { key: "instagram", label: "Instagram Settings", children: instagramTab },
+          { key: "whatsapp",  label: channelTabLabel("whatsapp",  "WhatsApp Settings"),  children: whatsappTab },
+          { key: "instagram", label: channelTabLabel("instagram", "Instagram Settings"), children: instagramTab },
         ]}
       />
     </div>

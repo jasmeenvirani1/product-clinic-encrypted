@@ -6,6 +6,7 @@ import { CheckCircle2, Facebook, Instagram, Linkedin, Plug, Send } from "lucide-
 import { PageSection } from "@/components/PageSection";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
+import { channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
 import { aiSettingService } from "@/services/aiSetting.service";
 
 // ─── Page ────────────────────────────────────────────────────────────
@@ -35,8 +36,6 @@ export default function SuperAdminConnectionsPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Channel tab renderer ─────────────────────────────────────────
-  type ChannelKey = "whatsapp" | "instagram" | "facebook" | "telegram" | "slack" | "linkedin";
-
   const renderChannelTab = (channel: ChannelKey) => {
     const isWa = channel === "whatsapp";
     const isIg = channel === "instagram";
@@ -263,12 +262,12 @@ export default function SuperAdminConnectionsPage() {
       <Tabs
         defaultActiveKey="whatsapp"
         items={[
-          { key: "whatsapp",  label: "WhatsApp Settings",  children: renderChannelTab("whatsapp") },
-          { key: "instagram", label: "Instagram Settings", children: renderChannelTab("instagram") },
-          { key: "facebook",  label: "Facebook Messenger", children: renderChannelTab("facebook") },
-          { key: "telegram",  label: "Telegram",           children: renderChannelTab("telegram") },
-          { key: "slack",     label: "Slack",              children: renderChannelTab("slack") },
-          { key: "linkedin",  label: "LinkedIn",           children: renderChannelTab("linkedin") },
+          { key: "whatsapp",  label: channelTabLabel("whatsapp",  "WhatsApp Settings"),  children: renderChannelTab("whatsapp") },
+          { key: "instagram", label: channelTabLabel("instagram", "Instagram Settings"), children: renderChannelTab("instagram") },
+          { key: "facebook",  label: channelTabLabel("facebook",  "Facebook Messenger"), children: renderChannelTab("facebook") },
+          { key: "telegram",  label: channelTabLabel("telegram",  "Telegram"),           children: renderChannelTab("telegram") },
+          { key: "slack",     label: channelTabLabel("slack",     "Slack"),              children: renderChannelTab("slack") },
+          { key: "linkedin",  label: channelTabLabel("linkedin",  "LinkedIn"),           children: renderChannelTab("linkedin") },
         ]}
       />
     </div>
