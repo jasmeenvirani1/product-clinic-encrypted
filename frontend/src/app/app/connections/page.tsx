@@ -7,6 +7,7 @@ import { PageSection } from "@/components/PageSection";
 import { aiSettingService, type UpdateAISettingPayload } from "@/services/aiSetting.service";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
+import { InstagramConnect } from "@/components/integrations/InstagramConnect";
 import { GoogleGlyph, channelTabLabel } from "@/components/integrations/ChannelTabLabel";
 
 // Channels surfaced on the clinic side. Google has no backend support yet, so
@@ -139,7 +140,7 @@ export default function ConnectionsPage() {
     const config = configs[channel];
 
     // WhatsApp links via QR scan (Baileys) — show the connect widget instead of
-    // the generic placeholder. Instagram keeps the "coming soon" placeholder.
+    // the generic placeholder.
     if (isWa) {
       return (
         <div className="space-y-5">
@@ -161,6 +162,63 @@ export default function ConnectionsPage() {
 
           <div className="crm-card p-5">
             <WhatsAppMultiConnect conversationsPath="/app/conversations" />
+          </div>
+        </div>
+      );
+    }
+
+    // Instagram links via the clinic's own Meta Developer App (manual
+    // credentials entry + webhook config) — same connect widget the
+    // super-admin page uses. The igEnabled toggle above still gates whether
+    // the AI/inbound pipeline treats the channel as live.
+    if (channel === "instagram") {
+      return (
+        <div className="space-y-5">
+          <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} p-6 text-white shadow-sm`}>
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-white/10 blur-xl" />
+            <div className="relative flex flex-wrap items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
+                {config.icon}
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{config.title}</h3>
+                  {config.connected ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium ring-1 ring-white/30">
+                      <CheckCircle2 size={11} /> Connected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium ring-1 ring-white/30">
+                      <Plug size={11} /> Not connected
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[13px] text-white/85">
+                  Connect Instagram using your clinic&apos;s own Meta Developer App
+                </p>
+              </div>
+              <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm ring-1 ring-white/30">
+                <span className="text-xs font-medium">{config.inboxLabel}</span>
+                <AppSwitch checked={config.enabled} onChange={config.setEnabled} />
+              </div>
+            </div>
+          </div>
+
+          <div className="crm-card p-5">
+            <InstagramConnect conversationsPath="/app/conversations" />
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="primary"
+              size="large"
+              icon={<Save size={15} />}
+              loading={savingChannels}
+              onClick={() => void saveChannelCredentials("instagram")}
+            >
+              Save Instagram Settings
+            </Button>
           </div>
         </div>
       );
