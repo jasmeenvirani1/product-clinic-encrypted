@@ -24,7 +24,6 @@ import { formatCurrency } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { BillingSummary, PaymentRecord, PlanRecord } from "@/utils/types";
 import { useThemeColors } from "@/providers/ThemeProvider";
-import { BOOLEAN_FEATURE_FIELDS, CLINIC_PAGE_LABELS } from "@/constants/planFeatures";
 
 // ─── Brand-anchored plan card gradients ──────────────────────────────
 // Built entirely from the theme's primary/primary-dark tokens (via Tailwind
@@ -37,24 +36,6 @@ const PLAN_GRADIENTS = [
   "from-primary/40 via-primary to-primary-dark/90",    // soft → deep
   "from-primary via-primary-dark to-primary-dark/80",  // deepest
 ] as const;
-
-// Merge the freeform "features" text list with whichever plan-tier
-// feature-access toggles are actually enabled, so the card shows one
-// combined "what's included" list instead of two disconnected blocks.
-const combinedFeatures = (plan: PlanRecord): string[] => {
-  const freeform = plan.features ?? [];
-  const flags = plan.feature_flags ?? {};
-
-  const enabledToggles = BOOLEAN_FEATURE_FIELDS
-    .filter(({ key }) => !!flags[key])
-    .map(({ label }) => label);
-
-  if (flags.dedicated_clinic_page && flags.dedicated_clinic_page !== "none") {
-    enabledToggles.push(`Dedicated Clinic Page (${CLINIC_PAGE_LABELS[flags.dedicated_clinic_page]})`);
-  }
-
-  return Array.from(new Set([...freeform, ...enabledToggles]));
-};
 
 const planPrice = (p: PlanRecord, period: "monthly" | "yearly"): number => {
   if (period === "yearly") return Number(p.yearly_price ?? p.price ?? 0);
@@ -523,21 +504,25 @@ export default function BillingPage() {
                     />
                   </div>
 
+                  {/* Only the plan's own `features` array is listed. If it's empty the
+                      whole block — heading included — is omitted rather than showing an
+                      empty-state line or labels derived from other plan variables. */}
                   <div className="flex-1">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      What&apos;s included
-                    </p>
-                    <ul className="space-y-1.5">
-                      {combinedFeatures(plan).length === 0 && (
-                        <li className="text-xs text-slate-400">No features listed.</li>
-                      )}
-                      {combinedFeatures(plan).map((f, i) => (
-                        <li key={`${f}-${i}`} className="flex items-start gap-2 text-[13px] text-slate-700">
-                          <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-primary" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    {(plan.features ?? []).length > 0 && (
+                      <>
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          What&apos;s included
+                        </p>
+                        <ul className="space-y-1.5">
+                          {(plan.features ?? []).map((f, i) => (
+                            <li key={`${f}-${i}`} className="flex items-start gap-2 text-[13px] text-slate-700">
+                              <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-primary" />
+                              <span>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
                   </div>
 
                   <Button

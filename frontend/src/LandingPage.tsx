@@ -76,6 +76,11 @@ const NAVY = 'var(--color-primary)';                                   // primar
 const NAVY_SOFT = 'var(--color-primary-hover)';                        // lighter primary for gradients / hover surfaces
 const TINT = 'var(--color-secondary)';                                 // secondary — raw brand secondary colour
 const PILL = 'color-mix(in srgb, var(--color-primary) 8%, #fff)';      // eyebrow pill background
+// Eyebrow pill background on a primary band. The band itself is already primary,
+// so a light chip would wash out the bright ACCENT label sitting on it. Darkening
+// the chip instead keeps the pill distinct from the band and lets ACCENT stay
+// legible — without touching the label colour or the section background.
+const PILL_ON_PRIMARY = 'color-mix(in srgb, #000 22%, var(--color-primary))';
 const HEADING = 'var(--color-brand-heading)';                          // heading text
 const BODY = 'var(--color-text-body)';                                 // body / muted text
 const CARD_BG = 'color-mix(in srgb, var(--color-secondary) 35%, #fff)'; // theme-tinted card surface
@@ -93,6 +98,15 @@ const WIRE_NODE = 'color-mix(in srgb, var(--color-primary) 38%, #fff)'; // node 
 
 // Primary with alpha, for shadows/glows — uses the rgb var ThemeProvider exposes.
 const navyAlpha = (a: number) => `rgba(var(--color-primary-rgb), ${a})`;
+
+// ─── Featured pricing card ("most popular") ────────────────────────────────────
+// The highlighted tier is inverted against the two plain white cards: filled with
+// the theme primary (NAVY), so it tracks whatever palette the super-admin
+// configures. Its feature checks sit in soft translucent chips and its type steps
+// down from near-white to muted, mirroring the light cards' hierarchy.
+const PLAN_DARK_CHIP = 'color-mix(in srgb, #fff 10%, transparent)';   // check-icon chip / badge fill
+const PLAN_DARK_TEXT = '#f1f5f9';                                      // primary type on the featured card
+const PLAN_DARK_MUTED = 'color-mix(in srgb, #fff 62%, transparent)';   // secondary type on the featured card
 
 interface PlanFeatureFlags {
   whatsapp_multi_connection?: boolean;
@@ -115,38 +129,6 @@ interface PlanData {
   feature_flags?: PlanFeatureFlags;
 }
 
-const BOOLEAN_FEATURE_LABELS: Array<{ key: keyof PlanFeatureFlags; label: string }> = [
-  { key: 'whatsapp_multi_connection', label: 'Multiple WhatsApp Connections' },
-  { key: 'chapter_instagram_integration', label: 'Chapter & Instagram Integration' },
-  { key: 'instagram_realtime_fetch', label: 'Instagram Real-Time Data Fetch' },
-  { key: 'chapter_creation', label: 'Chapter Creation' },
-  { key: 'video_like', label: 'Video Like Feature' },
-  { key: 'automatic_website_generation', label: 'Automatic Website Generation' },
-];
-
-const CLINIC_PAGE_FEATURE_LABELS: Record<NonNullable<PlanFeatureFlags['dedicated_clinic_page']>, string> = {
-  none: 'Not Available',
-  video_upload_only: 'Video Upload Only',
-  full_access: 'Full Access',
-};
-
-// Merge the freeform "features" text list with whichever plan-tier
-// feature-access toggles are actually enabled, so the pricing card shows
-// one combined feature list instead of missing the toggle-gated features.
-const combinePlanFeatures = (plan: PlanData): string[] => {
-  const freeform = plan.features ?? [];
-  const flags = plan.feature_flags ?? {};
-
-  const enabledToggles = BOOLEAN_FEATURE_LABELS
-    .filter(({ key }) => !!flags[key])
-    .map(({ label }) => label);
-
-  if (flags.dedicated_clinic_page && flags.dedicated_clinic_page !== 'none') {
-    enabledToggles.push(`Dedicated Clinic Page (${CLINIC_PAGE_FEATURE_LABELS[flags.dedicated_clinic_page]})`);
-  }
-
-  return Array.from(new Set([...freeform, ...enabledToggles]));
-};
 
 interface FooterPageLink {
   id: number;
@@ -163,6 +145,7 @@ const t = {
       { label: 'Features', href: '#solution' },
       { label: 'Pricing', href: '#pricing' },
       { label: 'Integration', href: '#integration' },
+      { label: 'Profiles', href: '/profiles', type: 'route' as const },
       { label: 'FAQ', href: '#faq' },
       { label: 'Contact', href: '#cta' },
     ],
@@ -309,6 +292,28 @@ const t = {
     pricingTitle: 'Fair Pricing for Every Stage.',
     pricingSub: 'Scalable plans built to grow alongside your clinic — from your first automation to full multi-location intelligence.',
     pricingMostPopular: 'MOST POPULAR',
+    // Chip copy for the non-featured tiers. The plans API carries no per-plan
+    // eyebrow/description field, so the first and last tier are labelled by
+    // position; anything in between falls back to no chip.
+    pricingChipFirst: 'FOR GETTING STARTED',
+    pricingChipLast: 'FOR SCALING TEAMS',
+    // Standalone custom/enterprise band below the three plan cards. Placeholder
+    // copy — swap these strings for the real offer wording.
+    customPlan: {
+      chip: 'TAILORED',
+      title: 'Need something built around your clinic?',
+      description:
+        'If none of the plans above fit, we will shape one around your workflow — custom AI credits, multi-location rollout, bespoke integrations and a migration plan handled by our team.',
+      points: [
+        'Volume-based pricing',
+        'Dedicated onboarding',
+        'Custom integrations',
+        'Priority SLA support',
+      ],
+      priceNote: 'Custom pricing',
+      priceSub: 'Billed to fit your scale',
+      cta: 'Talk to Sales',
+    },
     pricingMonthly: '/mo',
     pricingYearly: '/yr',
     pricingCustom: 'Custom',
@@ -317,7 +322,7 @@ const t = {
     pricingCtaContact: 'Contact Sales',
     pricingLoading: 'Loading plans…',
     pricingFallback: [
-      { name: 'Starter', price: '$499', period: '/mo', eyebrow: 'For small businesses just starting.', features: [
+      { name: 'Starter', price: '$499', period: '/mo', eyebrow: 'FOR GETTING STARTED', features: [
         { label: '1 AI Employee', on: true },
         { label: '500 Conversations', on: true },
         { label: 'Email & SMS', on: true },
@@ -329,7 +334,7 @@ const t = {
         { label: 'Voice AI Support', on: true },
         { label: 'CRM Advanced Sync', on: true },
       ], cta: 'Book Demo', highlight: true },
-      { name: 'Enterprise', price: 'Custom', period: '', eyebrow: 'Custom solutions for scale.', features: [
+      { name: 'Enterprise', price: 'Custom', period: '', eyebrow: 'FOR SCALING TEAMS', features: [
         { label: 'Custom AI Personas', on: true },
         { label: 'Dedicated Success Manager', on: true },
         { label: 'On-prem Deployment', on: true },
@@ -468,11 +473,13 @@ const IndustryCard = ({
 // ─── Section eyebrow (pill) ─────────────────────────────────────────────────────
 // `onPrimary` — the pill is sitting on a primary-coloured band (Solution / Results
 // / Demo), so its text and dot switch to the secondary accent instead of primary,
-// which would otherwise be primary-on-primary and barely legible.
+// which would otherwise be primary-on-primary and barely legible. The background
+// also switches to PILL_ON_PRIMARY — a darkened primary — instead of the near-white
+// PILL, which would wash out the bright accent label.
 const Eyebrow = ({ children, onPrimary = false }: { children: React.ReactNode; onPrimary?: boolean }) => (
   <div
     className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-[0.18em] mb-4"
-    style={{ background: PILL, color: onPrimary ? ACCENT : NAVY }}
+    style={{ background: onPrimary ? PILL_ON_PRIMARY : PILL, color: onPrimary ? ACCENT : NAVY }}
   >
     <span className="w-1.5 h-1.5 rounded-full" style={{ background: onPrimary ? ACCENT : NAVY }} />
     {children}
@@ -939,8 +946,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         name: plan.plan_name,
         priceLabel: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : t.pricingCustom,
         period: displayPrice > 0 ? period : '',
-        eyebrow: '',
-        features: combinePlanFeatures(plan).map((f) => ({ label: f, on: true })),
+        // No eyebrow field on PlanData, so label the outer two tiers by position.
+        eyebrow: i === 0 ? t.pricingChipFirst : i === plans.length - 1 ? t.pricingChipLast : '',
+        // Only the plan's own `features` array is listed point-wise. Labels derived
+        // from feature_flags / other plan variables are deliberately not shown, so a
+        // plan with no features renders no list at all rather than inventing rows.
+        features: (plan.features ?? []).map((f) => ({ label: f, on: true })),
         cta: i === midIndex ? t.pricingCtaBook : displayPrice > 0 ? t.pricingCtaStart : t.pricingCtaContact,
         highlight: i === midIndex,
       };
@@ -980,15 +991,26 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           </a>
 
           <div className="hidden lg:flex items-center gap-1">
-            {t.nav.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
-              >
-                {link.label}
-              </a>
-            ))}
+            {t.nav.map((link) =>
+              'type' in link && link.type === 'route' ? (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => router.push(link.href)}
+                  className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                >
+                  {link.label}
+                </a>
+              ),
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -1012,16 +1034,27 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {mobileMenuOpen && (
           <div className="w-full max-w-6xl mt-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg rounded-3xl px-4 py-4 flex flex-col gap-1 lg:hidden">
-            {t.nav.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-4 py-2.5 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+            {t.nav.map((link) =>
+              'type' in link && link.type === 'route' ? (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => { router.push(link.href); setMobileMenuOpen(false); }}
+                  className="text-left px-4 py-2.5 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  {link.label}
+                </button>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-base font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                >
+                  {link.label}
+                </a>
+              ),
+            )}
             <div className="mt-2 pt-3 border-t border-slate-100">
               <button
                 onClick={() => { goLogin(); setMobileMenuOpen(false); }}
@@ -1427,11 +1460,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               {/* Left: copy */}
               <div className="py-10 lg:py-12 text-white">
-                <div
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-bold uppercase tracking-widest mb-7"
-                  style={{ background: PILL, color: ACCENT }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} /> {t.demoBadge}
+                {/* Uses the shared <Eyebrow> so this pill tracks the same on-primary
+                    treatment as the Solution / Results badges. The extra bottom margin
+                    this section wants lives on the wrapper. */}
+                <div className="mb-3">
+                  <Eyebrow onPrimary>{t.demoBadge}</Eyebrow>
                 </div>
                 <h2 className="font-heading text-3xl sm:text-[2.25rem] font-semibold leading-[1.18] mb-6" style={{ color: ACCENT }}>
                   {t.demoTitle1}<br />{t.demoTitle2}
@@ -1514,44 +1547,70 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                     {...fadeInUp}
                     transition={{ duration: 0.5, delay: i * 0.1 }}
                     key={`${tier.name}-${i}`}
-                    className="relative rounded-3xl p-7 flex flex-col bg-white"
+                    className="relative rounded-3xl p-7 flex flex-col"
                     style={{
-                      border: `${tier.highlight ? 2 : 1}px solid ${tier.highlight ? NAVY : '#e2e8f0'}`,
-                      boxShadow: tier.highlight ? `0 24px 60px ${navyAlpha(0.15)}` : '0 8px 30px rgba(22,40,58,0.05)',
+                      // The "most popular" tier is inverted: a near-black surface with
+                      // light type, so it reads as the featured plan against the two
+                      // plain white ones either side of it.
+                      background: tier.highlight ? NAVY : '#fff',
+                      border: `1px solid ${tier.highlight ? NAVY : '#e2e8f0'}`,
+                      boxShadow: tier.highlight ? `0 24px 60px ${navyAlpha(0.25)}` : '0 8px 30px rgba(22,40,58,0.05)',
                     }}
                   >
-                    {tier.highlight && (
+                    {/* Every tier gets a chip in the same slot: "MOST POPULAR" on the
+                        featured card, the tier's own eyebrow copy on the others, so the
+                        three cards line up instead of only the middle one being tagged. */}
+                    {(tier.highlight || tier.eyebrow) && (
                       <span
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 text-white text-[11.5px] font-bold uppercase tracking-wider px-4 py-1 rounded-full"
-                        style={{ background: NAVY }}
+                        className="inline-flex self-start items-center text-[11.5px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-5"
+                        style={
+                          tier.highlight
+                            ? { background: PLAN_DARK_CHIP, color: ACCENT }
+                            : { background: PILL, color: NAVY, border: '1px solid #e2e8f0' }
+                        }
                       >
-                        {t.pricingMostPopular}
+                        {tier.highlight ? t.pricingMostPopular : tier.eyebrow}
                       </span>
                     )}
-                    <h3 className="font-heading text-3xl font-semibold mb-1.5" style={{ color: NAVY }}>{tier.name}</h3>
-                    {tier.eyebrow && <p className="text-[14.5px] mb-5" style={{ color: BODY }}>{tier.eyebrow}</p>}
+                    <h3 className="font-heading text-3xl font-semibold mb-1.5" style={{ color: tier.highlight ? PLAN_DARK_TEXT : NAVY }}>{tier.name}</h3>
                     <div className="mb-7">
-                      <span className="font-heading text-5xl font-extrabold" style={{ color: HEADING }}>{tier.priceLabel}</span>
-                      {tier.period && <span className="text-base ml-1" style={{ color: BODY }}>{tier.period}</span>}
+                      <span className="font-heading text-5xl font-extrabold" style={{ color: tier.highlight ? PLAN_DARK_TEXT : HEADING }}>{tier.priceLabel}</span>
+                      {tier.period && <span className="text-base ml-1" style={{ color: tier.highlight ? PLAN_DARK_MUTED : BODY }}>{tier.period}</span>}
                     </div>
+                    {/* No features on the plan → no list at all. The spacer keeps the
+                        CTA pinned to the card bottom so buttons stay aligned across tiers. */}
+                    {tier.features.length === 0 ? (
+                      <div className="flex-1" />
+                    ) : (
                     <ul className="space-y-3.5 mb-8 flex-1">
                       {tier.features.map((f) => (
                         <li key={f.label} className="flex items-center gap-2.5">
-                          {f.on ? (
-                            <Check size={16} strokeWidth={3} className="shrink-0" style={{ color: '#0ea371' }} />
-                          ) : (
-                            <X size={16} strokeWidth={3} className="shrink-0 text-slate-300" />
-                          )}
-                          <span className="text-[15.5px]" style={{ color: f.on ? HEADING : '#a3adba' }}>{f.label}</span>
+                          {/* Check/X sits in a soft round chip rather than bare on the card. */}
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                            style={{
+                              background: tier.highlight
+                                ? PLAN_DARK_CHIP
+                                : f.on ? 'rgba(14,163,113,0.12)' : 'rgba(148,163,184,0.15)',
+                            }}
+                          >
+                            {f.on ? (
+                              <Check size={12} strokeWidth={3.5} style={{ color: tier.highlight ? ACCENT : '#0ea371' }} />
+                            ) : (
+                              <X size={12} strokeWidth={3.5} style={{ color: tier.highlight ? PLAN_DARK_MUTED : '#94a3b8' }} />
+                            )}
+                          </span>
+                          <span className="text-[15.5px]" style={{ color: tier.highlight ? (f.on ? PLAN_DARK_TEXT : PLAN_DARK_MUTED) : (f.on ? HEADING : '#a3adba') }}>{f.label}</span>
                         </li>
                       ))}
                     </ul>
+                    )}
                     <button
                       onClick={goLogin}
                       className="w-full h-12 rounded-xl font-semibold text-[16.5px] transition-all"
                       style={
                         tier.highlight
-                          ? { background: NAVY, color: '#fff' }
+                          ? { background: ACCENT, color: NAVY }
                           : { background: '#fff', color: NAVY, border: `1.5px solid #d9e2ec` }
                       }
                     >
@@ -1561,6 +1620,69 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 ))}
               </div>
             )}
+
+            {/* ── Custom plan band ────────────────────────────────────────────
+                Deliberately outside the 3-card grid and laid out horizontally, so it
+                reads as a separate offer rather than a fourth tier. Three rails:
+                a filled price panel leading on the left, copy + points in the middle,
+                CTA last on the right. Static copy (t.customPlan) — not API-driven. */}
+            <motion.div
+              {...fadeInUp}
+              className="mt-6 rounded-3xl overflow-hidden flex flex-col lg:flex-row lg:items-stretch"
+              style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 30px rgba(22,40,58,0.05)' }}
+            >
+              {/* Left rail: the price leads. Filled with primary so it anchors the
+                  band and separates it from the white tier cards above. */}
+              <div
+                className="p-7 sm:p-9 lg:w-64 lg:shrink-0 flex flex-col justify-center"
+                style={{ background: NAVY }}
+              >
+                <span
+                  className="inline-flex self-start items-center text-[11.5px] font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-4"
+                  style={{ background: PLAN_DARK_CHIP, color: ACCENT }}
+                >
+                  {t.customPlan.chip}
+                </span>
+                <p className="font-heading text-3xl font-bold leading-tight mb-1" style={{ color: PLAN_DARK_TEXT }}>
+                  {t.customPlan.priceNote}
+                </p>
+                <p className="text-[13.5px]" style={{ color: PLAN_DARK_MUTED }}>{t.customPlan.priceSub}</p>
+              </div>
+
+              {/* Middle rail: title, description and the points list. */}
+              <div className="p-7 sm:p-9 flex-1 lg:border-l lg:border-slate-200">
+                <h3 className="font-heading text-2xl sm:text-[1.7rem] font-semibold mb-2.5" style={{ color: NAVY }}>
+                  {t.customPlan.title}
+                </h3>
+                <p className="text-[15.5px] leading-relaxed mb-6 max-w-2xl" style={{ color: BODY }}>
+                  {t.customPlan.description}
+                </p>
+                <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3">
+                  {t.customPlan.points.map((p) => (
+                    <li key={p} className="flex items-center gap-2.5">
+                      <span
+                        className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: 'rgba(14,163,113,0.12)' }}
+                      >
+                        <Check size={12} strokeWidth={3.5} style={{ color: '#0ea371' }} />
+                      </span>
+                      <span className="text-[15.5px]" style={{ color: HEADING }}>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Right rail: CTA stays last, as before. */}
+              <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex items-center">
+                <button
+                  onClick={goLogin}
+                  className="w-full h-12 rounded-xl font-semibold text-[16.5px] text-white transition-all hover:brightness-110"
+                  style={{ background: NAVY, boxShadow: `0 12px 28px ${navyAlpha(0.2)}` }}
+                >
+                  {t.customPlan.cta}
+                </button>
+              </div>
+            </motion.div>
           </div>
         </section>
 

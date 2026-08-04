@@ -5,20 +5,34 @@
 // it, the page paints with the built-in defaults and the real theme "pops in"
 // once ThemeProvider's effect + API fetch resolve — the flash we're fixing.
 //
-// It only applies the cache when logged in (crm_auth_session present), mirroring
-// ThemeProvider's rule so a previous tenant's colours never flash on the public
-// pages. ThemeProvider remains the source of truth and re-applies/validates the
-// authoritative theme right after; this only removes the first-paint flash.
+// It only applies the cache when logged in (crm_auth_session present) AND the
+// current route is not a public marketing route, mirroring ThemeProvider's rule so
+// neither a previous tenant's colours nor the logged-in tenant's colours flash on
+// the public pages. ThemeProvider remains the source of truth and re-applies/
+// validates the authoritative theme right after; this only removes the flash.
 //
 // Keep the applied var list in sync with applyToDocument() in ThemeProvider.tsx.
 
 const CACHE_KEY = "crm_theme_v2";
 const CACHE_TTL = 10 * 60 * 1000; // 10 min — matches ThemeProvider
 
+// Public marketing routes that must ALWAYS render the super-admin platform theme,
+// even when a clinic is logged in. Without this the landing page inherits the
+// logged-in tenant's palette, so the same public page looks different per visitor.
+// Exact matches only — tenant areas live under /app, /super-admin, /onboarding.
+export const PUBLIC_THEME_ROUTES = ["/", "/pricing", "/demo"] as const;
+
+export function isPublicThemeRoute(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, "") || "/";
+  return (PUBLIC_THEME_ROUTES as readonly string[]).includes(path);
+}
+
 // Stringified IIFE injected verbatim into a <script>. It must be dependency-free
 // and reference nothing outside its own scope.
 export const THEME_PRELOAD_SCRIPT = `(function(){try{
   if(!localStorage.getItem("crm_auth_session"))return;
+  var p=location.pathname.replace(/\\/+$/,"")||"/";
+  if(${JSON.stringify(PUBLIC_THEME_ROUTES)}.indexOf(p)!==-1)return;
   var raw=localStorage.getItem(${JSON.stringify(CACHE_KEY)});
   if(!raw)return;
   var parsed=JSON.parse(raw);

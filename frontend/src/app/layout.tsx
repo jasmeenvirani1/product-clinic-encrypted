@@ -7,6 +7,7 @@ import { AntdProvider } from "@/providers/AntdProvider";
 import { APP_TAGLINE } from "@/constants/brand";
 import { THEME_PRELOAD_SCRIPT } from "@/utils/themePreload";
 import { getPlatformBrand } from "@/lib/getPlatformBrand";
+import { getServerThemeCss } from "@/lib/getServerThemeCss";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -73,12 +74,21 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Resolved on the server, so the palette ships inside the initial HTML rather
+  // than being applied after hydration. This is what removes the default-theme
+  // flash for logged-out / first-time visitors on the public pages.
+  const themeCss = await getServerThemeCss();
+
   return (
     <html lang="en" className={`${plusJakarta.variable} ${dmSans.variable}`}>
       <head>
-        {/* Applies the cached theme synchronously before first paint to prevent
-            the default theme flashing while ThemeProvider fetches the real one. */}
+        {/* 1. Server-resolved public theme, inlined so it is styled on first paint.
+               Comes first so the cached-tenant script below can still override it
+               for logged-in users. */}
+        {themeCss && <style id="server-theme" dangerouslySetInnerHTML={{ __html: themeCss }} />}
+        {/* 2. Applies the cached tenant theme synchronously before first paint, so
+               a logged-in user's own palette does not flash the platform one. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_PRELOAD_SCRIPT }} />
       </head>
       <body className="font-body">

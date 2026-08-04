@@ -1,8 +1,10 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { APP_NAME, APP_SHORT_NAME, APP_FULL_NAME, COLORS } from "@/constants/brand";
 import { resetThemeVars } from "@/utils/themeVars";
+import { isPublicThemeRoute } from "@/utils/themePreload";
 
 export type ThemeColors = typeof COLORS;
 
@@ -29,6 +31,9 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export const useThemeColors = () => useContext(ThemeContext);
+
+// useLayoutEffect warns when run during SSR; fall back to useEffect on the server.
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 // ─── hex → "r, g, b" for rgba() usage ───────────────────────────────
 function hexToRgbStr(hex: string): string {
@@ -107,16 +112,29 @@ interface PlatformNameFields {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [colors, setColors]   = useState<ThemeColors>(COLORS);
   const [platformName, setPlatformName]         = useState<string>(APP_NAME);
   const [platformShortName, setPlatformShortName] = useState<string>(APP_SHORT_NAME);
   const [platformFullName, setPlatformFullName]   = useState<string>(APP_FULL_NAME);
   const [loading, setLoading] = useState(true);
-  // Gates the very first render: children are not shown until the authoritative
-  // theme has been applied, so the page never paints with the wrong theme while
-  // the theme API is still loading. The inline <head> script handles the cached
-  // (returning-user) case; this handles the no-cache / first-load case.
+  // Gates the very first render: children stay hidden until a theme has been
+  // applied, so the page never paints with the wrong palette.
+  //
+  // Three layers can satisfy this, cheapest first:
+  //   1. <style id="server-theme"> inlined by RootLayout — correct palette is in
+  //      the initial HTML, so there is nothing to wait for. Start ready.
+  //   2. THEME_PRELOAD_SCRIPT — cached tenant theme, applied pre-paint.
+  //   3. this provider's fetch — the fallback when neither of the above ran.
+  // Only case 3 needs the gate; holding the page in cases 1–2 just delays content.
+  // Resolved in a layout effect rather than a lazy initialiser, so the server and
+  // the first client render agree (no hydration mismatch) — useLayoutEffect still
+  // runs before the browser paints, so the gate lifts without a visible frame.
   const [ready, setReady] = useState(false);
+
+  useIsomorphicLayoutEffect(() => {
+    if (document.getElementById("server-theme")) setReady(true);
+  }, []);
 
   // Apply a fetched palette (+ platform name fields). `cache` controls whether
   // it's written to the instant-paint cache — only the tenant (logged-in) theme
@@ -135,7 +153,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Fetch the authenticated tenant theme (falls back silently if logged out).
+  // No-ops on public routes, which must keep showing the platform theme.
   const fetchTenantTheme = useCallback(() => {
+    if (isPublicThemeRoute(pathname ?? "/")) return;
     const token = getAuthToken();
     if (!token) return;
     fetch(`${API_BASE}/super-admin/theme`, {
@@ -153,10 +173,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => { /* keep whatever is applied */ });
-  }, [applyFetched]);
+  }, [applyFetched, pathname]);
 
   useEffect(() => {
-    const loggedIn = !!getAuthToken();
+    // Public marketing routes (landing / pricing / demo) always render the
+    // super-admin platform theme, even for a logged-in clinic — otherwise the same
+    // public page would take on whichever tenant happens to be signed in. So for
+    // theming purposes those routes behave exactly like logged-out.
+    const publicRoute = isPublicThemeRoute(pathname ?? "/");
+    const loggedIn = !!getAuthToken() && !publicRoute;
 
     // 1. Paint instantly from cache — but ONLY when logged in. The cache always
     //    holds the last-applied (tenant) theme, so reusing it while logged out
@@ -181,11 +206,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch { /* ignore */ }
     } else {
-      // Logged out: reset the applied vars to the built-in defaults first (so a
-      // previous tenant's colours never linger), then fall through to fetch the
-      // global/super-admin theme below. The tenant cache is dropped so it can't
-      // flash in — the login/landing/register pages show the platform theme.
-      localStorage.removeItem(CACHE_KEY);
+      // Logged out (or on a public route): reset the applied vars to the built-in
+      // defaults first, so a tenant's colours never linger, then fall through to
+      // fetch the global/super-admin theme below.
+      //
+      // The cache is only dropped when genuinely logged out. On a public route a
+      // signed-in clinic keeps its cached tenant theme, so returning to /app still
+      // paints instantly instead of flashing defaults — it just isn't applied here.
+      if (!publicRoute) localStorage.removeItem(CACHE_KEY);
       resetThemeVars();
       setColors(COLORS);
       setPlatformName(APP_NAME);
@@ -194,9 +222,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 2. Fetch the authoritative theme and apply it:
-    //    - logged out → /public/theme = the global/super-admin platform theme
-    //    - logged in  → /super-admin/theme = the caller's tenant theme
-    const token = getAuthToken();
+    //    - public route / logged out → /public/theme = the global platform theme
+    //    - logged in                 → /super-admin/theme = the caller's tenant theme
+    //
+    // The token is deliberately omitted on the public path, so the response can
+    // never come back tenant-scoped for a signed-in clinic browsing the landing page.
+    const token = loggedIn ? getAuthToken() : null;
     const endpoint = loggedIn ? `${API_BASE}/super-admin/theme` : `${API_BASE}/public/theme`;
     fetch(endpoint, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined)
       .then((r) => (r.ok ? r.json() : null))
@@ -220,7 +251,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // Authoritative theme applied (or failed → defaults kept): reveal the page.
         setReady(true);
       });
-  }, [applyFetched]);
+    // Re-runs on navigation: crossing between a public route and a tenant route
+    // must re-resolve which theme applies.
+  }, [applyFetched, pathname]);
 
   const applyColors = useCallback((partial: Partial<ThemeColors>) => {
     setColors((prev) => {

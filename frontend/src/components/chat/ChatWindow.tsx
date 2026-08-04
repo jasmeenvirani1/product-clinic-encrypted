@@ -1,12 +1,17 @@
 "use client";
 
-import { Button, Card, Dropdown, Empty, message as antMessage } from "antd";
-import { Bot, UserRound, AlertTriangle, MoreVertical, CalendarCheck } from "lucide-react";
+// eslint-disable-next-line no-unused-vars -- antMessage used by the commented-out Book button
+import { Button, Card, Empty, message as antMessage } from "antd";
+// eslint-disable-next-line no-unused-vars -- CalendarCheck used by the commented-out Book button
+import { Bot, UserRound, AlertTriangle, CalendarCheck, Building2, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import type { Conversation, Message } from "../../utils/types";
 import { ChannelHeaderBadge } from "./ChannelBadge";
+
+/** Owner-pill label used when a conversation has no owning clinic. */
+export const SUPER_ADMIN_LABEL = "Super Admin";
 
 const AVATAR_BG: Record<string, string> = {
   WhatsApp:   "!bg-green-500 !text-white",
@@ -20,10 +25,24 @@ interface ChatWindowProps {
   onSend: (_text: string) => void;
   onToggleAI?: () => void;
   onBook?: (_leadId: string) => Promise<void>;
+  /**
+   * Owning clinic for this conversation, shown as a pill beside the mode control.
+   * Super-admin only — the tenant view omits it, since every conversation there
+   * already belongs to the logged-in clinic. Pass SUPER_ADMIN_LABEL for the super
+   * admin's own chats to get the distinct internal pill instead of a clinic name.
+   */
+  ownerLabel?: string | null;
 }
 
-export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook }: ChatWindowProps) => {
+// `onBook`, `booking`/`setBooking`, `antMessage` and `CalendarCheck` are currently
+// only referenced by the commented-out Book button in the header. They are kept so
+// the button can be restored by uncommenting alone — disable the unused warnings
+// rather than stripping the wiring out.
+/* eslint-disable no-unused-vars */
+export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook, ownerLabel }: ChatWindowProps) => {
+  /* eslint-enable no-unused-vars */
   const scrollRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line no-unused-vars
   const [booking, setBooking] = useState(false);
   const isNearBottomRef = useRef(true);
   const prevConversationIdRef = useRef<string | undefined>(conversation?.id);
@@ -62,15 +81,6 @@ export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook 
     );
   }
 
-  const menuItems = [
-    {
-      key: "toggle-ai",
-      label: conversation.aiEnabled ? "Switch to Human Mode" : "Switch to AI Mode",
-      icon: conversation.aiEnabled ? <UserRound size={14} /> : <Bot size={14} />,
-      onClick: onToggleAI,
-    },
-  ];
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white">
       {/* Header */}
@@ -98,10 +108,67 @@ export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook 
           </div>
         </div>
 
-        {/* Right: lead score + view profile + menu */}
+        {/* Right: owner pill + AI/human mode + lead score */}
         <div className="flex items-center gap-3">
+          {/* Owner pill — which clinic this conversation belongs to. Super-admin only.
+              The super admin's own chats get a distinct labelled pill rather than a
+              clinic name, so internal conversations are obvious at a glance. */}
+          {ownerLabel && (
+            <span
+              className={`inline-flex max-w-[170px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${
+                ownerLabel === SUPER_ADMIN_LABEL
+                  ? "border-violet-200 bg-violet-50 text-violet-700"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
+              }`}
+            >
+              {ownerLabel === SUPER_ADMIN_LABEL ? (
+                <ShieldCheck size={12} strokeWidth={2.5} className="shrink-0" />
+              ) : (
+                <Building2 size={12} strokeWidth={2.5} className="shrink-0" />
+              )}
+              <span className="truncate">{ownerLabel}</span>
+            </span>
+          )}
+
+          {/* Mode control — a two-option segmented toggle rather than a bare on/off
+              switch, so the current mode is stated explicitly and either mode can be
+              picked directly. Same onToggleAI handler as before; it only fires when
+              the mode actually changes, so re-clicking the active side is a no-op. */}
+          {onToggleAI && (
+            <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+              <button
+                type="button"
+                onClick={() => { if (!conversation.aiEnabled) onToggleAI(); }}
+                aria-pressed={conversation.aiEnabled}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-semibold transition-all ${
+                  conversation.aiEnabled
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Bot size={13} strokeWidth={2.5} />
+                AI
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (conversation.aiEnabled) onToggleAI(); }}
+                aria-pressed={!conversation.aiEnabled}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-semibold transition-all ${
+                  !conversation.aiEnabled
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <UserRound size={13} strokeWidth={2.5} />
+                Human
+              </button>
+            </div>
+          )}
+
+          {/* Divider sits on the leading edge, separating the score from the mode
+              control to its left, rather than trailing after it. */}
           {conversation.leadScore != null && (
-            <div className="flex flex-col items-center border-r border-slate-200 pr-3">
+            <div className="flex flex-col items-center border-l border-slate-200 pl-3">
               <span className="text-[10px] uppercase tracking-wide text-slate-400">Lead Score</span>
               <span className="text-xl font-bold leading-tight text-slate-900">
                 {conversation.leadScore}
@@ -109,6 +176,9 @@ export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook 
             </div>
           )}
 
+          {/* Book button — hidden for now, kept intact so it can be restored by
+              simply uncommenting. The onBook prop, `booking` state and the handler
+              below are all still wired up; nothing else depends on this being shown.
           <button
             disabled={booking || !onBook || !conversation?.leadId}
             onClick={async () => {
@@ -132,15 +202,7 @@ export const ChatWindow = ({ conversation, messages, onSend, onToggleAI, onBook 
             )}
             Book
           </button>
-
-          <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomRight">
-            <Button
-              type="text"
-              size="small"
-              className="!px-1.5 !text-slate-500"
-              icon={<MoreVertical size={17} />}
-            />
-          </Dropdown>
+          */}
         </div>
       </div>
 

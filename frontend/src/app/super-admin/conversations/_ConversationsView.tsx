@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { Select } from "antd";
 import { PageSection } from "@/components/PageSection";
 import { ChatList } from "@/components/chat/ChatList";
-import { ChatWindow } from "@/components/chat/ChatWindow";
+import { ChatWindow, SUPER_ADMIN_LABEL } from "@/components/chat/ChatWindow";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { userService } from "@/services/user.service";
 import { chatService } from "@/services/chat.service";
 import type { Conversation, Message } from "@/utils/types";
@@ -16,6 +17,7 @@ const CONVERSATIONS_POLL_MS = 8_000;
 
 export function SuperAdminConversationsView({ initialId }: { initialId?: string }) {
   const pathname = usePathname();
+  const { user } = useCurrentUser();
   const [conversations,        setConversations]        = useState<Conversation[]>([]);
   const [messages,             setMessages]             = useState<Record<string, Message[]>>({});
   const [activeConversationId, setActiveConversationId] = useState<string | null>(initialId ?? null);
@@ -114,6 +116,25 @@ export function SuperAdminConversationsView({ initialId }: { initialId?: string 
 
   const activeConversation = filteredConversations.find((c) => c.id === activeConversationId);
 
+  // Owning clinic for the open conversation, resolved from the tenant-admin list
+  // already loaded for the filter.
+  //
+  // The backend stores `tenant_id = user.tenant_id || user.id`, so a super admin's
+  // own conversations carry their *own* user id rather than null. Matching against
+  // the logged-in id is therefore what identifies an internal chat — a plain null
+  // check never fires, and such rows would otherwise fall through to "Clinic #<id>".
+  const activeOwnerLabel = useMemo(() => {
+    if (!activeConversation) return null;
+    const tenantId = activeConversation.tenantId;
+    if (tenantId == null) return SUPER_ADMIN_LABEL;
+    if (user?.id != null && String(tenantId) === String(user.id)) return SUPER_ADMIN_LABEL;
+    const owner = tenantAdmins.find((u) => parseInt(u.id) === tenantId);
+    if (owner) return owner.clinic_name || owner.full_name || owner.email;
+    // Not a known tenant admin and not the current super admin — treat as internal
+    // rather than inventing a "Clinic #<id>" label for a clinic that isn't listed.
+    return SUPER_ADMIN_LABEL;
+  }, [activeConversation, tenantAdmins, user?.id]);
+
   const handleSelect = (id: string) => {
     setActiveConversationId(id);
     void chatService.markRead(id);
@@ -149,6 +170,7 @@ export function SuperAdminConversationsView({ initialId }: { initialId?: string 
         />
         <ChatWindow
           conversation={activeConversation}
+          ownerLabel={activeOwnerLabel}
           messages={messages[activeConversationId ?? ""] ?? []}
           onSend={(text) => {
             if (!activeConversationId) return;
