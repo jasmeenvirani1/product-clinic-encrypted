@@ -793,12 +793,15 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     Pick<Speciality, 'slug' | 'icon' | 'name' | 'short_description'>[]
   >([]);
 
-  // Hover-driven card story (was a pinned scroll-jack): the section is now normal
-  // height, so scrolling past it with the pointer outside the cards just scrolls —
-  // no pinning, no forced runway. Hovering the card stack advances the cards on a
-  // timer instead, and leaving resets to the first card.
+  // Wheel-scrubbed card story, scoped to hover (was a page-wide pinned scroll-jack).
+  // The section is normal height, so scrolling with the pointer OUTSIDE the cards
+  // scrolls straight on to the next section. With the pointer OVER the cards, the
+  // wheel scrubs the card reveal instead of scrolling the page — the original
+  // scroll-driven feel, just no longer forced on everyone passing by.
   const PROBLEM_COUNT = 6;
-  const PROBLEM_ADVANCE_MS = 1600; // dwell per card while hovered
+  // Wheel delta needed to advance one full card. ~1 notch ≈ 100px, so this is
+  // roughly 4 notches per card — tuned to feel like the old scroll runway.
+  const WHEEL_PER_CARD = 400;
   // Continuous progress across items: 0 → PROBLEM_COUNT-1 (fractional).
   // e.g. 2.35 means card 2 is 35% of the way to fully covering card 1.
   const [problemProgress, setProblemProgress] = React.useState(0);
@@ -815,7 +818,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  // Respect reduced-motion: hold on the first card rather than auto-animating.
+  // Respect reduced-motion: skip wheel scrubbing entirely and render the static
+  // stacked list, so the wheel is never intercepted for these users.
   const [reducedMotion, setReducedMotion] = React.useState(false);
   React.useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -825,45 +829,51 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  // Animate only while hovered. rAF-scrubbed so the reveal stays continuous
-  // (matching the old scroll feel) instead of snapping card-to-card.
-  React.useEffect(() => {
-    if (!isDesktop || reducedMotion) return;
-    if (!problemHovered) {
-      setProblemProgress(0); // reset so the next hover replays from card 1
-      return;
-    }
-    let raf = 0;
-    let start = 0;
-    const max = PROBLEM_COUNT - 1;
-    const tick = (ts: number) => {
-      if (!start) start = ts;
-      const elapsed = ts - start;
-      setProblemProgress(Math.min(elapsed / PROBLEM_ADVANCE_MS, max));
-      if (elapsed / PROBLEM_ADVANCE_MS < max) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [isDesktop, problemHovered, reducedMotion]);
-
-  // Solution section: same hover-driven pattern, driving a 3-column conveyor.
+  // Solution section: same wheel-scrubbed-on-hover pattern, driving a 3-column conveyor.
   const SOLUTION_COUNT = 6;
-  const SOLUTION_ADVANCE_MS = 1600;
   const [activeSolution, setActiveSolution] = React.useState(0);
   const [solutionHovered, setSolutionHovered] = React.useState(false);
+  const solutionProgressRef = React.useRef(0); // fractional, mirrors problemProgress
+
+  // Wheel scrubbing, active only while the pointer is over the cards.
+  //
+  // Listeners are attached natively with { passive: false } rather than via
+  // React's onWheel, because React's wheel listener is passive — preventDefault()
+  // there is ignored and the page would scroll underneath the animation.
+  //
+  // The wheel is consumed only while the reveal still has room in the scroll
+  // direction. At either end the event passes through, so the page keeps moving
+  // and the pointer resting on a card can never trap the user in the section.
+  const problemProgressRef = React.useRef(0);
+  problemProgressRef.current = problemProgress;
 
   React.useEffect(() => {
-    if (!isDesktop || reducedMotion) return;
-    if (!solutionHovered) {
-      setActiveSolution(0);
-      return;
-    }
-    // Discrete steps here — the conveyor swaps whole cards rather than scrubbing.
-    const id = setInterval(() => {
-      setActiveSolution((prev) => (prev + 1 >= SOLUTION_COUNT ? prev : prev + 1));
-    }, SOLUTION_ADVANCE_MS);
-    return () => clearInterval(id);
-  }, [isDesktop, solutionHovered, reducedMotion]);
+    if (!isDesktop || reducedMotion || !problemHovered) return;
+    const max = PROBLEM_COUNT - 1;
+    const onWheel = (e: WheelEvent) => {
+      const current = problemProgressRef.current;
+      if ((current <= 0 && e.deltaY < 0) || (current >= max && e.deltaY > 0)) return;
+      e.preventDefault();
+      setProblemProgress(Math.min(Math.max(current + e.deltaY / WHEEL_PER_CARD, 0), max));
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [isDesktop, reducedMotion, problemHovered]);
+
+  React.useEffect(() => {
+    if (!isDesktop || reducedMotion || !solutionHovered) return;
+    const max = SOLUTION_COUNT - 1;
+    const onWheel = (e: WheelEvent) => {
+      const current = solutionProgressRef.current;
+      if ((current <= 0 && e.deltaY < 0) || (current >= max && e.deltaY > 0)) return;
+      e.preventDefault();
+      const next = Math.min(Math.max(current + e.deltaY / WHEEL_PER_CARD, 0), max);
+      solutionProgressRef.current = next;
+      setActiveSolution(Math.round(next)); // conveyor swaps whole cards
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [isDesktop, reducedMotion, solutionHovered]);
 
   React.useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -1178,7 +1188,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ PROBLEM (hover-driven card story) ══════════════ */}
         {/* Normal-height section: scrolling past it with the pointer outside the
-            cards is an ordinary scroll. Hovering the card stack plays the reveal. */}
+            cards is an ordinary scroll. Over the cards, the wheel scrubs the reveal. */}
         <div className="relative bg-white">
           <div className="overflow-hidden py-10 sm:py-12 lg:py-16">
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
@@ -1189,8 +1199,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Single card: description (left) + image (right) travel together, one problem visible at a time.
-                  Hover is bound here — on the card stack only — so the animation plays
-                  on hover and the surrounding section scrolls untouched otherwise. */}
+                  Hover is bound here — on the card stack only — so the wheel scrubs
+                  the reveal over the cards and scrolls the page everywhere else. */}
               <div
                 className="relative mx-auto w-full max-w-6xl lg:h-[min(24rem,55vh)] lg:overflow-hidden"
                 onMouseEnter={() => setProblemHovered(true)}
