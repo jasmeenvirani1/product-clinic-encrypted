@@ -1282,22 +1282,30 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   onMouseEnter={() => setSolutionHovered(true)}
                   onMouseLeave={() => setSolutionHovered(false)}
                 >
-                  {/* Left: active solution's title + description */}
-                  <div className="relative h-40">
-                    {t.solutionCards.map((c, i) => (
-                      <div
-                        key={c.t}
-                        className="absolute inset-0 transition-[opacity,transform] duration-500 ease-out"
-                        style={{
-                          opacity: i === activeSolution ? 1 : 0,
-                          transform: `translateY(${i === activeSolution ? 0 : 16}px)`,
-                          pointerEvents: i === activeSolution ? 'auto' : 'none',
-                        }}
-                      >
-                        <h4 className="font-bold text-2xl" style={{ color: ACCENT }}>{c.t}</h4>
-                        <p className="text-base leading-relaxed mt-2" style={{ color: ON_PRIMARY_MUTED }}>{c.d}</p>
-                      </div>
-                    ))}
+                  {/* Left: active solution's title + description. Slides horizontally
+                      to match the image track — the next card enters from the right,
+                      the outgoing one exits to the left. Direction comes from the sign
+                      of (i - activeSolution), so cards already passed stay parked on
+                      the left instead of all sharing one offset. */}
+                  <div className="relative h-40 overflow-hidden">
+                    {t.solutionCards.map((c, i) => {
+                      const offset = i - activeSolution;
+                      const isActive = offset === 0;
+                      return (
+                        <div
+                          key={c.t}
+                          className="absolute inset-0 transition-[opacity,transform] duration-500 ease-out"
+                          style={{
+                            opacity: isActive ? 1 : 0,
+                            transform: `translateX(${isActive ? 0 : offset > 0 ? 60 : -60}px)`,
+                            pointerEvents: isActive ? 'auto' : 'none',
+                          }}
+                        >
+                          <h4 className="font-bold text-2xl" style={{ color: ACCENT }}>{c.t}</h4>
+                          <p className="text-base leading-relaxed mt-2" style={{ color: ON_PRIMARY_MUTED }}>{c.d}</p>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Middle + Right: image track — active image swipes left out; next preview swipes left into focus & zooms in. */}
