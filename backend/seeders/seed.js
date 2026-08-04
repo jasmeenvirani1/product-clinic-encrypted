@@ -63,18 +63,26 @@ async function seed() {
     { name: "Campaigns",       slug: "app-campaigns",     icon: "MessageSquare",   sort_order: 20 },
     { name: "Pricing",         slug: "app-pricing",       icon: "Receipt",         sort_order: 21 },
     { name: "Automation",      slug: "app-automation",    icon: "Workflow",        sort_order: 22 },
-    { name: "App Integrations",slug: "app-integrations",  icon: "Wrench",          sort_order: 23 },
+    { name: "App Integrations",slug: "app-integrations",  icon: "Wrench",          sort_order: 23, is_active: false },
     { name: "Settings",        slug: "app-settings",      icon: "Settings",        sort_order: 24 },
     { name: "Billing",         slug: "app-billing",       icon: "CreditCard",      sort_order: 25 },
     { name: "Team",            slug: "app-team",          icon: "UserCog",         sort_order: 26 },
+    { name: "App Connections", slug: "app-connections",   icon: "Plug",            sort_order: 27 },
     { name: "Guide",           slug: "app-guide",         icon: "PlayCircle",      sort_order: 9999 },
   ];
   const menus = {};
   for (const m of menuDefs) {
-    const [menu] = await Menu.findOrCreate({
+    const [menu, created] = await Menu.findOrCreate({
       where: { slug: m.slug },
       defaults: m,
     });
+    // Keep is_active in sync on re-runs too — app-integrations is retired
+    // (Menu row preserved, not deleted, per repo convention) in favor of
+    // the new app-connections menu.
+    if (!created && typeof m.is_active === "boolean" && menu.is_active !== m.is_active) {
+      menu.is_active = m.is_active;
+      await menu.save();
+    }
     menus[m.slug] = menu;
   }
 
@@ -96,8 +104,8 @@ async function seed() {
   await RoleMenuPermission.destroy({ where: { role_id: roles["tenant_admin"].id } });
   const tenantMenuSlugs = [
     "app-dashboard", "app-leads", "app-conversations", "app-ai-chat",
-    "app-campaigns", "app-pricing", "app-automation", "app-integrations",
-    "app-settings", "app-billing", "app-team", "plans", "app-guide",
+    "app-campaigns", "app-pricing", "app-automation",
+    "app-settings", "app-billing", "app-team", "app-connections", "plans", "app-guide",
   ];
   const taRecords = [];
   for (const slug of tenantMenuSlugs) {

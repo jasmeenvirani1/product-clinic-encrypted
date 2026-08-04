@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChevronUp, Gauge, Globe, KeyRound, LayoutList, LogOut, Settings, ShieldCheck, User } from "lucide-react";
+import { Bot, ChevronUp, Gauge, Globe, KeyRound, LayoutList, LogOut, Plug, Settings, ShieldCheck, User } from "lucide-react";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { logout } from "../store/slices/authSlice";
@@ -72,6 +72,12 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
           icon: <Bot size={14} />,
           label: profileLabel("aiSettings", "AI Settings"),
           href: "/super-admin/ai-settings",
+        },
+        {
+          key: "app-connections",
+          icon: <Plug size={14} />,
+          label: profileLabel("appConnections", "App Connections"),
+          href: "/super-admin/connections",
         },
         {
           key: "website-content",

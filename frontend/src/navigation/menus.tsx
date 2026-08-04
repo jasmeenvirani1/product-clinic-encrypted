@@ -216,7 +216,9 @@ export const appMenu: MenuEntry[] = [
   { key: "app-faq",           label: "AI Knowledge Base", icon: <HelpCircle size={18} />, path: "/app/faq",           roles: ["tenant_admin"] },
   { key: "app-pricing",       label: "Pricing",         icon: <Receipt size={18} />,         path: "/app/pricing",       roles: ["tenant_admin"] },
   // { key: "app-automation",    label: "Automation",      icon: <Workflow size={18} />,        path: "/app/automation",    roles: ["tenant_admin"] },
-  { key: "app-integrations",  label: "Integrations",    icon: <Wrench size={18} />,          path: "/app/integrations",  roles: ["tenant_admin"] },
+  // Integrations retired — consolidated into App Connections (/app/connections).
+  // The old /app/integrations route survives as a redirect for existing bookmarks.
+  { key: "app-connections",   label: "App Connections", icon: <Plug size={18} />,            path: "/app/connections",   roles: ["tenant_admin"] },
   { key: "app-settings",      label: "Settings",        icon: <Settings size={18} />,        path: "/app/settings",      roles: ["tenant_admin"] },
   { key: "app-billing",       label: "Billing",         icon: <CreditCard size={18} />,      path: "/app/billing",       roles: ["tenant_admin"] },
   { key: "users",             label: "Users",           icon: <Users size={18} />,           path: "/app/users",         roles: ["tenant_admin"] },
