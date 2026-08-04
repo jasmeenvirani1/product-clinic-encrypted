@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { App, Button, Tabs } from "antd";
-import { CheckCircle2, Instagram, Plug, Save } from "lucide-react";
+import { CheckCircle2, Instagram, Plug } from "lucide-react";
 import { PageSection } from "@/components/PageSection";
-import { aiSettingService, type UpdateAISettingPayload } from "@/services/aiSetting.service";
-import { AppSwitch } from "@/components/ui/AppSwitch";
+import { aiSettingService } from "@/services/aiSetting.service";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
 import { GoogleGlyph, channelTabLabel } from "@/components/integrations/ChannelTabLabel";
@@ -18,9 +17,8 @@ type ClinicChannel = "whatsapp" | "instagram" | "google";
 export default function ConnectionsPage() {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
-  const [savingChannels, setSavingChannels] = useState(false);
 
-  // ── Channel toggles ──────────────────────────────────────────────
+  // ── Channel state (drives the connected pill on each hero) ───────
   const [hasWhatsapp, setHasWhatsapp]   = useState(false);
   const [waEnabled, setWaEnabled]       = useState(false);
 
@@ -41,35 +39,6 @@ export default function ConnectionsPage() {
       .catch(() => void message.error("Failed to load connection settings."))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const saveChannelCredentials = async (channel: ClinicChannel) => {
-    // Google has no persisted settings yet — nothing to save.
-    if (channel === "google") return;
-
-    setSavingChannels(true);
-    try {
-      const payload: Record<string, unknown> = {};
-      if (channel === "whatsapp") {
-        payload.whatsapp_enabled = waEnabled;
-      } else {
-        payload.instagram_enabled = igEnabled;
-      }
-      const updated = await aiSettingService.update(payload as UpdateAISettingPayload);
-      const d = updated as unknown as Record<string, unknown>;
-      if (channel === "whatsapp") {
-        setHasWhatsapp(Boolean(d.has_whatsapp));
-        setWaEnabled(Boolean(d.whatsapp_enabled ?? d.has_whatsapp));
-      } else {
-        setHasInstagram(Boolean(d.has_instagram));
-        setIgEnabled(Boolean(d.instagram_enabled ?? d.has_instagram));
-      }
-      void message.success(`${channel === "whatsapp" ? "WhatsApp" : "Instagram"} settings saved.`);
-    } catch {
-      void message.error("Failed to save channel settings.");
-    } finally {
-      setSavingChannels(false);
-    }
-  };
 
   const renderChannelTab = (channel: ClinicChannel) => {
     const isWa = channel === "whatsapp";
@@ -198,27 +167,11 @@ export default function ConnectionsPage() {
                   Connect Instagram using your clinic&apos;s own Meta Developer App
                 </p>
               </div>
-              <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm ring-1 ring-white/30">
-                <span className="text-xs font-medium">{config.inboxLabel}</span>
-                <AppSwitch checked={config.enabled} onChange={config.setEnabled} />
-              </div>
             </div>
           </div>
 
           <div className="crm-card p-5">
             <InstagramConnect conversationsPath="/app/conversations" />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              type="primary"
-              size="large"
-              icon={<Save size={15} />}
-              loading={savingChannels}
-              onClick={() => void saveChannelCredentials("instagram")}
-            >
-              Save Instagram Settings
-            </Button>
           </div>
         </div>
       );
@@ -249,13 +202,6 @@ export default function ConnectionsPage() {
               </div>
               <p className="mt-0.5 text-[13px] text-white/85">{config.subtitle}</p>
             </div>
-            {/* Google has no persisted enable flag yet, so it gets no toggle. */}
-            {channel !== "google" && (
-              <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm ring-1 ring-white/30">
-                <span className="text-xs font-medium">{config.inboxLabel}</span>
-                <AppSwitch checked={config.enabled} onChange={config.setEnabled} />
-              </div>
-            )}
           </div>
         </div>
 
@@ -272,21 +218,6 @@ export default function ConnectionsPage() {
           </div>
           <Button type="primary" disabled>Connect {config.title}</Button>
         </div>
-
-        {/* Google has nothing to persist yet, so it gets no save action. */}
-        {channel !== "google" && (
-          <div className="flex justify-end">
-            <Button
-              type="primary"
-              size="large"
-              icon={<Save size={15} />}
-              loading={savingChannels}
-              onClick={() => void saveChannelCredentials(channel)}
-            >
-              Save {isWa ? "WhatsApp" : "Instagram"} Settings
-            </Button>
-          </div>
-        )}
       </div>
     );
   };
