@@ -65,6 +65,7 @@ import Image from 'next/image';
 import { HeroSlider, DEFAULT_HERO_CONTENT } from '@/components/hero/HeroSlider';
 import type { HeroContent } from '@/services/hero.service';
 import { specialityService, type Speciality } from '@/services/speciality.service';
+import { CustomPlanEnquiryModal } from './components/CustomPlanEnquiryModal';
 
 // ─── Design tokens (driven by Theme Management) ─────────────────────────────────
 // These read the live CSS custom properties written by ThemeProvider
@@ -782,6 +783,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   const router = useRouter();
   const { platformName, platformShortName } = useThemeColors();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  const [isCustomPlanModalOpen, setIsCustomPlanModalOpen] = React.useState(false);
   const [plans, setPlans] = React.useState<PlanData[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
   const [footerPages, setFooterPages] = React.useState<FooterPageLink[]>([]);
@@ -1711,7 +1713,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               {/* Right rail: CTA stays last, as before. */}
               <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex items-center">
                 <button
-                  onClick={goLogin}
+                  onClick={() => setIsCustomPlanModalOpen(true)}
                   className="w-full h-12 rounded-xl font-semibold text-[16.5px] text-white transition-all hover:brightness-110"
                   style={{ background: NAVY, boxShadow: `0 12px 28px ${navyAlpha(0.2)}` }}
                 >
@@ -1856,6 +1858,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           </div>
         </footer>
       </div>
+
+      <CustomPlanEnquiryModal
+        open={isCustomPlanModalOpen}
+        onClose={() => setIsCustomPlanModalOpen(false)}
+      />
     </div>
   );
 };

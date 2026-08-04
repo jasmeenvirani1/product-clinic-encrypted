@@ -8,6 +8,7 @@ const videoController = require("../controllers/videoController");
 const landingFaqController = require("../controllers/landingFaqController");
 const specialityController = require("../controllers/specialityController");
 const seoSettingController = require("../controllers/seoSettingController");
+const customPlanEnquiryController = require("../controllers/customPlanEnquiryController");
 
 router.get("/plans", async (req, res) => {
   try {
@@ -39,5 +40,7 @@ router.get("/landing-faqs", landingFaqController.getPublic);
 router.get("/specialities", specialityController.getPublic);
 router.get("/specialities/:slug", specialityController.getPublicBySlug);
 router.get("/seo-settings/:pageKey", seoSettingController.getPublic);
+
+router.post("/custom-plan-enquiry", customPlanEnquiryController.submit);
 
 module.exports = router;
