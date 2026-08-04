@@ -128,7 +128,8 @@ export default function ConnectionsPage() {
         chipText: "text-blue-700",
         accentText: "text-blue-600",
         tagColor: "blue",
-        inboxLabel: "Google inbox",
+        // Unused for Google — the hero renders no toggle for this channel.
+        inboxLabel: "",
         connected: false,
         enabled: false,
         setEnabled: () => {},
@@ -190,10 +191,13 @@ export default function ConnectionsPage() {
               </div>
               <p className="mt-0.5 text-[13px] text-white/85">{config.subtitle}</p>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm ring-1 ring-white/30">
-              <span className="text-xs font-medium">{config.inboxLabel}</span>
-              <AppSwitch checked={config.enabled} onChange={config.setEnabled} />
-            </div>
+            {/* Google has no persisted enable flag yet, so it gets no toggle. */}
+            {channel !== "google" && (
+              <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2 backdrop-blur-sm ring-1 ring-white/30">
+                <span className="text-xs font-medium">{config.inboxLabel}</span>
+                <AppSwitch checked={config.enabled} onChange={config.setEnabled} />
+              </div>
+            )}
           </div>
         </div>
 
