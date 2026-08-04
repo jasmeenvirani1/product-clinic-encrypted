@@ -7,7 +7,11 @@ import { PageSection } from "@/components/PageSection";
 import { aiSettingService, type UpdateAISettingPayload } from "@/services/aiSetting.service";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
-import { channelTabLabel } from "@/components/integrations/ChannelTabLabel";
+import { ChannelIcon, channelTabLabel } from "@/components/integrations/ChannelTabLabel";
+
+// Channels surfaced on the clinic side. Google has no backend support yet, so
+// it renders the same "coming soon" placeholder the other pending channels use.
+type ClinicChannel = "whatsapp" | "instagram" | "google";
 
 // ─── Page ───────────────────────────────────────────────────────────
 export default function ConnectionsPage() {
@@ -37,7 +41,10 @@ export default function ConnectionsPage() {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveChannelCredentials = async (channel: "whatsapp" | "instagram") => {
+  const saveChannelCredentials = async (channel: ClinicChannel) => {
+    // Google has no persisted settings yet — nothing to save.
+    if (channel === "google") return;
+
     setSavingChannels(true);
     try {
       const payload: Record<string, unknown> = {};
@@ -63,41 +70,72 @@ export default function ConnectionsPage() {
     }
   };
 
-  const renderChannelTab = (channel: "whatsapp" | "instagram") => {
+  const renderChannelTab = (channel: ClinicChannel) => {
     const isWa = channel === "whatsapp";
-    const config = isWa
-      ? {
-          title: "WhatsApp Business",
-          subtitle: "Send campaigns & receive messages",
-          icon: (
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M16 2C8.268 2 2 8.268 2 16c0 2.492.65 4.835 1.788 6.865L2 30l7.335-1.922A13.93 13.93 0 0 0 16 30c7.732 0 14-6.268 14-14S23.732 2 16 2zm0 25.6a11.55 11.55 0 0 1-5.89-1.607l-.422-.252-4.352 1.14 1.16-4.24-.276-.435A11.556 11.556 0 0 1 4.4 16C4.4 9.593 9.593 4.4 16 4.4S27.6 9.593 27.6 16 22.407 27.6 16 27.6zm6.34-8.64c-.348-.174-2.06-1.016-2.38-1.132-.32-.116-.552-.174-.784.174-.232.348-.9 1.132-1.103 1.364-.203.232-.406.26-.754.087-.348-.174-1.47-.542-2.8-1.727-1.034-.922-1.732-2.06-1.935-2.408-.203-.348-.022-.536.152-.71.157-.155.348-.406.522-.609.174-.203.232-.348.348-.58.116-.232.058-.435-.029-.609-.087-.174-.784-1.888-1.074-2.587-.283-.68-.57-.587-.784-.598l-.667-.012c-.232 0-.61.087-.928.435-.319.348-1.218 1.19-1.218 2.903s1.247 3.366 1.42 3.598c.174.232 2.453 3.744 5.944 5.25.831.359 1.48.573 1.986.733.834.265 1.594.228 2.194.138.669-.1 2.06-.843 2.351-1.657.29-.813.29-1.51.203-1.657-.087-.145-.319-.232-.667-.406z"/>
-            </svg>
-          ),
-          gradient: "from-emerald-500 via-green-500 to-teal-500",
-          chipBg: "bg-emerald-50",
-          chipText: "text-emerald-700",
-          accentText: "text-emerald-600",
-          tagColor: "green",
-          inboxLabel: "WhatsApp inbox",
-          connected: hasWhatsapp,
-          enabled: waEnabled,
-          setEnabled: setWaEnabled,
-        }
-      : {
-          title: "Instagram",
-          subtitle: "Send campaigns & receive DMs",
-          icon: <Instagram size={28} className="text-white" />,
-          gradient: "from-pink-500 via-fuchsia-500 to-orange-400",
-          chipBg: "bg-pink-50",
-          chipText: "text-pink-600",
-          accentText: "text-pink-600",
-          tagColor: "pink",
-          inboxLabel: "Instagram DMs",
-          connected: hasInstagram,
-          enabled: igEnabled,
-          setEnabled: setIgEnabled,
-        };
+
+    const configs: Record<ClinicChannel, {
+      title: string;
+      subtitle: string;
+      icon: React.ReactNode;
+      gradient: string;
+      chipBg: string;
+      chipText: string;
+      accentText: string;
+      tagColor: string;
+      inboxLabel: string;
+      connected: boolean;
+      enabled: boolean;
+      setEnabled: (_v: boolean) => void;
+    }> = {
+      whatsapp: {
+        title: "WhatsApp Business",
+        subtitle: "Send campaigns & receive messages",
+        icon: (
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 2C8.268 2 2 8.268 2 16c0 2.492.65 4.835 1.788 6.865L2 30l7.335-1.922A13.93 13.93 0 0 0 16 30c7.732 0 14-6.268 14-14S23.732 2 16 2zm0 25.6a11.55 11.55 0 0 1-5.89-1.607l-.422-.252-4.352 1.14 1.16-4.24-.276-.435A11.556 11.556 0 0 1 4.4 16C4.4 9.593 9.593 4.4 16 4.4S27.6 9.593 27.6 16 22.407 27.6 16 27.6zm6.34-8.64c-.348-.174-2.06-1.016-2.38-1.132-.32-.116-.552-.174-.784.174-.232.348-.9 1.132-1.103 1.364-.203.232-.406.26-.754.087-.348-.174-1.47-.542-2.8-1.727-1.034-.922-1.732-2.06-1.935-2.408-.203-.348-.022-.536.152-.71.157-.155.348-.406.522-.609.174-.203.232-.348.348-.58.116-.232.058-.435-.029-.609-.087-.174-.784-1.888-1.074-2.587-.283-.68-.57-.587-.784-.598l-.667-.012c-.232 0-.61.087-.928.435-.319.348-1.218 1.19-1.218 2.903s1.247 3.366 1.42 3.598c.174.232 2.453 3.744 5.944 5.25.831.359 1.48.573 1.986.733.834.265 1.594.228 2.194.138.669-.1 2.06-.843 2.351-1.657.29-.813.29-1.51.203-1.657-.087-.145-.319-.232-.667-.406z"/>
+          </svg>
+        ),
+        gradient: "from-emerald-500 via-green-500 to-teal-500",
+        chipBg: "bg-emerald-50",
+        chipText: "text-emerald-700",
+        accentText: "text-emerald-600",
+        tagColor: "green",
+        inboxLabel: "WhatsApp inbox",
+        connected: hasWhatsapp,
+        enabled: waEnabled,
+        setEnabled: setWaEnabled,
+      },
+      instagram: {
+        title: "Instagram",
+        subtitle: "Send campaigns & receive DMs",
+        icon: <Instagram size={28} className="text-white" />,
+        gradient: "from-pink-500 via-fuchsia-500 to-orange-400",
+        chipBg: "bg-pink-50",
+        chipText: "text-pink-600",
+        accentText: "text-pink-600",
+        tagColor: "pink",
+        inboxLabel: "Instagram DMs",
+        connected: hasInstagram,
+        enabled: igEnabled,
+        setEnabled: setIgEnabled,
+      },
+      google: {
+        title: "Google",
+        subtitle: "Coming soon",
+        icon: <ChannelIcon channel="google" size={26} />,
+        gradient: "from-blue-500 via-amber-400 to-red-500",
+        chipBg: "bg-amber-50",
+        chipText: "text-amber-700",
+        accentText: "text-amber-600",
+        tagColor: "gold",
+        inboxLabel: "Google inbox",
+        connected: false,
+        enabled: false,
+        setEnabled: () => {},
+      },
+    };
+
+    const config = configs[channel];
 
     // WhatsApp links via QR scan (Baileys) — show the connect widget instead of
     // the generic placeholder. Instagram keeps the "coming soon" placeholder.
@@ -173,17 +211,20 @@ export default function ConnectionsPage() {
           <Button type="primary" disabled>Connect {config.title}</Button>
         </div>
 
-        <div className="flex justify-end">
-          <Button
-            type="primary"
-            size="large"
-            icon={<Save size={15} />}
-            loading={savingChannels}
-            onClick={() => void saveChannelCredentials(channel)}
-          >
-            Save {isWa ? "WhatsApp" : "Instagram"} Settings
-          </Button>
-        </div>
+        {/* Google has nothing to persist yet, so it gets no save action. */}
+        {channel !== "google" && (
+          <div className="flex justify-end">
+            <Button
+              type="primary"
+              size="large"
+              icon={<Save size={15} />}
+              loading={savingChannels}
+              onClick={() => void saveChannelCredentials(channel)}
+            >
+              Save {isWa ? "WhatsApp" : "Instagram"} Settings
+            </Button>
+          </div>
+        )}
       </div>
     );
   };
@@ -203,6 +244,7 @@ export default function ConnectionsPage() {
 
   const whatsappTab  = renderChannelTab("whatsapp");
   const instagramTab = renderChannelTab("instagram");
+  const googleTab    = renderChannelTab("google");
 
   return (
     <div>
@@ -216,6 +258,7 @@ export default function ConnectionsPage() {
         items={[
           { key: "whatsapp",  label: channelTabLabel("whatsapp",  "WhatsApp Settings"),  children: whatsappTab },
           { key: "instagram", label: channelTabLabel("instagram", "Instagram Settings"), children: instagramTab },
+          { key: "google",    label: channelTabLabel("google",    "Google Settings"),    children: googleTab },
         ]}
       />
     </div>

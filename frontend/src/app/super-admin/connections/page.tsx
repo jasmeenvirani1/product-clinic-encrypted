@@ -6,7 +6,7 @@ import { CheckCircle2, Facebook, Instagram, Linkedin, Plug, Send } from "lucide-
 import { PageSection } from "@/components/PageSection";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
-import { channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
+import { ChannelIcon, channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
 import { aiSettingService } from "@/services/aiSetting.service";
 
 // ─── Page ────────────────────────────────────────────────────────────
@@ -85,6 +85,20 @@ export default function SuperAdminConnectionsPage() {
         connected: hasInstagram,
         enabled: igEnabled,
         setEnabled: setIgEnabled,
+      },
+      google: {
+        title: "Google",
+        subtitle: "Coming soon",
+        icon: <ChannelIcon channel="google" size={26} />,
+        gradient: "from-blue-500 via-amber-400 to-red-500",
+        chipBg: "bg-amber-50",
+        chipText: "text-amber-700",
+        accentText: "text-amber-600",
+        tagColor: "gold",
+        inboxLabel: "Google inbox",
+        connected: false,
+        enabled: false,
+        setEnabled: () => {},
       },
       facebook: {
         title: "Facebook Messenger",
@@ -264,6 +278,7 @@ export default function SuperAdminConnectionsPage() {
         items={[
           { key: "whatsapp",  label: channelTabLabel("whatsapp",  "WhatsApp Settings"),  children: renderChannelTab("whatsapp") },
           { key: "instagram", label: channelTabLabel("instagram", "Instagram Settings"), children: renderChannelTab("instagram") },
+          { key: "google",    label: channelTabLabel("google",    "Google Settings"),    children: renderChannelTab("google") },
           { key: "facebook",  label: channelTabLabel("facebook",  "Facebook Messenger"), children: renderChannelTab("facebook") },
           { key: "telegram",  label: channelTabLabel("telegram",  "Telegram"),           children: renderChannelTab("telegram") },
           { key: "slack",     label: channelTabLabel("slack",     "Slack"),              children: renderChannelTab("slack") },
