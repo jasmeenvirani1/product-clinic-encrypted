@@ -22,6 +22,8 @@ export const ICON_OPTIONS = [
   "ShieldCheck", "Shield", "Lock", "Unlock", "KeyRound", "Key", "Fingerprint", "ScanFace",
   // Settings & Tools
   "Settings", "Wrench", "SlidersHorizontal", "Cog", "Filter", "Search", "Palette", "Brush",
+  // Integrations & Plugins
+  "Plug", "Plug2", "PlugZap", "PlugZap2", "Puzzle", "Blocks", "Cable", "Webhook",
   // Notifications & Status
   "Bell", "BellRing", "AlertCircle", "AlertTriangle", "Info", "CheckCircle", "XCircle", "Clock",
   // Medical & Health
