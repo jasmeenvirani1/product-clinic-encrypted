@@ -7,7 +7,7 @@ import { PageSection } from "@/components/PageSection";
 import { aiSettingService, type UpdateAISettingPayload } from "@/services/aiSetting.service";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
-import { ChannelIcon, channelTabLabel } from "@/components/integrations/ChannelTabLabel";
+import { GoogleGlyph, channelTabLabel } from "@/components/integrations/ChannelTabLabel";
 
 // Channels surfaced on the clinic side. Google has no backend support yet, so
 // it renders the same "coming soon" placeholder the other pending channels use.
@@ -122,7 +122,7 @@ export default function ConnectionsPage() {
       google: {
         title: "Google",
         subtitle: "Coming soon",
-        icon: <ChannelIcon channel="google" size={26} />,
+        icon: <GoogleGlyph size={28} className="text-white" />,
         gradient: "from-blue-600 via-blue-500 to-sky-500",
         chipBg: "bg-blue-50",
         chipText: "text-blue-700",

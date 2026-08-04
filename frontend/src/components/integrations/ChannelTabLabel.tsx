@@ -109,6 +109,36 @@ export function ChannelIcon({ channel, size = ICON_SIZE }: { channel: ChannelKey
 }
 
 /**
+ * Monochrome outline "G" in currentColor, for the hero badge where every other
+ * channel shows a flat white glyph. The four-colour mark is reserved for the
+ * tab strip — inside the glass badge it would be the only coloured icon.
+ *
+ * Stroke weight and cap style match the lucide icons used by the other heroes.
+ */
+export function GoogleGlyph({ size = 28, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+      focusable="false"
+    >
+      {/* Open ring, broken at the right where the crossbar enters. */}
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      {/* Crossbar into the centre, as in the Google G. */}
+      <path d="M21 12h-8" />
+    </svg>
+  );
+}
+
+/**
  * Tab label with the app's icon beside the text. Returned as a node so it can
  * be handed straight to the `label` of an antd Tabs item.
  */

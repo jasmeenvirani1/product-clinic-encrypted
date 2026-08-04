@@ -6,7 +6,7 @@ import { CheckCircle2, Facebook, Instagram, Linkedin, Plug, Send } from "lucide-
 import { PageSection } from "@/components/PageSection";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
-import { ChannelIcon, channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
+import { GoogleGlyph, channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
 import { aiSettingService } from "@/services/aiSetting.service";
 
 // ─── Page ────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ export default function SuperAdminConnectionsPage() {
       google: {
         title: "Google",
         subtitle: "Coming soon",
-        icon: <ChannelIcon channel="google" size={26} />,
+        icon: <GoogleGlyph size={28} className="text-white" />,
         gradient: "from-blue-600 via-blue-500 to-sky-500",
         chipBg: "bg-blue-50",
         chipText: "text-blue-700",
