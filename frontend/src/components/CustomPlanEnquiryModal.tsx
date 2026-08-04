@@ -125,11 +125,19 @@ export const CustomPlanEnquiryModal = ({ open, onClose }: CustomPlanEnquiryModal
           <Input placeholder="you@clinic.com" disabled={submitting} maxLength={EMAIL_MAX} />
         </Form.Item>
 
-        {/* Optional on purpose: requiring free text on a sales enquiry costs
-            leads. Sales can always follow up using the contact details above. */}
+        {/* Optional on purpose: requiring free text on a sales enquiry costs leads,
+            and sales can follow up using the contact details above. The form sets
+            requiredMark={false} so AntD draws no asterisks anywhere — nothing would
+            otherwise distinguish this field from the three required ones, hence the
+            "(optional)" hint lives in the label text itself. */}
         <Form.Item
           name="message"
-          label="Tell us about your requirement"
+          label={
+            <span>
+              Tell us about your requirement{" "}
+              <span className="text-slate-400 font-normal">(optional)</span>
+            </span>
+          }
           rules={[{ max: MESSAGE_MAX, message: `Please keep this under ${MESSAGE_MAX} characters` }]}
         >
           <Input.TextArea
