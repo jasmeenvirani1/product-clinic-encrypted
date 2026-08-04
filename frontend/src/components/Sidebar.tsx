@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bot, ChevronUp, Gauge, Globe, HelpCircle, KeyRound, LayoutList, LogOut, Settings, ShieldCheck, Sparkles, Stethoscope, User } from "lucide-react";
+import { Bot, ChevronUp, Gauge, Globe, KeyRound, LayoutList, LogOut, Settings, ShieldCheck, User } from "lucide-react";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { logout } from "../store/slices/authSlice";
@@ -74,28 +74,10 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
           href: "/super-admin/ai-settings",
         },
         {
-          key: "hero-content",
-          icon: <Sparkles size={14} />,
-          label: profileLabel("heroContent", "Hero Section"),
-          href: "/super-admin/hero-content",
-        },
-        {
-          key: "landing-faq",
-          icon: <HelpCircle size={14} />,
-          label: profileLabel("landingFaq", "Landing FAQ"),
-          href: "/super-admin/landing-faq",
-        },
-        {
-          key: "specialities",
-          icon: <Stethoscope size={14} />,
-          label: profileLabel("specialities", "Specialities"),
-          href: "/super-admin/specialities",
-        },
-        {
-          key: "seo-settings",
+          key: "website-content",
           icon: <Globe size={14} />,
-          label: profileLabel("seoSettings", "SEO Settings"),
-          href: "/super-admin/seo-settings",
+          label: profileLabel("websiteContent", "Website Content"),
+          href: "/super-admin/landing-page",
         },
       ]
     : [

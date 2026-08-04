@@ -186,8 +186,10 @@ export const superAdminMenu: MenuEntry[] = [
   { key: "sa-videos",          label: "Video Management", icon: <Video size={18} />,           path: "/super-admin/videos",          roles: ["super_admin"] },
   { key: "sa-manage-pages",    label: "Manage Pages",     icon: <FileText size={18} />,        path: "/super-admin/manage-pages",    roles: ["super_admin"] },
   { key: "sa-won-leads",       label: "Won Leads",        icon: <Award size={18} />,           path: "/super-admin/won-leads",       roles: ["super_admin"] },
-  // Hero Section and Theme Settings now live in the profile popup (see Sidebar.tsx),
-  // so they are intentionally omitted from the main sidebar menu.
+  // Hero Section, Landing FAQ, Specialities, and SEO Settings are consolidated
+  // under the single "Website Content" item in the sidebar profile popup
+  // (tabbed shell at /super-admin/landing-page — see Sidebar.tsx). Theme
+  // Settings alone remains in the profile popup alongside it.
   // Custom Fields menu hidden from the sidebar (page still reachable by URL).
   // { key: "sa-custom-fields",   label: "Custom Fields",    icon: <SlidersHorizontal size={18} />,   path: "/super-admin/custom-fields",   roles: ["super_admin"] },
 ];
