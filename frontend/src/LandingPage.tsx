@@ -793,18 +793,20 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     Pick<Speciality, 'slug' | 'icon' | 'name' | 'short_description'>[]
   >([]);
 
-  // Pinned scroll story: section fills the screen and pins; scroll progress steps items 1..N, then releases.
-  // STEP_VH = scroll runway per item (in vh). Lower = snappier / less empty scrolling before release.
+  // Hover-driven card story (was a pinned scroll-jack): the section is now normal
+  // height, so scrolling past it with the pointer outside the cards just scrolls —
+  // no pinning, no forced runway. Hovering the card stack advances the cards on a
+  // timer instead, and leaving resets to the first card.
   const PROBLEM_COUNT = 6;
-  const STEP_VH = 100;
-  // Continuous scroll-scrubbed progress across items: 0 → PROBLEM_COUNT-1 (fractional).
-  // e.g. 2.35 means card 2 is 35% of the way to fully covering card 1 — no snapping, no fixed-duration transition.
+  const PROBLEM_ADVANCE_MS = 1600; // dwell per card while hovered
+  // Continuous progress across items: 0 → PROBLEM_COUNT-1 (fractional).
+  // e.g. 2.35 means card 2 is 35% of the way to fully covering card 1.
   const [problemProgress, setProblemProgress] = React.useState(0);
   const activeProblem = Math.min(PROBLEM_COUNT - 1, Math.round(problemProgress));
   const [isDesktop, setIsDesktop] = React.useState(false);
-  const problemWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const [problemHovered, setProblemHovered] = React.useState(false);
 
-  // Track lg+ so the pinned scroll-jack only runs on desktop; mobile gets a normal stacked list.
+  // Track lg+ so the hover story only runs on desktop; mobile gets a normal stacked list.
   React.useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
     const update = () => setIsDesktop(mq.matches);
@@ -813,62 +815,55 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
+  // Respect reduced-motion: hold on the first card rather than auto-animating.
+  const [reducedMotion, setReducedMotion] = React.useState(false);
   React.useEffect(() => {
-    if (!isDesktop) return; // no scroll-jack on mobile/tablet
-    let ticking = false;
-    const compute = () => {
-      ticking = false;
-      const el = problemWrapRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const total = el.offsetHeight - window.innerHeight; // scroll distance while pinned
-      if (total <= 0) return;
-      const progress = Math.min(Math.max(-rect.top / total, 0), 1); // 0→1 across the pinned range
-      setProblemProgress(progress * (PROBLEM_COUNT - 1)); // continuous — every scroll pixel updates card position directly
-    };
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(compute); // throttle to one update per frame
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    compute();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [isDesktop]);
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReducedMotion(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
-  // Solution section: same pinned scroll-jack pattern as Problem, driving a 3-column conveyor.
+  // Animate only while hovered. rAF-scrubbed so the reveal stays continuous
+  // (matching the old scroll feel) instead of snapping card-to-card.
+  React.useEffect(() => {
+    if (!isDesktop || reducedMotion) return;
+    if (!problemHovered) {
+      setProblemProgress(0); // reset so the next hover replays from card 1
+      return;
+    }
+    let raf = 0;
+    let start = 0;
+    const max = PROBLEM_COUNT - 1;
+    const tick = (ts: number) => {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      setProblemProgress(Math.min(elapsed / PROBLEM_ADVANCE_MS, max));
+      if (elapsed / PROBLEM_ADVANCE_MS < max) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isDesktop, problemHovered, reducedMotion]);
+
+  // Solution section: same hover-driven pattern, driving a 3-column conveyor.
   const SOLUTION_COUNT = 6;
-  const SOLUTION_STEP_VH = 60;
+  const SOLUTION_ADVANCE_MS = 1600;
   const [activeSolution, setActiveSolution] = React.useState(0);
-  const solutionWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const [solutionHovered, setSolutionHovered] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isDesktop) return;
-    let ticking = false;
-    let last = -1;
-    const compute = () => {
-      ticking = false;
-      const el = solutionWrapRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const total = el.offsetHeight - window.innerHeight;
-      if (total <= 0) return;
-      const progress = Math.min(Math.max(-rect.top / total, 0), 1);
-      const idx = Math.min(SOLUTION_COUNT - 1, Math.round(progress * (SOLUTION_COUNT - 1)));
-      if (idx !== last) {
-        last = idx;
-        setActiveSolution(idx);
-      }
-    };
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(compute);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    compute();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [isDesktop]);
+    if (!isDesktop || reducedMotion) return;
+    if (!solutionHovered) {
+      setActiveSolution(0);
+      return;
+    }
+    // Discrete steps here — the conveyor swaps whole cards rather than scrubbing.
+    const id = setInterval(() => {
+      setActiveSolution((prev) => (prev + 1 >= SOLUTION_COUNT ? prev : prev + 1));
+    }, SOLUTION_ADVANCE_MS);
+    return () => clearInterval(id);
+  }, [isDesktop, solutionHovered, reducedMotion]);
 
   React.useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -1181,14 +1176,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           </div>
         </section>
 
-        {/* ══════════════ PROBLEM (pinned scroll story) ══════════════ */}
-        {/* Tall wrapper = scroll runway; inner pins to one screen and steps through items, then releases. */}
-        <div
-          ref={problemWrapRef}
-          className="relative bg-white"
-          style={isDesktop ? { height: `${PROBLEM_COUNT * STEP_VH}vh` } : undefined}
-        >
-          <div className="lg:sticky lg:top-16 overflow-hidden pt-10 sm:pt-12 lg:pt-0 pb-10 lg:pb-0 lg:h-[calc(100dvh-4rem)] lg:flex lg:flex-col lg:justify-center">
+        {/* ══════════════ PROBLEM (hover-driven card story) ══════════════ */}
+        {/* Normal-height section: scrolling past it with the pointer outside the
+            cards is an ordinary scroll. Hovering the card stack plays the reveal. */}
+        <div className="relative bg-white">
+          <div className="overflow-hidden py-10 sm:py-12 lg:py-16">
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-2xl mx-auto mb-8 lg:mb-5">
                 <div className="flex justify-center"><Eyebrow>{t.problemBadge}</Eyebrow></div>
@@ -1196,12 +1188,21 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 <p className="text-base sm:text-[16.5px] leading-relaxed" style={{ color: BODY }}>{t.problemSubtitle}</p>
               </div>
 
-              {/* Single card: description (left) + image (right) travel together, one problem visible at a time. */}
-              <div className="relative mx-auto w-full max-w-6xl lg:h-[min(24rem,55vh)] lg:overflow-hidden">
-                {isDesktop ? (
+              {/* Single card: description (left) + image (right) travel together, one problem visible at a time.
+                  Hover is bound here — on the card stack only — so the animation plays
+                  on hover and the surrounding section scrolls untouched otherwise. */}
+              <div
+                className="relative mx-auto w-full max-w-6xl lg:h-[min(24rem,55vh)] lg:overflow-hidden"
+                onMouseEnter={() => setProblemHovered(true)}
+                onMouseLeave={() => setProblemHovered(false)}
+              >
+                {/* Reduced-motion falls through to the stacked list below: the hover
+                    animation never runs for those users, so the overlay stack would
+                    otherwise strand them on card 1 with the other five unreachable. */}
+                {isDesktop && !reducedMotion ? (
                   t.problemItems.map((item, i) => {
                     // Continuous scrub: card i slides from 110% (below, hidden) to 0% (in place, covering earlier cards)
-                    // as problemProgress moves through [i-1, i]. Stopping mid-scroll leaves it visibly half-covered.
+                    // as problemProgress moves through [i-1, i]. Pausing mid-hover leaves it visibly half-covered.
                     const localProgress = Math.min(Math.max(problemProgress - (i - 1), 0), 1);
                     const translateY = i === 0 ? 0 : (1 - localProgress) * 110;
                     const isTopmost = i === activeProblem;
@@ -1248,25 +1249,29 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </div>
 
         {/* ══════════════ SOLUTION (pinned scroll conveyor) ══════════════ */}
-        {/* Tall wrapper = scroll runway; inner pins to one screen and steps through solutions, then releases. */}
+        {/* Normal-height section: hovering the card track plays the conveyor; scrolling
+            past with the pointer elsewhere is an ordinary scroll. */}
         <div
-          ref={solutionWrapRef}
           id="solution"
           className="relative scroll-mt-24"
-          style={{
-            background: NAVY,
-            ...(isDesktop ? { height: `${SOLUTION_COUNT * SOLUTION_STEP_VH}vh` } : {}),
-          }}
+          style={{ background: NAVY }}
         >
-          <div className="lg:sticky lg:top-16 overflow-hidden pt-10 sm:pt-12 lg:pt-0 pb-10 lg:pb-0 lg:h-[calc(100dvh-4rem)] lg:flex lg:flex-col lg:justify-center">
+          <div className="overflow-hidden py-10 sm:py-12 lg:py-16">
             <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-4xl mx-auto mb-5 lg:mb-4">
                 <div className="flex justify-center mb-2"><Eyebrow onPrimary>{t.solutionBadge}</Eyebrow></div>
                 <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: TINT }}>{t.solutionTitle}</h2>
               </div>
 
-              {isDesktop ? (
-                <div className="grid grid-cols-[1fr_2.5fr] gap-8 items-center h-[min(34rem,60vh)]">
+              {isDesktop && !reducedMotion ? (
+                /* Hover bound to the card track only, so the section heading and
+                   surrounding whitespace scroll without triggering the conveyor.
+                   Reduced-motion falls through to the static stacked list below. */
+                <div
+                  className="grid grid-cols-[1fr_2.5fr] gap-8 items-center h-[min(34rem,60vh)]"
+                  onMouseEnter={() => setSolutionHovered(true)}
+                  onMouseLeave={() => setSolutionHovered(false)}
+                >
                   {/* Left: active solution's title + description */}
                   <div className="relative h-40">
                     {t.solutionCards.map((c, i) => (
