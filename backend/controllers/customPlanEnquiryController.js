@@ -7,6 +7,7 @@ const MODULE = "CustomPlanEnquiryController";
 const NAME_MAX = 100;
 const MOBILE_MAX = 20;
 const EMAIL_MAX = 150;
+const MESSAGE_MAX = 2000;
 const MOBILE_REGEX = /^[+]?[0-9][0-9\s\-()]{5,19}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -27,7 +28,7 @@ exports.submit = async (req, res) => {
     const clientIp = req.ip;
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
-    let { name, mobile, email } = body;
+    let { name, mobile, email, message } = body;
 
     if (typeof name !== "string" || typeof mobile !== "string" || typeof email !== "string") {
       return res.status(400).json({
@@ -36,9 +37,16 @@ exports.submit = async (req, res) => {
       });
     }
 
+    // Optional field: absent/null is fine, but reject a wrong type outright
+    // rather than coercing it into the email body.
+    if (message !== undefined && message !== null && typeof message !== "string") {
+      return res.status(400).json({ success: false, message: "Invalid message." });
+    }
+
     name = name.trim();
     mobile = mobile.trim();
     email = email.trim();
+    message = typeof message === "string" ? message.trim() : "";
 
     if (!name || !mobile || !email) {
       return res.status(400).json({
@@ -55,6 +63,9 @@ exports.submit = async (req, res) => {
     }
     if (email.length > EMAIL_MAX) {
       return res.status(400).json({ success: false, message: "Email is too long." });
+    }
+    if (message.length > MESSAGE_MAX) {
+      return res.status(400).json({ success: false, message: "Message is too long." });
     }
 
     if (!EMAIL_REGEX.test(email)) {
@@ -77,7 +88,7 @@ exports.submit = async (req, res) => {
       });
     }
 
-    await sendCustomPlanEnquiryEmail({ name, mobile, email });
+    await sendCustomPlanEnquiryEmail({ name, mobile, email, message });
 
     log.info(MODULE, "submit", { ip: clientIp, email });
     return res.status(200).json({

@@ -38,9 +38,9 @@ async function sendOtpEmail(to, otp, purpose) {
   });
 }
 
-// Escapes the 5 HTML-significant characters. Sufficient because these three
-// values are only ever interpolated into HTML *text content* (never into an
-// attribute, href, or <script> context) in the email template below.
+// Escapes the 5 HTML-significant characters. Sufficient because these values
+// are only ever interpolated into HTML *text content* (never into an attribute,
+// href, or <script> context) in the email template below.
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")
@@ -50,11 +50,22 @@ function escapeHtml(str) {
     .replace(/'/g, "&#39;");
 }
 
-async function sendCustomPlanEnquiryEmail({ name, mobile, email }) {
+async function sendCustomPlanEnquiryEmail({ name, mobile, email, message }) {
   if (!process.env.SALES_EMAIL) {
     log.error(MODULE, "sendCustomPlanEnquiryEmail", { error: "SALES_EMAIL is not configured" });
     throw new Error("SALES_EMAIL is not configured");
   }
+
+  // Escape FIRST, then turn newlines into <br> — doing it the other way round
+  // would escape the tags we just inserted. The message is optional, so the
+  // whole row is omitted when it is blank.
+  const messageRow = message
+    ? `
+          <tr>
+            <td style="padding:8px 0;color:#666;font-size:13px;vertical-align:top;">Requirement</td>
+            <td style="padding:8px 0;font-size:14px;white-space:pre-wrap;">${escapeHtml(message).replace(/\r?\n/g, "<br>")}</td>
+          </tr>`
+    : "";
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
@@ -77,7 +88,7 @@ async function sendCustomPlanEnquiryEmail({ name, mobile, email }) {
           <tr>
             <td style="padding:8px 0;color:#666;font-size:13px;">Email</td>
             <td style="padding:8px 0;font-size:14px;">${escapeHtml(email)}</td>
-          </tr>
+          </tr>${messageRow}
         </table>
         <p style="color:#666;font-size:13px;">Reply directly to this email to reach the enquirer.</p>
       </div>

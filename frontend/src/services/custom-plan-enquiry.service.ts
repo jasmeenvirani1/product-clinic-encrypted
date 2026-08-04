@@ -4,6 +4,8 @@ export interface CustomPlanEnquiryRequest {
   name: string;
   mobile: string;
   email: string;
+  /** Optional free-text brief from the visitor. */
+  message?: string;
 }
 
 export interface CustomPlanEnquirySuccessResponse {

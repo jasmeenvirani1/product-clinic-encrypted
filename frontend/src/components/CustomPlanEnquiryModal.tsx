@@ -16,6 +16,7 @@ interface CustomPlanEnquiryModalProps {
 const NAME_MAX = 100;
 const MOBILE_MAX = 20;
 const EMAIL_MAX = 150;
+const MESSAGE_MAX = 2000;
 const MOBILE_REGEX = /^[+]?[0-9][0-9\s\-()]{5,19}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,6 +24,7 @@ interface CustomPlanEnquiryFormValues {
   name: string;
   mobile: string;
   email: string;
+  message?: string;
 }
 
 const GENERIC_ERROR_MESSAGE = "Unable to submit enquiry right now. Please try again later.";
@@ -48,6 +50,8 @@ export const CustomPlanEnquiryModal = ({ open, onClose }: CustomPlanEnquiryModal
         name: values.name.trim(),
         mobile: values.mobile.trim(),
         email: values.email.trim(),
+        // Optional — omit entirely when blank so the email body can skip the row.
+        message: values.message?.trim() || undefined,
       });
       void message.success(res.message || "Enquiry submitted. Our team will reach out shortly.");
       form.resetFields();
@@ -119,6 +123,22 @@ export const CustomPlanEnquiryModal = ({ open, onClose }: CustomPlanEnquiryModal
           ]}
         >
           <Input placeholder="you@clinic.com" disabled={submitting} maxLength={EMAIL_MAX} />
+        </Form.Item>
+
+        {/* Optional on purpose: requiring free text on a sales enquiry costs
+            leads. Sales can always follow up using the contact details above. */}
+        <Form.Item
+          name="message"
+          label="Tell us about your requirement"
+          rules={[{ max: MESSAGE_MAX, message: `Please keep this under ${MESSAGE_MAX} characters` }]}
+        >
+          <Input.TextArea
+            rows={4}
+            placeholder="Briefly describe what you need — number of locations, integrations, expected patient volume, anything specific to your clinic."
+            disabled={submitting}
+            maxLength={MESSAGE_MAX}
+            showCount
+          />
         </Form.Item>
 
         <Form.Item className="mb-0 mt-2">
