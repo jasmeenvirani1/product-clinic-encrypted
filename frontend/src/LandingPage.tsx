@@ -253,8 +253,8 @@ const t = {
     integrationTitle: 'Connects with the tools you already run on.',
     integrationHub: 'AI WORKFORCE',
     integrationHubSubtitle: 'Your Intelligent Automation Layer',
-    integrationLeft: ['WhatsApp', 'Instagram', 'Telegram', 'Gmail', 'Google Calendar'],
-    integrationRight: ['Salesforce', 'HubSpot', 'Slack', 'Shopify', 'Microsoft Teams'],
+    integrationLeft: ['WhatsApp', 'Google Calendar', 'Gmail', 'Zoom', 'HubSpot'],
+    integrationRight: ['Instagram', 'Facebook', 'Slack', 'Salesforce', 'Microsoft Teams'],
 
     // Industries
     industriesBadge: 'Built for every industries/specialities',
@@ -498,28 +498,29 @@ const ROW_ANGLES = [50, 25, 0, -25, -50]; // degrees above/below horizontal, sym
 // Flow count per app, keyed by the display name coming from t.integrationLeft / t.integrationRight.
 const INTEGRATION_FLOWS: Record<string, number> = {
   WhatsApp: 12,
-  Instagram: 9,
-  Telegram: 9,
-  Gmail: 10,
   'Google Calendar': 1,
-  Salesforce: 9,
+  Gmail: 10,
+  Zoom: 9,
   HubSpot: 10,
+  Instagram: 9,
+  Facebook: 9,
   Slack: 18,
-  Shopify: 9,
+  Salesforce: 9,
   'Microsoft Teams': 9,
 };
 
-// Logo file per app (public/), keyed by the same display name.
+// Logo file per app (public/), keyed by the same display name. Drop a matching
+// PNG into frontend/public/ and it renders automatically — no code change needed.
 const INTEGRATION_LOGOS: Record<string, string> = {
   WhatsApp: '/Whatsapp.png',
-  Instagram: '/Instagram.png',
-  Telegram: '/Telegram.png',
-  Gmail: '/Gmail.png',
   'Google Calendar': '/Google calendar.png',
-  Salesforce: '/Salesforce.png',
+  Gmail: '/Gmail.png',
+  Zoom: '/Zoom.png',
   HubSpot: '/Hubspot.png',
+  Instagram: '/Instagram.png',
+  Facebook: '/Facebook.png',
   Slack: '/Slack.png',
-  Shopify: '/Shopify.png',
+  Salesforce: '/Salesforce.png',
   'Microsoft Teams': '/Teams.png',
 };
 
@@ -651,7 +652,19 @@ const IntegrationDiagram = ({
       >
         {logo ? (
           <div className="integration-card-icon shrink-0">
-            <Image src={logo} alt={name} width={56} height={56} />
+            {/* Plain <img>, not next/image: the file may not exist in public/ yet.
+                next/image 404s loudly and needs a restart to pick up a newly
+                pasted file, whereas this renders blank now and shows the logo as
+                soon as the PNG is dropped in. onError hides the broken-image
+                glyph so a missing logo looks intentionally empty. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logo}
+              alt={name}
+              width={56}
+              height={56}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+            />
           </div>
         ) : null}
         <div className="min-w-0">
