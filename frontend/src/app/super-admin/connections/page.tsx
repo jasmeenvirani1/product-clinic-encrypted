@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { App, Tabs } from "antd";
-import { CheckCircle2, Facebook, Instagram, Linkedin, Plug, Send } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Plug, Send } from "lucide-react";
 import { PageSection } from "@/components/PageSection";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
@@ -90,11 +90,11 @@ export default function SuperAdminConnectionsPage() {
         title: "Google",
         subtitle: "Coming soon",
         icon: <GoogleGlyph size={28} className="text-white" />,
-        gradient: "from-blue-600 via-blue-500 to-sky-500",
-        chipBg: "bg-blue-50",
-        chipText: "text-blue-700",
-        accentText: "text-blue-600",
-        tagColor: "blue",
+        gradient: "from-amber-500 via-red-500 to-blue-600",
+        chipBg: "bg-amber-50",
+        chipText: "text-amber-700",
+        accentText: "text-amber-600",
+        tagColor: "gold",
         inboxLabel: "Google inbox",
         connected: false,
         enabled: false,
@@ -204,18 +204,7 @@ export default function SuperAdminConnectionsPage() {
                 {config.icon}
               </div>
               <div className="flex-1 min-w-[180px]">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold">{config.title}</h3>
-                  {config.connected ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-medium ring-1 ring-white/30">
-                      <CheckCircle2 size={11} /> Connected
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-medium ring-1 ring-white/30">
-                      <Plug size={11} /> Not connected
-                    </span>
-                  )}
-                </div>
+                <h3 className="text-lg font-semibold">{config.title}</h3>
                 <p className="mt-0.5 text-[13px] text-white/85">
                   Connect Instagram using your clinic&apos;s own Meta Developer App
                 </p>

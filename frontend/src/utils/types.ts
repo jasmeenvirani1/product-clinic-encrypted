@@ -59,6 +59,11 @@ export interface User {
   trialDaysLeft?: number | null;
   isPlanExpired?: boolean;
   featureFlags?: PlanFeatureFlags; // resolved effective flags from GET /auth/me
+  username?: string | null;
+  experience?: string | null;
+  education?: string | null;
+  category_id?: number | null;
+  category?: { id: number; name: string; slug: string } | null; // resolved via Speciality lookup, GET /auth/me only
 }
 
 export interface Tenant {

@@ -2,7 +2,7 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
-const { User, Role, Plan, OtpCode, RoleMenuPermission, Menu, Permission } = require("../models");
+const { User, Role, Plan, OtpCode, RoleMenuPermission, Menu, Permission, Speciality } = require("../models");
 const { generateOtp, hashOtp, verifyOtp } = require("../utils/otp");
 const { sendOtpEmail } = require("../utils/mailer");
 const log = require("../utils/logger");
@@ -444,7 +444,18 @@ exports.updateProfile = async (req, res) => {
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
-    const { full_name, mobile, clinic_name, old_password, new_password, remove_profile_photo } = req.body;
+    const {
+      full_name,
+      mobile,
+      clinic_name,
+      old_password,
+      new_password,
+      remove_profile_photo,
+      username,
+      experience,
+      education,
+      category_id,
+    } = req.body;
     const profilePhoto = mapSingleUploadedFile(req.files?.profile_photo || []);
 
     if (full_name !== undefined) user.full_name = full_name.trim();
@@ -457,6 +468,24 @@ exports.updateProfile = async (req, res) => {
     if (profilePhoto) {
       if (user.profile_photo && user.profile_photo !== profilePhoto) deleteProofFile(user.profile_photo);
       user.profile_photo = profilePhoto;
+    }
+
+    if (username !== undefined) user.username = username ? username.trim().toLowerCase() : null;
+    if (experience !== undefined) user.experience = experience || null;
+    if (education !== undefined) user.education = education || null;
+
+    if (category_id !== undefined) {
+      if (category_id === null || category_id === "") {
+        user.category_id = null;
+      } else {
+        const speciality = await Speciality.findOne({
+          where: { id: category_id, tenant_id: null, is_deleted: false },
+        });
+        if (!speciality) {
+          return res.status(400).json({ success: false, message: "Invalid category selected." });
+        }
+        user.category_id = speciality.id;
+      }
     }
 
     if (new_password) {
@@ -483,9 +512,16 @@ exports.updateProfile = async (req, res) => {
         mobile: user.mobile,
         clinic_name: user.clinic_name,
         profile_photo: user.profile_photo,
+        username: user.username ?? null,
+        experience: user.experience ?? null,
+        education: user.education ?? null,
+        category_id: user.category_id ?? null,
       },
     });
   } catch (err) {
+    if (err.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ success: false, message: "This username is already taken." });
+    }
     log.error(MODULE, "updateProfile", { error: err.message });
     return res.status(500).json({ success: false, message: "Internal server error." });
   }
@@ -503,6 +539,17 @@ exports.me = async (req, res) => {
       feature_flags: getEffectiveFeatures(req.user),
     };
 
+    let category = null;
+    if (req.user.category_id) {
+      const speciality = await Speciality.findOne({
+        where: { id: req.user.category_id, tenant_id: null, is_deleted: false },
+        attributes: ["id", "name", "slug"],
+      });
+      if (speciality) {
+        category = { id: speciality.id, name: speciality.name, slug: speciality.slug };
+      }
+    }
+
     log.info(MODULE, "me", { userId: req.user.id, message: "Profile fetched" });
     return res.status(200).json({
       success: true,
@@ -516,6 +563,11 @@ exports.me = async (req, res) => {
           profile_photo: req.user.profile_photo ?? null,
           logo_url: req.user.logo ? `/uploads/logos/${req.user.logo}` : null,
           role: req.user.Role.name,
+          username: req.user.username ?? null,
+          experience: req.user.experience ?? null,
+          education: req.user.education ?? null,
+          category_id: req.user.category_id ?? null,
+          category,
         },
         menuPermissions,
         planContext,

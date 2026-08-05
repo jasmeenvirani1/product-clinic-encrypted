@@ -9,6 +9,7 @@ import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
 import { fetchMeThunk } from "@/store/slices/authSlice";
 import { authService } from "@/services/auth.service";
+import { specialityService, type Speciality } from "@/services/speciality.service";
 import { useThemeColors } from "@/providers/ThemeProvider";
 import { ThemeSettingsPanel, type ThemeSettingsPanelHandle } from "@/components/ThemeSettingsPanel";
 import { AiModelsPanel, type AiModelsPanelHandle } from "@/components/AiModelsPanel";
@@ -23,13 +24,6 @@ import {
 import { AppSwitch } from "@/components/ui/AppSwitch";
 
 type SettingsKey = "profile" | "password" | "platform" | "ai-models";
-
-const splitName = (name?: string) => {
-  const raw = (name ?? "").trim();
-  if (!raw) return { first_name: "", last_name: "" };
-  const parts = raw.split(/\s+/);
-  return { first_name: parts[0] ?? "", last_name: parts.slice(1).join(" ") };
-};
 
 const COUNTRY_OPTIONS = [{ value: "india", label: "India" }, { value: "usa", label: "USA" }];
 const STATE_OPTIONS = [{ value: "maharashtra", label: "Maharashtra" }, { value: "gujarat", label: "Gujarat" }];
@@ -57,15 +51,18 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
   const [platformDraftName, setPlatformDraftName] = useState(platformName);
   const [platformDirty, setPlatformDirty] = useState(false);
   const [savingPlatform, setSavingPlatform] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<Speciality[]>([]);
 
   useEffect(() => {
-    const { first_name, last_name } = splitName(user?.name);
     profileForm.setFieldsValue({
-      first_name,
-      last_name,
+      normal_name: user?.name ?? "",
       email: user?.email ?? "",
       mobile: user?.mobile ?? "",
       clinic_name: user?.clinic_name ?? "",
+      username: user?.username ?? "",
+      experience: user?.experience ?? "",
+      education: user?.education ?? "",
+      category_id: user?.category_id ?? undefined,
       address_line_1: "",
       address_line_2: "",
       country: undefined,
@@ -73,7 +70,32 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
       city: undefined,
       pincode: "",
     });
-  }, [profileForm, user?.clinic_name, user?.email, user?.mobile, user?.name]);
+  }, [
+    profileForm,
+    user?.clinic_name,
+    user?.email,
+    user?.mobile,
+    user?.name,
+    user?.username,
+    user?.experience,
+    user?.education,
+    user?.category_id,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    specialityService
+      .getPublic()
+      .then((list) => {
+        if (!cancelled) setCategoryOptions(list as unknown as Speciality[]);
+      })
+      .catch(() => {
+        // Non-fatal: category select just stays empty if this fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setPlatformDraftName(platformName);
@@ -91,19 +113,25 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
   const profilePreview = selectedPhotoSrc || existingProfileSrc;
 
   const saveBasicInformation = async (values: {
-    first_name: string;
-    last_name: string;
+    normal_name: string;
     mobile?: string;
     clinic_name?: string;
+    username?: string;
+    experience?: string;
+    education?: string;
+    category_id?: number | null;
   }) => {
     setSavingInfo(true);
     try {
-      const full_name = `${values.first_name || ""} ${values.last_name || ""}`.trim();
       await authService.updateProfile({
-        full_name,
+        full_name: (values.normal_name || "").trim(),
         mobile: values.mobile ?? "",
         clinic_name: user?.role === "tenant_admin" ? values.clinic_name ?? "" : undefined,
         profile_photo: selectedPhoto?.originFileObj as File | undefined,
+        username: values.username ?? "",
+        experience: values.experience ?? "",
+        education: values.education ?? "",
+        category_id: values.category_id ?? null,
       });
       setProfilePhotoFiles([]);
       await dispatch(fetchMeThunk());
@@ -301,11 +329,8 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Form.Item label="First Name" name="first_name" rules={[{ required: true, message: "First name is required." }]}>
-                    <Input prefix={<User size={14} className="text-slate-400" />} />
-                  </Form.Item>
-                  <Form.Item label="Last Name" name="last_name" rules={[{ required: true, message: "Last name is required." }]}>
-                    <Input prefix={<User size={14} className="text-slate-400" />} />
+                  <Form.Item label="Display Name" name="normal_name" rules={[{ required: true, message: "Display name is required." }]}>
+                    <Input prefix={<User size={14} className="text-slate-400" />} placeholder="Public display name" />
                   </Form.Item>
                   <Form.Item label="Email" name="email">
                     <Input prefix={<Mail size={14} className="text-slate-400" />} disabled className="bg-slate-50" />
@@ -318,6 +343,22 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
                       <Input />
                     </Form.Item>
                   )}
+                  <Form.Item label="Username" name="username">
+                    <Input placeholder="e.g. smiledentalstudio" />
+                  </Form.Item>
+                  <Form.Item label="Category" name="category_id">
+                    <Select
+                      allowClear
+                      placeholder="Select a category"
+                      options={categoryOptions.map((c) => ({ value: c.id, label: c.name }))}
+                    />
+                  </Form.Item>
+                  <Form.Item label="Experience" name="experience" className="md:col-span-2">
+                    <Input.TextArea rows={2} placeholder="e.g. 8 years in cosmetic dentistry" />
+                  </Form.Item>
+                  <Form.Item label="Education" name="education" className="md:col-span-2">
+                    <Input.TextArea rows={2} placeholder="e.g. DDS, University of Texas" />
+                  </Form.Item>
                 </div>
 
                 <div className="mt-4 flex justify-end gap-2">

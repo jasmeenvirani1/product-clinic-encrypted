@@ -47,6 +47,26 @@ const User = sequelize.define(
       allowNull: true,
       defaultValue: null,
     },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: null,
+    },
+    experience: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+    },
+    education: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+    },
+    category_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: "specialities", key: "id" },
+    },
     password_hash: {
       type: DataTypes.STRING(255),
       allowNull: false,
@@ -138,6 +158,12 @@ const User = sequelize.define(
     tableName: "users",
     timestamps: true,
     underscored: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ["username"],
+      },
+    ],
   }
 );
 

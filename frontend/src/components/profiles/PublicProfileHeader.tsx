@@ -15,6 +15,7 @@ export default function PublicProfileHeader({ profile }: PublicProfileHeaderProp
   const totalViews = profile.videos.reduce((sum, v) => sum + v.views, 0);
   const totalLikes = profile.videos.reduce((sum, v) => sum + v.likes, 0);
   const joined = formatJoinedDate(profile.joinedDate);
+  const displayName = profile.name;
 
   return (
     <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-start sm:text-left">
@@ -28,7 +29,7 @@ export default function PublicProfileHeader({ profile }: PublicProfileHeaderProp
       <div className="flex-1">
         <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center">
           <h1 className="flex items-center gap-1.5 font-heading text-2xl font-bold text-slate-900 sm:text-3xl">
-            {profile.name}
+            {displayName}
             {profile.verified && (
               <BadgeCheck size={20} className="text-primary" aria-label="Verified" />
             )}
@@ -38,8 +39,10 @@ export default function PublicProfileHeader({ profile }: PublicProfileHeaderProp
           </span>
         </div>
 
-        {profile.handle && (
-          <p className="mt-1 text-sm font-medium text-slate-500">{profile.handle}</p>
+        {(profile.username || profile.handle) && (
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            {profile.username ? `@${profile.username}` : profile.handle}
+          </p>
         )}
 
         {/* Stats row */}
@@ -76,6 +79,22 @@ export default function PublicProfileHeader({ profile }: PublicProfileHeaderProp
           )}
           {joined && <span>{joined}</span>}
         </div>
+
+        {/* Experience / education */}
+        {(profile.experience || profile.education) && (
+          <div className="mt-3 flex flex-col items-center gap-1 text-sm text-slate-600 sm:items-start">
+            {profile.experience && (
+              <span>
+                <span className="font-semibold text-slate-700">Experience:</span> {profile.experience}
+              </span>
+            )}
+            {profile.education && (
+              <span>
+                <span className="font-semibold text-slate-700">Education:</span> {profile.education}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Action row — visual only, non-functional */}
         <div className="mt-5 flex justify-center gap-2 sm:justify-start">

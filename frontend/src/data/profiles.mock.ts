@@ -31,6 +31,10 @@ export interface PublicProfile {
   verified: boolean;
   joinedDate: string;
   videos: PublicProfileVideo[];
+  /** Public handle-style username, distinct from `handle` (kept for backward compat). */
+  username: string;
+  experience: string;
+  education: string;
 }
 
 const gradients = [
@@ -77,6 +81,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-03-01",
     videos: makeVideos("smile-dental-studio", 6),
+    username: "smiledentalstudio",
+    experience: "12 years in cosmetic and family dentistry",
+    education: "DDS, University of Texas School of Dentistry",
   },
   {
     slug: "glow-derma-clinic",
@@ -90,6 +97,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2021-11-15",
     videos: makeVideos("glow-derma-clinic", 5),
+    username: "glowdermaclinic",
+    experience: "9 years in dermatology and laser therapy",
+    education: "MD Dermatology, University of Miami",
   },
   {
     slug: "vital-cardio-center",
@@ -103,6 +113,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-01-20",
     videos: makeVideos("vital-cardio-center", 7),
+    username: "vitalcardiocenter",
+    experience: "15 years in interventional cardiology",
+    education: "MD, Northwestern University Feinberg School of Medicine",
   },
   {
     slug: "bloom-womens-health",
@@ -116,6 +129,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-07-08",
     videos: makeVideos("bloom-womens-health", 4),
+    username: "bloomwomenshealth",
+    experience: "10 years in obstetrics and gynecology",
+    education: "MD, University of Colorado School of Medicine",
   },
   {
     slug: "flex-physio-lab",
@@ -129,6 +145,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-05-30",
     videos: makeVideos("flex-physio-lab", 5),
+    username: "flexphysiolab",
+    experience: "7 years in sports rehabilitation and physiotherapy",
+    education: "DPT, University of Washington",
   },
   {
     slug: "clearview-eye-care",
@@ -142,6 +161,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2021-09-12",
     videos: makeVideos("clearview-eye-care", 4),
+    username: "clearvieweyecare",
+    experience: "14 years in ophthalmic surgery",
+    education: "MD, Harvard Medical School",
   },
   {
     slug: "little-steps-pediatrics",
@@ -155,6 +177,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-02-14",
     videos: makeVideos("little-steps-pediatrics", 6),
+    username: "littlestepspeds",
+    experience: "6 years in pediatric care",
+    education: "MD, Oregon Health & Science University",
   },
   {
     slug: "mindful-therapy-collective",
@@ -168,6 +193,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-10-05",
     videos: makeVideos("mindful-therapy-collective", 5),
+    username: "mindfultherapyco",
+    experience: "11 years in clinical psychology and mindfulness-based therapy",
+    education: "PsyD, University of California, Berkeley",
   },
   {
     slug: "peak-ortho-sports-med",
@@ -181,6 +209,9 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-08-19",
     videos: makeVideos("peak-ortho-sports-med", 4),
+    username: "peakorthosports",
+    experience: "13 years in orthopedic and sports medicine surgery",
+    education: "MD, University of Utah School of Medicine",
   },
 ];
 

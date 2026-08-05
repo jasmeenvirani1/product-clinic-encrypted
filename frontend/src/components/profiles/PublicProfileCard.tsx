@@ -11,6 +11,7 @@ interface PublicProfileCardProps {
 /** Instagram-explore-style profile card: circular avatar, name, category. */
 export default function PublicProfileCard({ profile }: PublicProfileCardProps) {
   const router = useRouter();
+  const displayName = profile.name;
 
   return (
     <button
@@ -26,8 +27,11 @@ export default function PublicProfileCard({ profile }: PublicProfileCardProps) {
       </span>
       <span className="w-full">
         <span className="block truncate font-heading text-base font-semibold text-slate-900 group-hover:text-primary">
-          {profile.name}
+          {displayName}
         </span>
+        {profile.username && (
+          <span className="block truncate text-xs text-slate-500">@{profile.username}</span>
+        )}
         <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
           {profile.category}
         </span>
