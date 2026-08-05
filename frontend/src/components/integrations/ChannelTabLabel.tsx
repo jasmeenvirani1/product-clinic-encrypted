@@ -109,11 +109,14 @@ export function ChannelIcon({ channel, size = ICON_SIZE }: { channel: ChannelKey
 }
 
 /**
- * Monochrome outline "G" in currentColor, for the hero badge where every other
- * channel shows a flat white glyph. The four-colour mark is reserved for the
- * tab strip — inside the glass badge it would be the only coloured icon.
+ * Solid monochrome "G" in currentColor, for the hero badge where every other
+ * channel shows a flat white glyph (e.g. lucide's `Facebook`). The four-colour
+ * mark is reserved for the tab strip — inside the glass badge it would be the
+ * only coloured icon.
  *
- * Stroke weight and cap style match the lucide icons used by the other heroes.
+ * Drawn as a single filled silhouette (even-odd fill) so it carries the same
+ * solid visual weight as lucide's icon set at 28px, instead of a thin stroked
+ * outline.
  */
 export function GoogleGlyph({ size = 28, className }: { size?: number; className?: string }) {
   return (
@@ -121,19 +124,17 @@ export function GoogleGlyph({ size = 28, className }: { size?: number; className
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill="currentColor"
+      fillRule="evenodd"
+      clipRule="evenodd"
       className={className}
       aria-hidden
       focusable="false"
     >
-      {/* Open ring, broken at the right where the crossbar enters. */}
-      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-      {/* Crossbar into the centre, as in the Google G. */}
-      <path d="M21 12h-8" />
+      {/* Solid "G" silhouette: outer ring with a flattened right edge, a
+          crossbar plugging into the centre, and a punched-out inner hole
+          so the shape reads as a proper glyph rather than a filled disc. */}
+      <path d="M12 2c2.62 0 4.93.9 6.71 2.6l.19.19-2.44 2.44-.17-.16C15.1 5.87 13.62 5.25 12 5.25c-3.73 0-6.75 3.02-6.75 6.75S8.27 18.75 12 18.75c2.99 0 5.24-1.55 6.19-4.05H12v-3.3h9.72c.11.61.18 1.26.18 2.02 0 3.28-1.17 6.05-3.2 7.93C16.9 23.02 14.62 24 12 24 5.92 24 1 19.08 1 13S5.92 2 12 2Z" />
     </svg>
   );
 }
