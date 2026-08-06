@@ -6,6 +6,7 @@ import { Facebook, Instagram, Linkedin, Plug, Send } from "lucide-react";
 import { PageSection } from "@/components/PageSection";
 import { WhatsAppMultiConnect } from "@/components/integrations/WhatsAppMultiConnect";
 import { InstagramConnect } from "@/components/integrations/InstagramConnect";
+import { GoogleConnect } from "@/components/integrations/GoogleConnect";
 import { GoogleGlyph, channelTabLabel, type ChannelKey } from "@/components/integrations/ChannelTabLabel";
 import { aiSettingService } from "@/services/aiSetting.service";
 
@@ -13,6 +14,7 @@ import { aiSettingService } from "@/services/aiSetting.service";
 export default function SuperAdminConnectionsPage() {
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ChannelKey>("whatsapp");
 
   // ── Channel state ────────────────────────────────────────────────
   const [hasWhatsapp,  setHasWhatsapp]  = useState(false);
@@ -35,10 +37,29 @@ export default function SuperAdminConnectionsPage() {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Google OAuth bounces the browser back here as
+  // `?google=connected` / `?google=error&reason=denied|failed` — switch to
+  // the Google tab and show a toast. GoogleConnect itself clears the query
+  // params after reading them (see its own effect + codebase precedent of
+  // reading window.location.search instead of useSearchParams).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("google")) setActiveTab("google");
+  }, []);
+
+  const handleGoogleRedirectResult = (result: "connected" | "denied" | "failed") => {
+    setActiveTab("google");
+    if (result === "connected") void message.success("Google connected successfully.");
+    else if (result === "denied") void message.info("Google connection was cancelled.");
+    else void message.error("Failed to connect Google. Please try again.");
+  };
+
   // ── Channel tab renderer ─────────────────────────────────────────
   const renderChannelTab = (channel: ChannelKey) => {
     const isWa = channel === "whatsapp";
     const isIg = channel === "instagram";
+    const isGoogle = channel === "google";
 
     const channelConfigs: Record<ChannelKey, {
       title: string;
@@ -88,7 +109,7 @@ export default function SuperAdminConnectionsPage() {
       },
       google: {
         title: "Google",
-        subtitle: "Coming soon",
+        subtitle: "Connect your Google Calendar",
         icon: <GoogleGlyph size={28} className="text-white" />,
         gradient: "from-amber-500 via-red-500 to-blue-600",
         chipBg: "bg-amber-50",
@@ -219,6 +240,34 @@ export default function SuperAdminConnectionsPage() {
       );
     }
 
+    // Google links via a real OAuth2 redirect to Google's sign-in + consent
+    // screen (Google Calendar scope) — no manual credentials entry. Same
+    // widget as the clinic page; the backend derives the correct return path
+    // (`/super-admin/connections`) from the logged-in user's role.
+    if (isGoogle) {
+      return (
+        <div className="space-y-5">
+          <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${config.gradient} p-6 text-white shadow-sm`}>
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-12 -left-6 h-32 w-32 rounded-full bg-white/10 blur-xl" />
+            <div className="relative flex flex-wrap items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
+                {config.icon}
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <h3 className="text-lg font-semibold">{config.title}</h3>
+                <p className="mt-0.5 text-[13px] text-white/85">{config.subtitle}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="crm-card p-5">
+            <GoogleConnect onRedirectResult={handleGoogleRedirectResult} />
+          </div>
+        </div>
+      );
+    }
+
     // All other channels: generic "coming soon" placeholder.
     return (
       <div className="space-y-5">
@@ -263,7 +312,8 @@ export default function SuperAdminConnectionsPage() {
         description="Manage channel connections for your own account across all messaging integrations."
       />
       <Tabs
-        defaultActiveKey="whatsapp"
+        activeKey={activeTab}
+        onChange={(key) => setActiveTab(key as ChannelKey)}
         items={[
           { key: "whatsapp",  label: channelTabLabel("whatsapp",  "WhatsApp Settings"),  children: renderChannelTab("whatsapp") },
           { key: "instagram", label: channelTabLabel("instagram", "Instagram Settings"), children: renderChannelTab("instagram") },

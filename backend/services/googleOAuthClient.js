@@ -1,0 +1,127 @@
+"use strict";
+
+/**
+ * googleOAuthClient.js — thin wrapper around googleapis' OAuth2Client for
+ * Google Calendar OAuth. Isolates the googleapis SDK to this one file
+ * (mirrors metaGraphApi.js's role as the "external API wrapper" for
+ * Instagram). Owns: auth URL generation, code→token exchange, userinfo
+ * lookup, access-token refresh, and token revocation.
+ *
+ * Nothing in this file touches the DB or encryption — googleOAuthBootstrap.js
+ * calls this for the Google-facing HTTP calls and handles persistence/
+ * encryption itself.
+ */
+
+const { google } = require("googleapis");
+const log = require("../utils/logger");
+
+const MODULE = "GoogleOAuthClient";
+
+// Per-service scope map — only "calendar" is functionally wired today;
+// future services (Gmail/Drive) add a new key here, no other change needed.
+const SCOPES_BY_SERVICE = {
+  calendar: ["https://www.googleapis.com/auth/calendar"],
+};
+
+// Identity scopes (not service-specific) — resolve the connected account's
+// display email for the UI. Always included alongside a service's scopes.
+const IDENTITY_SCOPES = ["openid", "email"];
+
+/** Resolve the full scope list to request for a given service. Throws on an
+ *  unknown service — callers must validate against a known-service allowlist
+ *  before reaching here (see googleOAuthBootstrap.js's KNOWN_SERVICES). */
+function scopesForService(service) {
+  const serviceScopes = SCOPES_BY_SERVICE[service];
+  if (!serviceScopes) throw new Error(`Unknown Google service: ${service}`);
+  return [...IDENTITY_SCOPES, ...serviceScopes];
+}
+
+function redirectUri() {
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+  return `${backendUrl}/api/google/oauth/callback`;
+}
+
+function buildOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri()
+  );
+}
+
+/** Build Google's consent URL. `state` carries the HMAC-signed tenant id +
+ *  service (signed by the caller) since Google's callback hits us with no
+ *  Bearer header. `access_type: "offline"` + `prompt: "consent"` ensure a
+ *  refresh token is issued even on a re-connect. `service` resolves which
+ *  scopes to request via `scopesForService`. */
+function getAuthUrl({ state, service }) {
+  const client = buildOAuth2Client();
+  return client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: scopesForService(service),
+    state,
+  });
+}
+
+/** Exchange an authorization code for tokens, and resolve the connected
+ *  account's email via the userinfo endpoint. Returns
+ *  { accessToken, refreshToken, expiryDate, email, scopes }. */
+async function exchangeCode(code) {
+  const client = buildOAuth2Client();
+  const { tokens } = await client.getToken(code);
+  client.setCredentials(tokens);
+
+  let email = null;
+  try {
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const { data } = await oauth2.userinfo.get();
+    email = data?.email || null;
+  } catch (err) {
+    log.warn(MODULE, "exchangeCode:userinfoFailed", { error: err.message });
+  }
+
+  return {
+    accessToken: tokens.access_token || null,
+    refreshToken: tokens.refresh_token || null,
+    expiryDate: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+    email,
+    // Defensive fallback for the rare case Google's token response omits
+    // `scope` — the actual granted scopes always come from Google's
+    // response, not from our request, so this is just a log-worthy anomaly
+    // guard, not a normal path.
+    scopes: tokens.scope ? tokens.scope.split(" ") : [],
+  };
+}
+
+/** Use a stored refresh token to mint a fresh access token. Returns
+ *  { accessToken, expiryDate }. Throws if Google rejects the refresh token
+ *  (e.g. revoked) — caller decides how to reflect that in `status`. */
+async function refreshAccessToken(refreshToken) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ refresh_token: refreshToken });
+  const { credentials } = await client.refreshAccessToken();
+  return {
+    accessToken: credentials.access_token || null,
+    expiryDate: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
+  };
+}
+
+/** Best-effort revoke of a Google access token (used on disconnect). Never
+ *  throws — Google may already consider the token revoked/expired. */
+async function revokeToken(accessToken) {
+  if (!accessToken) return;
+  try {
+    const client = buildOAuth2Client();
+    await client.revokeToken(accessToken);
+  } catch (err) {
+    log.warn(MODULE, "revokeToken", { error: err.message });
+  }
+}
+
+module.exports = {
+  getAuthUrl,
+  exchangeCode,
+  refreshAccessToken,
+  revokeToken,
+};

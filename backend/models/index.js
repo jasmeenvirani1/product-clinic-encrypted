@@ -30,6 +30,7 @@ const AiModel = require("./AiModel");
 const Notification = require("./Notification");
 const WhatsAppSession = require("./WhatsAppSession");
 const InstagramSession = require("./InstagramSession");
+const GoogleConnection = require("./GoogleConnection");
 
 // User <-> Role
 Role.hasMany(User, { foreignKey: "role_id" });
@@ -139,6 +140,10 @@ WhatsAppSession.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
 User.hasMany(InstagramSession, { foreignKey: "tenant_id", as: "instagramSessions" });
 InstagramSession.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
 
+// GoogleConnection associations (one tenant → many rows, one per service)
+User.hasMany(GoogleConnection, { foreignKey: "tenant_id", as: "googleConnections" });
+GoogleConnection.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+
 module.exports = {
   sequelize,
   Role,
@@ -172,6 +177,7 @@ module.exports = {
   Notification,
   WhatsAppSession,
   InstagramSession,
+  GoogleConnection,
 };
 
 
