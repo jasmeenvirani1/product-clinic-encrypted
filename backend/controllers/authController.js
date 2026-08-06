@@ -24,6 +24,34 @@ const deleteProofFile = (filename) => {
   require("fs").unlink(filePath, () => {});
 };
 
+// Slugifies a display name into a URL-safe username base, e.g.
+// "Dr. Maria Chen!" -> "dr-maria-chen".
+const slugifyName = (name) =>
+  (name || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50) || "clinic";
+
+// Generates a unique username from full_name, appending -2, -3, ... on
+// collision with another user's username. Excludes the current user's own
+// row so re-saving an unchanged name doesn't churn the username.
+const generateUniqueUsername = async (fullName, currentUserId) => {
+  const base = slugifyName(fullName);
+  let candidate = base;
+  let suffix = 2;
+  while (
+    await User.findOne({
+      where: { username: candidate, id: { [Op.ne]: currentUserId } },
+    })
+  ) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+};
+
 const mapUserPlanContext = (user) => {
   const now = new Date();
   const trialEndsAt = user.trial_ends_at ? new Date(user.trial_ends_at) : null;
@@ -451,13 +479,13 @@ exports.updateProfile = async (req, res) => {
       old_password,
       new_password,
       remove_profile_photo,
-      username,
       experience,
       education,
       category_id,
     } = req.body;
     const profilePhoto = mapSingleUploadedFile(req.files?.profile_photo || []);
 
+    const nameChanged = full_name !== undefined && full_name.trim() !== user.full_name;
     if (full_name !== undefined) user.full_name = full_name.trim();
     if (mobile !== undefined) user.mobile = mobile || null;
     if (clinic_name !== undefined) user.clinic_name = clinic_name || null;
@@ -470,7 +498,12 @@ exports.updateProfile = async (req, res) => {
       user.profile_photo = profilePhoto;
     }
 
-    if (username !== undefined) user.username = username ? username.trim().toLowerCase() : null;
+    // username is a read-only, auto-generated slug derived from full_name —
+    // never accepted from the client. Regenerated only when the name changes
+    // or no username exists yet, so it stays stable across unrelated saves.
+    if (nameChanged || !user.username) {
+      user.username = await generateUniqueUsername(user.full_name, user.id);
+    }
     if (experience !== undefined) user.experience = experience || null;
     if (education !== undefined) user.education = education || null;
 

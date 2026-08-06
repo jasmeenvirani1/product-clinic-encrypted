@@ -1,15 +1,53 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getAllProfiles } from "@/data/profiles.mock";
 import PublicProfileCard from "@/components/profiles/PublicProfileCard";
+import type { PublicProfile } from "@/data/profiles.mock";
+import type { PublicClinicSummary } from "@/services/clinic.service";
 
 export const metadata: Metadata = {
   title: "Profiles",
   description: "Browse all clinic profiles and their videos.",
 };
 
-export default function ProfilesListingPage() {
-  const profiles = getAllProfiles();
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+
+async function getAllClinics(): Promise<PublicClinicSummary[]> {
+  try {
+    const res = await fetch(`${API_BASE}/public/clinics`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json?.data) ? json.data : [];
+  } catch {
+    return []; // network error/timeout — same "no profiles" empty state
+  }
+}
+
+// Maps the real API summary shape into the existing PublicProfile shape so
+// PublicProfileCard (which only reads slug/name/username/category/avatarGradient)
+// needs zero changes. Video-derived fields aren't used by the card, so they're
+// filled with empty/zero placeholders.
+function toPublicProfile(clinic: PublicClinicSummary): PublicProfile {
+  return {
+    slug: clinic.slug,
+    name: clinic.name,
+    category: clinic.category,
+    avatarGradient: clinic.avatarGradient,
+    bio: "",
+    location: "",
+    handle: `@${clinic.username}`,
+    website: "",
+    verified: false,
+    joinedDate: clinic.joinedDate,
+    videos: [],
+    username: clinic.username,
+    experience: clinic.experience ?? "",
+    education: clinic.education ?? "",
+  };
+}
+
+export default async function ProfilesListingPage() {
+  const clinics = await getAllClinics();
+  const profiles = clinics.map(toPublicProfile);
 
   return (
     <main className="min-h-screen bg-slate-50">

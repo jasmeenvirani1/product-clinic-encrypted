@@ -153,6 +153,15 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    // Public clinic-directory opt-in flag (issue #29). Defaults true to
+    // preserve current-mock-parity for existing clinics on deploy — an
+    // opt-out settings toggle is a future ticket, not built here. Never
+    // exposed in any public API response (internal filter only).
+    is_public: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     tableName: "users",

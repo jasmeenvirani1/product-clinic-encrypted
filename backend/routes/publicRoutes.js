@@ -9,6 +9,7 @@ const landingFaqController = require("../controllers/landingFaqController");
 const specialityController = require("../controllers/specialityController");
 const seoSettingController = require("../controllers/seoSettingController");
 const customPlanEnquiryController = require("../controllers/customPlanEnquiryController");
+const clinicController = require("../controllers/clinicController");
 
 router.get("/plans", async (req, res) => {
   try {
@@ -40,6 +41,11 @@ router.get("/landing-faqs", landingFaqController.getPublic);
 router.get("/specialities", specialityController.getPublic);
 router.get("/specialities/:slug", specialityController.getPublicBySlug);
 router.get("/seo-settings/:pageKey", seoSettingController.getPublic);
+
+// Public clinic directory (issue #29) — unauthenticated, allowlisted fields
+// only. See clinicController.js for the explicit attribute allowlist.
+router.get("/clinics", clinicController.getPublic);
+router.get("/clinics/:username", clinicController.getPublicByUsername);
 
 router.post("/custom-plan-enquiry", customPlanEnquiryController.submit);
 

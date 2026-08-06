@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { BadgeCheck, Globe, MapPin } from "lucide-react";
 import type { PublicProfile } from "@/data/profiles.mock";
 import { formatCount, formatJoinedDate } from "@/data/profiles.mock";
 import { getInitials } from "@/lib/utils";
+import { useAppSelector } from "@/hooks/useAppSelector";
 
 interface PublicProfileHeaderProps {
   profile: PublicProfile;
@@ -11,6 +13,13 @@ interface PublicProfileHeaderProps {
 
 /** Instagram-profile-style header: avatar + name/category + stats + bio + action row. */
 export default function PublicProfileHeader({ profile }: PublicProfileHeaderProps) {
+  const router = useRouter();
+  const loggedInUsername = useAppSelector((state) => state.auth.user?.username);
+  // Only a non-null username match counts as ownership — a logged-in user with
+  // username: null must never be treated as the owner of a profile whose route
+  // param happens to be a username (different identifier types).
+  const isOwner = !!loggedInUsername && loggedInUsername === profile.username;
+
   const videoCount = profile.videos.length;
   const totalViews = profile.videos.reduce((sum, v) => sum + v.views, 0);
   const totalLikes = profile.videos.reduce((sum, v) => sum + v.likes, 0);
@@ -96,27 +105,42 @@ export default function PublicProfileHeader({ profile }: PublicProfileHeaderProp
           </div>
         )}
 
-        {/* Action row — visual only, non-functional */}
+        {/* Action row */}
         <div className="mt-5 flex justify-center gap-2 sm:justify-start">
-          <button
-            type="button"
-            className="rounded-full px-5 py-1.5 text-sm font-semibold text-white shadow-sm"
-            style={{ background: "var(--color-primary)" }}
-          >
-            Follow
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-slate-200 bg-white px-5 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Message
-          </button>
-          <button
-            type="button"
-            className="rounded-full border border-slate-200 bg-white px-5 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Share
-          </button>
+          {isOwner ? (
+            <button
+              type="button"
+              onClick={() => router.push("/app/settings")}
+              className="rounded-full px-5 py-1.5 text-sm font-semibold text-white shadow-sm"
+              style={{ background: "var(--color-primary)" }}
+              aria-label="Edit your profile"
+            >
+              Edit Profile
+            </button>
+          ) : (
+            <>
+              {/* Visual only, non-functional — shown to non-owner viewers */}
+              <button
+                type="button"
+                className="rounded-full px-5 py-1.5 text-sm font-semibold text-white shadow-sm"
+                style={{ background: "var(--color-primary)" }}
+              >
+                Follow
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-5 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Message
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-5 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Share
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

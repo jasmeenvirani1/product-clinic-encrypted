@@ -116,7 +116,6 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
     normal_name: string;
     mobile?: string;
     clinic_name?: string;
-    username?: string;
     experience?: string;
     education?: string;
     category_id?: number | null;
@@ -128,7 +127,6 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
         mobile: values.mobile ?? "",
         clinic_name: user?.role === "tenant_admin" ? values.clinic_name ?? "" : undefined,
         profile_photo: selectedPhoto?.originFileObj as File | undefined,
-        username: values.username ?? "",
         experience: values.experience ?? "",
         education: values.education ?? "",
         category_id: values.category_id ?? null,
@@ -343,8 +341,8 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
                       <Input />
                     </Form.Item>
                   )}
-                  <Form.Item label="Username" name="username">
-                    <Input placeholder="e.g. smiledentalstudio" />
+                  <Form.Item label="Username" name="username" tooltip="Auto-generated from your display name.">
+                    <Input disabled className="bg-slate-50" />
                   </Form.Item>
                   <Form.Item label="Category" name="category_id">
                     <Select

@@ -96,6 +96,13 @@ require("./services/whatsappQrBootstrap").mountWhatsAppQr(app, { authMiddleware:
 // /api/webhooks/instagram/:tenantId/:slot (see webhookRoutes.js).
 require("./services/instagramDmBootstrap").mountInstagramMeta(app, { authMiddleware: authenticate });
 
+// Google Calendar OAuth2 integration — real redirect-based OAuth flow (unlike
+// WhatsApp/Instagram above). Registers /api/google/* (authorize/callback/
+// status/disconnect). Access/refresh tokens are encrypted at rest via
+// backend/utils/tokenCrypto.js — a deliberate deviation from Instagram's
+// plaintext-storage precedent (see GoogleConnection.js file header).
+require("./services/googleOAuthBootstrap").mountGoogleOAuth(app, { authMiddleware: authenticate });
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ success: true, message: `${APP_NAME} API is running.` });

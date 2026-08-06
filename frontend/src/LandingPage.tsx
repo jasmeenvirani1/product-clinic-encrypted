@@ -75,6 +75,13 @@ import { CustomPlanEnquiryModal } from './components/CustomPlanEnquiryModal';
 // which keeps the module-level <Eyebrow> component working unchanged.
 const NAVY = 'var(--color-primary)';                                   // primary accent
 const NAVY_SOFT = 'var(--color-primary-hover)';                        // lighter primary for gradients / hover surfaces
+// Typed-word accent in the hero headline: hue-rotated off the live primary
+// colour (via CSS filter, applied where it's rendered), so it always reacts to
+// whatever the super-admin sets as primary in Theme Management — a contrasting
+// hue that's still mathematically derived from primary, with no separate
+// "typed word colour" field to keep in sync and no extra config surface.
+const NAVY_TYPED_ACCENT = NAVY;
+const NAVY_TYPED_ACCENT_FILTER = 'hue-rotate(150deg) saturate(1.15)';
 const TINT = 'var(--color-secondary)';                                 // secondary — raw brand secondary colour
 const PILL = 'color-mix(in srgb, var(--color-primary) 8%, #fff)';      // eyebrow pill background
 // Eyebrow pill background on a primary band. The band itself is already primary,
@@ -156,8 +163,15 @@ const t = {
     heroBadge1: 'Built for healthcare operations',
     heroBadge2: 'HIPAA-ready infrastructure',
     heroTitle1: 'Your Clinic Never',
-    heroTitle2: 'Misses Another Patient',
-    heroTitle3: 'Again.',
+    heroTitle2: 'Misses Another',
+    heroTitle3: 'Patient.',
+    heroTypedWords: [
+      'Patient.',
+      'Call.',
+      'Lead.',
+      'Booking.',
+      'Message.',
+    ],
     heroSubtitle:
       'ClinicFlow is the AI front desk that answers, books, and follows up with every patient — on WhatsApp, call, or web — 24/7, without adding staff.',
     heroCta1: 'Get Started Free',
@@ -681,7 +695,7 @@ const IntegrationDiagram = ({
     <div ref={diagramRef} className="integration-diagram relative grid items-center min-h-[620px] w-full max-w-[1280px] mx-auto">
       <style>{`
         .integration-diagram { grid-template-columns: 1fr; gap: 18px; }
-        @media (min-width: 860px) {
+        @media (min-width: 1024px) {
           .integration-diagram { grid-template-columns: 300px 1fr 300px; gap: 0 16px; }
         }
         .integration-col { display: flex; flex-direction: column; gap: 18px; position: relative; z-index: 2; }
@@ -725,7 +739,7 @@ const IntegrationDiagram = ({
         @media (prefers-reduced-motion: reduce) {
           .integration-bot-eyes span, .integration-pulse { animation: none !important; }
         }
-        @media (max-width: 859px) {
+        @media (max-width: 1023px) {
           .integration-wires { display: none; }
           .integration-hub-wrap { order: -1; margin-bottom: 16px; }
           .integration-ring { width: 200px; height: 200px; }
@@ -810,6 +824,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   const activeProblem = Math.min(PROBLEM_COUNT - 1, Math.round(problemProgress));
   const [isDesktop, setIsDesktop] = React.useState(false);
   const [problemHovered, setProblemHovered] = React.useState(false);
+  // Auto-play: advances on its own once the section scrolls into view, pauses
+  // the moment the pointer takes over (hover) or the section scrolls out, and
+  // resumes from wherever it left off (not a restart) when it comes back.
+  const problemCardsRef = React.useRef<HTMLDivElement | null>(null);
+  const [problemInView, setProblemInView] = React.useState(false);
 
   // Track lg+ so the hover story only runs on desktop; mobile gets a normal stacked list.
   React.useEffect(() => {
@@ -823,6 +842,20 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   // Respect reduced-motion: skip wheel scrubbing entirely and render the static
   // stacked list, so the wheel is never intercepted for these users.
   const [reducedMotion, setReducedMotion] = React.useState(false);
+  const [heroIntroCharCount, setHeroIntroCharCount] = React.useState(0);
+  const [typedWordIndex, setTypedWordIndex] = React.useState(0);
+  const [typedText, setTypedText] = React.useState(t.heroTypedWords[0]);
+  const [isDeletingTypedText, setIsDeletingTypedText] = React.useState(false);
+  const heroIntroLines = React.useMemo(
+    () => [t.heroTitle1, t.heroTitle2, t.heroTypedWords[0]],
+    []
+  );
+  const heroIntroText = heroIntroLines.join('\n');
+  const hasTypedHeroIntro = reducedMotion || heroIntroCharCount >= heroIntroText.length;
+  const visibleHeroIntroLines = hasTypedHeroIntro
+    ? heroIntroLines
+    : heroIntroText.slice(0, heroIntroCharCount).split('\n');
+
   React.useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setReducedMotion(mq.matches);
@@ -831,11 +864,68 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
+  React.useEffect(() => {
+    if (reducedMotion || hasTypedHeroIntro) return;
+
+    const timeout = window.setTimeout(() => {
+      setHeroIntroCharCount((count) => Math.min(count + 1, heroIntroText.length));
+    }, 55);
+
+    return () => window.clearTimeout(timeout);
+  }, [hasTypedHeroIntro, heroIntroCharCount, heroIntroText.length, reducedMotion]);
+
+  React.useEffect(() => {
+    if (reducedMotion) {
+      setTypedText(t.heroTypedWords[0]);
+      return;
+    }
+
+    if (!hasTypedHeroIntro) return;
+
+    const currentWord = t.heroTypedWords[typedWordIndex];
+    const isWordComplete = !isDeletingTypedText && typedText === currentWord;
+    const isWordCleared = isDeletingTypedText && typedText === '';
+    const timeoutMs = isWordComplete ? 1400 : isDeletingTypedText ? 45 : 80;
+
+    const timeout = window.setTimeout(() => {
+      if (isWordComplete) {
+        setIsDeletingTypedText(true);
+        return;
+      }
+
+      if (isWordCleared) {
+        setIsDeletingTypedText(false);
+        setTypedWordIndex((index) => (index + 1) % t.heroTypedWords.length);
+        return;
+      }
+
+      setTypedText(
+        isDeletingTypedText
+          ? currentWord.slice(0, Math.max(typedText.length - 1, 0))
+          : currentWord.slice(0, typedText.length + 1)
+      );
+    }, timeoutMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [hasTypedHeroIntro, isDeletingTypedText, reducedMotion, typedText, typedWordIndex]);
+
   // Solution section: same wheel-scrubbed-on-hover pattern, driving a 3-column conveyor.
   const SOLUTION_COUNT = 6;
   const [activeSolution, setActiveSolution] = React.useState(0);
   const [solutionHovered, setSolutionHovered] = React.useState(false);
   const solutionProgressRef = React.useRef(0); // fractional, mirrors problemProgress
+  const solutionCardsRef = React.useRef<HTMLDivElement | null>(null);
+  const [solutionInView, setSolutionInView] = React.useState(false);
+  // Wraps card i's distance from the active card into the shortest signed step
+  // around the loop (e.g. last->first is +1, not +[SOLUTION_COUNT-1]), so the
+  // autoplay wrap-around slides the same direction as every other step instead
+  // of the last card vanishing and the first card popping in with no transition.
+  const solutionLoopOffset = React.useCallback((i: number, active: number) => {
+    let offset = i - active;
+    if (offset > SOLUTION_COUNT / 2) offset -= SOLUTION_COUNT;
+    if (offset < -SOLUTION_COUNT / 2) offset += SOLUTION_COUNT;
+    return offset;
+  }, []);
 
   // Wheel scrubbing, active only while the pointer is over the cards.
   //
@@ -876,6 +966,61 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     window.addEventListener('wheel', onWheel, { passive: false });
     return () => window.removeEventListener('wheel', onWheel);
   }, [isDesktop, reducedMotion, solutionHovered]);
+
+  // Track whether each card story is actually on screen, so autoplay starts the
+  // moment the section is reached and stops the moment it's scrolled past —
+  // rather than running forever in the background once triggered once.
+  React.useEffect(() => {
+    const el = problemCardsRef.current;
+    if (!isDesktop || reducedMotion || !el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setProblemInView(entry.isIntersecting),
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isDesktop, reducedMotion]);
+
+  React.useEffect(() => {
+    const el = solutionCardsRef.current;
+    if (!isDesktop || reducedMotion || !el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setSolutionInView(entry.isIntersecting),
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isDesktop, reducedMotion]);
+
+  // Autoplay: one card every ~4s while in view and not being manually scrubbed.
+  // Progress lives in the same problemProgress/activeSolution state the wheel
+  // handlers drive, so pausing (hover, or scrolling out of view) simply stops
+  // the interval — the next resume continues from that exact position instead
+  // of restarting, and looping back to the first card after the last one.
+  const AUTOPLAY_INTERVAL_MS = 1200;
+
+  React.useEffect(() => {
+    if (!isDesktop || reducedMotion || !problemInView || problemHovered) return;
+    const id = window.setInterval(() => {
+      setProblemProgress((current) => {
+        const rounded = Math.round(current);
+        return rounded >= PROBLEM_COUNT - 1 ? 0 : rounded + 1;
+      });
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [isDesktop, reducedMotion, problemInView, problemHovered]);
+
+  React.useEffect(() => {
+    if (!isDesktop || reducedMotion || !solutionInView || solutionHovered) return;
+    const id = window.setInterval(() => {
+      setActiveSolution((current) => {
+        const next = current >= SOLUTION_COUNT - 1 ? 0 : current + 1;
+        solutionProgressRef.current = next;
+        return next;
+      });
+    }, AUTOPLAY_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [isDesktop, reducedMotion, solutionInView, solutionHovered]);
 
   React.useEffect(() => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
@@ -943,6 +1088,19 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
       .catch(() => {});
   }, []);
 
+  const activeHeroIntroLineIndex = Math.min(Math.max(visibleHeroIntroLines.length - 1, 0), 2);
+  const renderHeroCursor = (color: string) => (
+    !reducedMotion && (
+      <motion.span
+        aria-hidden
+        className="inline-block ml-1 h-[0.9em] w-[3px] align-[-0.08em] rounded-full"
+        animate={{ opacity: [1, 0, 1] }}
+        transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ background: color }}
+      />
+    )
+  );
+
   const goLogin = () => router.push('/login');
 
   // Map API plans onto the 3-tier layout; fall back to static copy if none.
@@ -1002,10 +1160,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     <div className="min-h-screen bg-white font-sans selection:bg-[var(--color-primary)] selection:text-white overflow-x-clip" style={{ color: BODY }}>
       {/* ══════════════ NAV ══════════════ */}
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
-        <div className="w-full max-w-6xl xl:max-w-[78rem] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-5 pr-3.5 h-16 flex items-center justify-between gap-3">
-          <a href="#home" className="flex items-center gap-2.5 no-underline shrink-0">
-            <LogoMark size="md" shortName={platformShortName} />
-            <span className="font-heading text-xl font-bold tracking-tight text-slate-900">
+        <div className="w-full max-w-7xl xl:max-w-[92rem] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-4 sm:pl-5 md:pl-6 pr-3 sm:pr-3.5 md:pr-4 h-14 sm:h-16 md:h-[4.5rem] lg:h-20 flex items-center justify-between gap-3">
+          <a href="#home" className="flex items-center gap-2 sm:gap-2.5 md:gap-3 no-underline shrink-0 min-w-0">
+            <LogoMark size="md" className="md:hidden" shortName={platformShortName} />
+            <LogoMark size="lg" className="hidden md:block" shortName={platformShortName} />
+            <span className="font-heading text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-slate-900 truncate">
               {platformName}
             </span>
           </a>
@@ -1017,7 +1176,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   key={link.label}
                   type="button"
                   onClick={() => router.push(link.href)}
-                  className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  className="px-3.5 xl:px-5 py-2.5 rounded-full text-[15px] xl:text-[17px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
                 >
                   {link.label}
                 </button>
@@ -1025,7 +1184,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 <a
                   key={link.label}
                   href={link.href}
-                  className="px-4 py-2 rounded-full text-base font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  className="px-3.5 xl:px-5 py-2.5 rounded-full text-[15px] xl:text-[17px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap"
                 >
                   {link.label}
                 </a>
@@ -1033,27 +1192,28 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={goLogin}
-              className="hidden sm:inline-flex items-center gap-1.5 h-11 px-5 rounded-full text-base font-semibold text-white transition-all hover:brightness-110 shadow-md"
+              className="hidden sm:inline-flex items-center gap-1.5 h-10 md:h-12 lg:h-[3.25rem] px-4 md:px-5 lg:px-6 rounded-full text-sm md:text-base lg:text-[17px] font-semibold text-white transition-all hover:brightness-110 shadow-md whitespace-nowrap"
               style={{ background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.2)}` }}
             >
-              {t.navCta} <ArrowRight size={16} />
+              {t.navCta} <ArrowRight size={16} className="hidden md:inline" />
             </button>
 
             <button
-              className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors"
+              className="lg:hidden flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors shrink-0"
               onClick={() => setMobileMenuOpen((p) => !p)}
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileMenuOpen ? <X size={20} className="sm:hidden" /> : <Menu size={20} className="sm:hidden" />}
+              {mobileMenuOpen ? <X size={24} className="hidden sm:block" /> : <Menu size={24} className="hidden sm:block" />}
             </button>
           </div>
         </div>
 
         {mobileMenuOpen && (
-          <div className="w-full max-w-6xl mt-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg rounded-3xl px-4 py-4 flex flex-col gap-1 lg:hidden">
+          <div className="w-full max-w-7xl mt-2 bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg rounded-3xl px-4 py-4 flex flex-col gap-1 lg:hidden">
             {t.nav.map((link) =>
               'type' in link && link.type === 'route' ? (
                 <button
@@ -1091,12 +1251,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
       {/* PAGE CONTENT */}
       <div>
         {/* ══════════════ HERO ══════════════ */}
-        <section id="home" className="scroll-mt-24 relative pt-20 lg:pt-24 pb-6 overflow-hidden bg-white">
+        <section id="home" className="scroll-mt-28 relative pt-28 sm:pt-32 md:pt-36 lg:pt-40 pb-6 overflow-hidden bg-white">
           <div
-            className="absolute -top-40 -right-32 w-[560px] h-[560px] rounded-full blur-3xl pointer-events-none"
+            className="absolute -top-24 -right-20 w-[280px] h-[280px] sm:-top-32 sm:-right-28 sm:w-[420px] sm:h-[420px] lg:-top-40 lg:-right-32 lg:w-[560px] lg:h-[560px] rounded-full blur-3xl pointer-events-none"
             style={{ background: navyAlpha(0.05) }}
           />
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10">
+          <div className="max-w-6xl 2xl:max-w-[84rem] mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10">
             <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 <span
@@ -1112,10 +1272,22 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   <ShieldCheck size={15} /> {t.heroBadge2}
                 </span>
               </div>
-              <h1 className="font-heading text-[1.9rem] sm:text-5xl lg:text-[3.1rem] 2xl:text-[3.6rem] font-semibold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
-                <span className="block whitespace-nowrap">{t.heroTitle1}</span>
-                <span className="block whitespace-nowrap">{t.heroTitle2}</span>
-                <span className="block whitespace-nowrap">{t.heroTitle3}</span>
+              <h1 className="font-heading text-[1.9rem] sm:text-5xl lg:text-[3.1rem] 2xl:text-[3.6rem] font-bold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
+                <span className="block whitespace-nowrap">
+                  {visibleHeroIntroLines[0] || '\u00A0'}
+                  {!hasTypedHeroIntro && activeHeroIntroLineIndex === 0 && renderHeroCursor(NAVY)}
+                </span>
+                <span className="block whitespace-nowrap">
+                  {visibleHeroIntroLines[1] || '\u00A0'}
+                  {!hasTypedHeroIntro && activeHeroIntroLineIndex === 1 && renderHeroCursor(NAVY)}
+                </span>
+                <span
+                  className="block whitespace-nowrap"
+                  style={{ color: NAVY_TYPED_ACCENT, filter: NAVY_TYPED_ACCENT_FILTER }}
+                >
+                  <span>{hasTypedHeroIntro ? typedText || '\u00A0' : visibleHeroIntroLines[2] || '\u00A0'}</span>
+                  {(hasTypedHeroIntro || activeHeroIntroLineIndex === 2) && renderHeroCursor(NAVY_TYPED_ACCENT)}
+                </span>
               </h1>
               <p className="text-[16.5px] leading-relaxed mb-7 max-w-sm" style={{ color: BODY }}>{t.heroSubtitle}</p>
               <div className="flex flex-wrap gap-3">
@@ -1163,8 +1335,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ FEATURE VIDEO / IMAGE BAND ══════════════ */}
-        <section className="pt-2 pb-6">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section className="py-10 sm:py-12 lg:py-16">
+          <div className="max-w-5xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="relative rounded-3xl overflow-hidden shadow-xl shadow-slate-900/10">
               {landingVideo ? (
                 <video
@@ -1193,10 +1365,10 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
             cards is an ordinary scroll. Over the cards, the wheel scrubs the reveal. */}
         <div className="relative bg-white">
           <div className="overflow-hidden py-10 sm:py-12 lg:py-16">
-            <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
+            <div className="max-w-6xl mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-2xl mx-auto mb-8 lg:mb-5">
                 <div className="flex justify-center"><Eyebrow>{t.problemBadge}</Eyebrow></div>
-                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-5xl font-semibold tracking-tight mb-2" style={{ color: NAVY }}>{t.problemTitle}</h2>
+                <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-[2.05rem] xl:text-5xl font-semibold tracking-tight mb-2" style={{ color: NAVY }}>{t.problemTitle}</h2>
                 <p className="text-base sm:text-[16.5px] leading-relaxed" style={{ color: BODY }}>{t.problemSubtitle}</p>
               </div>
 
@@ -1204,6 +1376,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   Hover is bound here — on the card stack only — so the wheel scrubs
                   the reveal over the cards and scrolls the page everywhere else. */}
               <div
+                ref={problemCardsRef}
                 className="relative mx-auto w-full max-w-6xl lg:h-[min(24rem,55vh)] lg:overflow-hidden"
                 onMouseEnter={() => setProblemHovered(true)}
                 onMouseLeave={() => setProblemHovered(false)}
@@ -1225,6 +1398,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                         style={{
                           background: CARD_BG,
                           transform: `translateY(${translateY}%)`,
+                          transition: problemHovered ? 'none' : 'transform 0.6s ease-out',
                           pointerEvents: isTopmost ? 'auto' : 'none',
                           zIndex: i,
                         }}
@@ -1269,10 +1443,10 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
           style={{ background: NAVY }}
         >
           <div className="overflow-hidden py-10 sm:py-12 lg:py-16">
-            <div className="max-w-6xl 2xl:max-w-7xl mx-auto w-full px-5 sm:px-8">
+            <div className="max-w-7xl 2xl:max-w-[88rem] mx-auto w-full px-5 sm:px-8">
               <div className="text-center max-w-4xl mx-auto mb-5 lg:mb-4">
                 <div className="flex justify-center mb-2"><Eyebrow onPrimary>{t.solutionBadge}</Eyebrow></div>
-                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: TINT }}>{t.solutionTitle}</h2>
+                <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-[2.05rem] xl:text-4xl font-semibold tracking-tight leading-tight" style={{ color: TINT }}>{t.solutionTitle}</h2>
               </div>
 
               {isDesktop && !reducedMotion ? (
@@ -1280,6 +1454,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                    surrounding whitespace scroll without triggering the conveyor.
                    Reduced-motion falls through to the static stacked list below. */
                 <div
+                  ref={solutionCardsRef}
                   className="grid grid-cols-[1fr_2.5fr] gap-8 items-center h-[min(34rem,60vh)]"
                   onMouseEnter={() => setSolutionHovered(true)}
                   onMouseLeave={() => setSolutionHovered(false)}
@@ -1291,7 +1466,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                       the left instead of all sharing one offset. */}
                   <div className="relative h-40 overflow-hidden">
                     {t.solutionCards.map((c, i) => {
-                      const offset = i - activeSolution;
+                      const offset = solutionLoopOffset(i, activeSolution);
                       const isActive = offset === 0;
                       return (
                         <div
@@ -1313,7 +1488,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   {/* Middle + Right: image track — active image swipes left out; next preview swipes left into focus & zooms in. */}
                   <div className="relative h-full overflow-hidden">
                     {t.solutionCards.map((_c, i) => {
-                      const offset = i - activeSolution; // 0 = middle/focused, 1 = right preview, -1 = swiped out left
+                      const offset = solutionLoopOffset(i, activeSolution); // 0 = middle/focused, 1 = right preview, -1 = swiped out left
                       if (offset < -1 || offset > 1) return null;
                       const isActive = offset === 0;
                       const isPreview = offset === 1;
@@ -1377,13 +1552,13 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </div>
 
         {/* ══════════════ HOW IT WORKS ══════════════ */}
-        <section className="py-6 sm:py-8 bg-white">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section className="py-10 sm:py-12 lg:py-16 bg-white">
+          <div className="max-w-5xl 2xl:max-w-6xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-12">
               <Eyebrow>{t.howBadge}</Eyebrow>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.howTitle}</h2>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.howTitle}</h2>
             </motion.div>
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {t.howSteps.map((step, i) => (
                 <motion.div
                   {...fadeInUp}
@@ -1411,12 +1586,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ RESULTS ══════════════ */}
-        <section className="py-6 sm:py-8" style={{ background: NAVY }}>
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <section className="py-10 sm:py-12 lg:py-16" style={{ background: NAVY }}>
+          <div className="max-w-6xl xl:max-w-[72rem] mx-auto px-5 sm:px-8 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: heading + subtitle + points with progress bars */}
             <motion.div {...fadeInUp}>
               <Eyebrow onPrimary>{t.resultsBadge}</Eyebrow>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-4" style={{ color: TINT }}>{t.resultsTitle}</h2>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-4" style={{ color: TINT }}>{t.resultsTitle}</h2>
               <p className="leading-relaxed mb-10 max-w-md" style={{ color: ON_PRIMARY_MUTED }}>{t.resultsSubtitle}</p>
               <div className="space-y-7">
                 {t.resultsPoints.map((p, i) => (
@@ -1453,11 +1628,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ INTEGRATION ══════════════ */}
-        <section id="integration" className="scroll-mt-24 py-6 sm:py-8 bg-white overflow-hidden">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section id="integration" className="scroll-mt-24 py-10 sm:py-12 lg:py-16 bg-white overflow-hidden">
+          <div className="max-w-7xl 2xl:max-w-[96rem] mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-10">
               <Eyebrow>{t.integrationBadge}</Eyebrow>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.integrationTitle}</h2>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.integrationTitle}</h2>
             </motion.div>
 
             <motion.div {...fadeInUp} className="w-full">
@@ -1472,11 +1647,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ INDUSTRIES ══════════════ */}
-        <section className="py-6 sm:py-8 bg-white">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section className="py-10 sm:py-12 lg:py-16 bg-white">
+          <div className="max-w-6xl 2xl:max-w-[84rem] mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center max-w-2xl mx-auto mb-12">
               <div className="flex justify-center"><Eyebrow>{t.industriesBadge}</Eyebrow></div>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.industriesTitle}</h2>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight" style={{ color: NAVY }}>{t.industriesTitle}</h2>
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
               {industryItems.map((ind, i) => (
@@ -1493,11 +1668,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         </section>
 
         {/* ══════════════ DEMO BAND ══════════════ */}
-        <section id="cta" className="scroll-mt-24" style={{ background: NAVY }}>
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section id="cta" className="scroll-mt-24 py-10 sm:py-12 lg:py-16" style={{ background: NAVY }}>
+          <div className="max-w-5xl mx-auto px-5 sm:px-8">
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               {/* Left: copy */}
-              <div className="py-10 lg:py-12 text-white">
+              <div className="text-white">
                 {/* Uses the shared <Eyebrow> so this pill tracks the same on-primary
                     treatment as the Solution / Results badges. The extra bottom margin
                     this section wants lives on the wrapper. */}
@@ -1518,7 +1693,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Right: phone image */}
-              <div className="flex justify-center lg:justify-end py-4 lg:py-5">
+              <div className="flex justify-center lg:justify-end">
                 <Image
                   src="/demo.png"
                   alt="Live WhatsApp AI receptionist demo"
@@ -1533,7 +1708,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ TESTIMONIALS (hidden) ══════════════ */}
         {false && (
-        <section className="py-6 sm:py-8 bg-white">
+        <section className="py-10 sm:py-12 lg:py-16 bg-white">
           <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-12">
               <Eyebrow>{t.testimonialsBadge}</Eyebrow>
@@ -1569,17 +1744,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         )}
 
         {/* ══════════════ PRICING ══════════════ */}
-        <section id="pricing" className="scroll-mt-24 py-6 sm:py-8 bg-white">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
+        <section id="pricing" className="scroll-mt-24 py-10 sm:py-12 lg:py-16 bg-white">
+          <div className="max-w-6xl 2xl:max-w-[80rem] mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center max-w-2xl mx-auto mb-12">
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
 
             {plansLoading ? (
               <div className="flex justify-center py-16"><Spin size="large" /></div>
             ) : (
-              <div className="grid md:grid-cols-3 gap-6 items-stretch">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                 {pricingTiers.map((tier, i) => (
                   <motion.div
                     {...fadeInUp}
@@ -1726,12 +1901,12 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ FAQ ══════════════ */}
         {faqList.length > 0 && (
-        <section id="faq" className="scroll-mt-24 py-6 sm:py-8 bg-white">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16 items-start">
+        <section id="faq" className="scroll-mt-24 py-10 sm:py-12 lg:py-16 bg-white">
+          <div className="max-w-5xl 2xl:max-w-6xl mx-auto px-5 sm:px-8 grid lg:grid-cols-[0.85fr_1.15fr] gap-12 lg:gap-16 items-start">
             {/* Left: heading + CTA */}
             <motion.div {...fadeInUp}>
               <Eyebrow>{t.faqBadge}</Eyebrow>
-              <h2 className="font-heading text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mb-5" style={{ color: NAVY }}>
+              <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight mb-5" style={{ color: NAVY }}>
                 {t.faqTitle1}<br />{t.faqTitle2}
               </h2>
               <p className="leading-relaxed mb-8 max-w-xs text-[16.5px]" style={{ color: BODY }}>{t.faqSub}</p>
@@ -1781,7 +1956,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ FOOTER ══════════════ */}
         <footer style={{ background: NAVY }} className="text-white">
-          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8 pt-16 pb-12 grid grid-cols-2 md:grid-cols-[1.4fr_0.8fr_0.9fr_1.5fr] gap-x-6 gap-y-8">
+          <div className="max-w-7xl 2xl:max-w-[92rem] mx-auto px-5 sm:px-8 pt-16 pb-12 grid grid-cols-2 md:grid-cols-[1.4fr_0.8fr_0.9fr_1.5fr] gap-x-6 gap-y-8">
             {/* Brand + tagline */}
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-5">

@@ -39,7 +39,7 @@ export function LogoMark({ size = "md", className = "", shortName = APP_SHORT_NA
         style={{ border: "1px solid rgba(255,255,255,0.12)" }}
       />
       <span
-        className={`relative z-10 font-black tracking-tight leading-none text-white ${text}`}
+        className={`relative z-10 flex items-center justify-center w-full h-full text-center font-black tracking-tight leading-none text-white ${text}`}
         style={{ textShadow: "0 1px 2px rgba(0,0,0,0.25)", letterSpacing: "-0.03em" }}
       >
         {shortName}

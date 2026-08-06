@@ -156,7 +156,6 @@ export const authService = {
     new_password?: string;
     profile_photo?: File;
     remove_profile_photo?: boolean;
-    username?: string;
     experience?: string;
     education?: string;
     category_id?: number | null;
@@ -183,7 +182,6 @@ export const authService = {
           if (payload.new_password !== undefined) fd.append("new_password", payload.new_password);
           if (payload.remove_profile_photo) fd.append("remove_profile_photo", "true");
           if (payload.profile_photo) fd.append("profile_photo", payload.profile_photo);
-          if (payload.username !== undefined) fd.append("username", payload.username);
           if (payload.experience !== undefined) fd.append("experience", payload.experience);
           if (payload.education !== undefined) fd.append("education", payload.education);
           if (payload.category_id !== undefined) fd.append("category_id", payload.category_id === null ? "" : String(payload.category_id));
