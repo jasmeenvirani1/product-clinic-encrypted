@@ -31,6 +31,9 @@ const Notification = require("./Notification");
 const WhatsAppSession = require("./WhatsAppSession");
 const InstagramSession = require("./InstagramSession");
 const GoogleConnection = require("./GoogleConnection");
+const InstagramReel = require("./InstagramReel");
+const Lesson = require("./Lesson");
+const LessonReel = require("./LessonReel");
 
 // User <-> Role
 Role.hasMany(User, { foreignKey: "role_id" });
@@ -144,6 +147,32 @@ InstagramSession.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
 User.hasMany(GoogleConnection, { foreignKey: "tenant_id", as: "googleConnections" });
 GoogleConnection.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
 
+// InstagramReel associations (one tenant → many synced reels)
+User.hasMany(InstagramReel, { foreignKey: "tenant_id", as: "instagramReels" });
+InstagramReel.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+
+// Lesson associations (one tenant → many lessons)
+User.hasMany(Lesson, { foreignKey: "tenant_id", as: "lessons" });
+Lesson.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+
+// Lesson <-> InstagramReel (many-to-many through LessonReel)
+Lesson.belongsToMany(InstagramReel, {
+  through: LessonReel,
+  foreignKey: "lesson_id",
+  otherKey: "instagram_reel_id",
+  as: "reels",
+});
+InstagramReel.belongsToMany(Lesson, {
+  through: LessonReel,
+  foreignKey: "instagram_reel_id",
+  otherKey: "lesson_id",
+  as: "lessons",
+});
+
+// LessonReel direct associations (used for FK-level lookups, not eager loads)
+LessonReel.belongsTo(Lesson, { foreignKey: "lesson_id" });
+LessonReel.belongsTo(InstagramReel, { foreignKey: "instagram_reel_id" });
+
 module.exports = {
   sequelize,
   Role,
@@ -178,6 +207,9 @@ module.exports = {
   WhatsAppSession,
   InstagramSession,
   GoogleConnection,
+  InstagramReel,
+  Lesson,
+  LessonReel,
 };
 
 

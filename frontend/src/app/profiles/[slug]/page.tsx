@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import type { PublicProfile } from "@/data/profiles.mock";
+import type { PublicProfile, PublicProfileVideo, PublicProfileLesson } from "@/data/profiles.mock";
+import { videoGradients } from "@/data/profiles.mock";
 import type { PublicClinicDetail } from "@/services/clinic.service";
 import PublicProfileHeader from "@/components/profiles/PublicProfileHeader";
-import PublicProfileVideoGrid from "@/components/profiles/PublicProfileVideoGrid";
+import PublicProfileContentTabs from "@/components/profiles/PublicProfileContentTabs";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
@@ -35,7 +36,33 @@ function toPublicProfile(clinic: PublicClinicDetail): PublicProfile {
     website: clinic.website,
     verified: clinic.verified,
     joinedDate: clinic.joinedDate,
-    videos: [],
+    videos: (clinic.videos ?? []).map(
+      (v, i): PublicProfileVideo => ({
+        id: v.id,
+        thumbnailGradient: videoGradients[i % videoGradients.length],
+        views: v.views,
+        likes: v.likes,
+        caption: v.caption,
+        thumbnailUrl: v.thumbnail_url,
+        permalink: v.permalink,
+      }),
+    ),
+    lessons: (clinic.lessons ?? []).map((lesson): PublicProfileLesson => ({
+      id: lesson.id,
+      title: lesson.title,
+      description: lesson.description,
+      reels: (lesson.reels ?? []).map(
+        (v, i): PublicProfileVideo => ({
+          id: v.id,
+          thumbnailGradient: videoGradients[i % videoGradients.length],
+          views: v.views,
+          likes: v.likes,
+          caption: v.caption,
+          thumbnailUrl: v.thumbnail_url,
+          permalink: v.permalink,
+        }),
+      ),
+    })),
     username: clinic.username,
     experience: clinic.experience ?? "",
     education: clinic.education ?? "",
@@ -75,10 +102,13 @@ export default async function ProfileDetailPage({
           {/* Profile header — photo, name, category, stats, bio, details, actions */}
           <PublicProfileHeader profile={profile} />
 
-          {/* Videos — below the profile header */}
+          {/* Videos/Lessons — below the profile header, behind Shared/Lessons tab toggle */}
           <section aria-label="Videos" className="mt-10 border-t border-slate-100 pt-8">
-            <h2 className="mb-4 font-heading text-lg font-bold text-slate-900">Videos</h2>
-            <PublicProfileVideoGrid videos={profile.videos} />
+            <PublicProfileContentTabs
+              videos={profile.videos}
+              lessons={profile.lessons}
+              profileUsername={profile.username}
+            />
           </section>
         </article>
       </div>

@@ -39,6 +39,7 @@ function toPublicProfile(clinic: PublicClinicSummary): PublicProfile {
     verified: false,
     joinedDate: clinic.joinedDate,
     videos: [],
+    lessons: [],
     username: clinic.username,
     experience: clinic.experience ?? "",
     education: clinic.education ?? "",

@@ -206,6 +206,12 @@ export function InstagramConnect({ conversationsPath, slot = 1, title, onChanged
                 <li>A Meta Developer App with the <strong>Instagram Graph API</strong> product added</li>
                 <li>An Instagram <strong>Business or Creator account</strong> linked to a Facebook Page</li>
                 <li>A long-lived <strong>Access Token</strong> generated from your Meta App&apos;s dashboard</li>
+                <li>
+                  To display Reels on your public profile, your Access Token also needs the{" "}
+                  <strong>instagram_business_basic</strong> permission (this replaced the older
+                  &quot;instagram_basic&quot; scope Meta retired in 2025) — select it in Graph API
+                  Explorer when generating your token.
+                </li>
               </ul>
               <p>
                 After saving your credentials below, we&apos;ll show you a webhook URL and verify token —

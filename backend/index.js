@@ -81,6 +81,7 @@ app.use("/api/super-admin/specialities",   require("./routes/specialityRoutes"))
 app.use("/api/tenant/specialities",        require("./routes/tenantSpecialityRoutes"));
 app.use("/api/ai-models",                  require("./routes/aiModelRoutes"));
 app.use("/api/super-admin/ai-models",      require("./routes/superAdminAiModelRoutes"));
+app.use("/api/lessons",                    require("./routes/lessonRoutes"));
 
 // WhatsApp-QR channel (Baileys — link the clinic's real WhatsApp by QR scan).
 // Registers /api/whatsapp-qr/* and restores linked sessions on boot.
@@ -95,6 +96,13 @@ require("./services/whatsappQrBootstrap").mountWhatsAppQr(app, { authMiddleware:
 // Inbound messages arrive via the per-tenant webhook mounted through
 // /api/webhooks/instagram/:tenantId/:slot (see webhookRoutes.js).
 require("./services/instagramDmBootstrap").mountInstagramMeta(app, { authMiddleware: authenticate });
+
+// Instagram Reels sync (issue #33) — dedicated periodic job, deliberately
+// separate from the DM token-health check above. Populates the InstagramReel
+// table (read by the public clinic profile endpoint) from each connected
+// tenant's own IG Business Account; reels-scope failures are logged and
+// skipped, never flip InstagramSession.status (that field is DM-health-only).
+require("./services/instagramReelsSync").startInstagramReelsSync();
 
 // Google Calendar OAuth2 integration — real redirect-based OAuth flow (unlike
 // WhatsApp/Instagram above). Registers /api/google/* (authorize/callback/

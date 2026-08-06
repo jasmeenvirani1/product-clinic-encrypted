@@ -26,8 +26,33 @@ export interface PublicClinicSummary {
   joinedDate: string;
 }
 
+// Raw shape of each item in the `videos` array returned by
+// `GET /api/public/clinics/:username` — backend keeps snake_case field names
+// (matches InstagramReel's column names); mapped to the camelCase
+// PublicProfileVideo shape at the [slug]/page.tsx boundary.
+export interface PublicClinicVideo {
+  id: string;
+  thumbnail_url: string | null;
+  permalink: string | null;
+  views: number;
+  likes: number;
+  caption: string;
+}
+
+// One Lesson (clinic-created title/description grouping) + its attached
+// reels, as returned inside `PublicClinicDetail.lessons`. Each nested reel
+// uses the EXACT same shape as `PublicClinicVideo` (allowlist discipline
+// shared 1:1 with the `videos` mapping server-side).
+export interface PublicClinicLesson {
+  id: number;
+  title: string;
+  description: string;
+  reels: PublicClinicVideo[];
+}
+
 export interface PublicClinicDetail extends PublicClinicSummary {
-  videos: [];
+  videos: PublicClinicVideo[];
+  lessons: PublicClinicLesson[];
   bio: string;
   location: string;
   handle: string;

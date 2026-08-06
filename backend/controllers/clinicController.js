@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
-const { User, Speciality } = require("../models");
+const { User, Speciality, InstagramReel, Lesson } = require("../models");
+const { toLessonPayload } = require("./lessonController");
 const log = require("../utils/logger");
 
 const MODULE = "ClinicController";
@@ -99,13 +100,62 @@ exports.getPublicByUsername = async (req, res) => {
 
     const summary = await toPublicSummary(user.get({ plain: true }));
 
+    // Instagram Reels (issue #33) — synced ahead of time by
+    // instagramReelsSync.js, never fetched from Graph API on this
+    // unauthenticated request path. Explicit attributes allowlist: never
+    // include media_url/media_type/media_product_type here — media_url is
+    // the raw playable file Meta doesn't guarantee stays stable/present, and
+    // the other two are internal-only debug fields (see InstagramReel.js).
+    // Returns [] (not an error) when there's no session, no sync yet, or no
+    // reels — all three cases collapse to the same empty findAll result.
+    const reels = await InstagramReel.findAll({
+      where: { tenant_id: user.id },
+      attributes: ["ig_media_id", "thumbnail_url", "permalink", "like_count", "comments_count", "caption"],
+      order: [["posted_at", "DESC"]],
+      limit: 12,
+    });
+
+    const videos = reels.map((r) => ({
+      id: r.ig_media_id,
+      thumbnail_url: r.thumbnail_url,
+      permalink: r.permalink,
+      // Instagram Insights (instagram_manage_insights) is out of scope for
+      // this ticket — hardcoded 0, not a bug. See architecture doc.
+      views: 0,
+      likes: r.like_count,
+      caption: r.caption ?? "",
+    }));
+
+    // Lessons (issue #35) — clinic-curated groupings of their own reels.
+    // Same allowlist discipline as the videos query above (never media_url/
+    // media_type/media_product_type on the nested reels), reusing the exact
+    // same shared mapper lessonController.js uses for its own authenticated
+    // list endpoint so the two code paths can't drift. `through: { attributes:
+    // [] }` ensures the LessonReel join row itself is never serialized.
+    const lessonRows = await Lesson.findAll({
+      where: { tenant_id: user.id },
+      attributes: ["id", "title", "description"],
+      include: [
+        {
+          model: InstagramReel,
+          as: "reels",
+          attributes: ["ig_media_id", "thumbnail_url", "permalink", "like_count", "comments_count", "caption"],
+          through: { attributes: [] },
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    const lessons = lessonRows.map(toLessonPayload);
+
     // Detail-only fields with no backing User column yet — included as
     // empty-but-present values (not omitted) so the frontend PublicProfile
     // TS interface, which declares these as required, needs zero shape
     // changes. Intentionally not solved by adding new columns in this ticket.
     const data = {
       ...summary,
-      videos: [],
+      videos,
+      lessons,
       bio: "",
       location: "",
       handle: `@${user.username}`,

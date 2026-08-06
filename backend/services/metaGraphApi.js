@@ -53,10 +53,32 @@ async function verifyAccessToken({ igBusinessAccountId, accessToken }) {
   return !!resp.data?.id;
 }
 
+/** Fetch this tenant's Instagram Reels (media_product_type === "REELS") via the
+ *  IG Business Account's /media edge. There is no server-side Reels-only
+ *  filter in Graph API — we request media_product_type as a field and filter
+ *  client-side. Requires the instagram_business_basic scope (renamed from
+ *  the deprecated instagram_basic, retired by Meta 2025-01-27) on the stored
+ *  access token. Throws on Graph API errors (e.g. missing scope) — callers
+ *  are responsible for catching/logging/skipping, per this file's
+ *  credentials-as-parameters, zero-CRM-knowledge convention. */
+async function getReels({ igBusinessAccountId, accessToken, limit = 25 }) {
+  const resp = await axios.get(`${GRAPH_BASE}/${igBusinessAccountId}/media`, {
+    params: {
+      fields:
+        "id,caption,media_type,media_product_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count",
+      limit,
+      access_token: accessToken,
+    },
+  });
+  const items = resp.data?.data || [];
+  return items.filter((m) => m.media_product_type === "REELS");
+}
+
 module.exports = {
   GRAPH_VERSION,
   GRAPH_BASE,
   getIgBusinessAccountUsername,
   sendInstagramMessage,
   verifyAccessToken,
+  getReels,
 };

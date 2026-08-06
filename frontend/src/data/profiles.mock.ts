@@ -16,6 +16,25 @@ export interface PublicProfileVideo {
   views: number;
   likes: number;
   caption: string;
+  /** NEW — real Meta-hosted thumbnail image URL (from synced Instagram Reels).
+   *  Undefined for mock data; may also be null/undefined for real data if Meta
+   *  omitted it (e.g. copyright-flagged media). */
+  thumbnailUrl?: string | null;
+  /** NEW — stable instagram.com/reel/... link, used for link-out ("View on
+   *  Instagram") rather than in-app playback. Undefined for mock data. */
+  permalink?: string | null;
+}
+
+/** NEW — a clinic-created Lesson grouping (title + description) with its
+ *  attached Instagram Reels (Issue #35). Empty for mock data — Lessons have
+ *  no mock fixtures since the real backend/frontend contract ships together;
+ *  the field exists here purely so `PublicProfile`'s TS shape stays
+ *  consistent with the real `PublicClinicDetail` API shape. */
+export interface PublicProfileLesson {
+  id: number;
+  title: string;
+  description: string;
+  reels: PublicProfileVideo[];
 }
 
 export interface PublicProfile {
@@ -31,6 +50,8 @@ export interface PublicProfile {
   verified: boolean;
   joinedDate: string;
   videos: PublicProfileVideo[];
+  /** NEW — see `PublicProfileLesson`. Always empty array for mock fixtures. */
+  lessons: PublicProfileLesson[];
   /** Public handle-style username, distinct from `handle` (kept for backward compat). */
   username: string;
   experience: string;
@@ -49,7 +70,9 @@ const gradients = [
   "linear-gradient(135deg,#d946ef,#f97316)",
 ];
 
-const videoGradients = [
+// Exported so real-data call sites (e.g. profiles/[slug]/page.tsx) can reuse a
+// consistent fallback gradient for videos without a real `thumbnailUrl`.
+export const videoGradients = [
   "linear-gradient(160deg,#1e293b,#0ea5e9)",
   "linear-gradient(160deg,#312e81,#a855f7)",
   "linear-gradient(160deg,#7c2d12,#f97316)",
@@ -81,6 +104,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-03-01",
     videos: makeVideos("smile-dental-studio", 6),
+    lessons: [],
     username: "smiledentalstudio",
     experience: "12 years in cosmetic and family dentistry",
     education: "DDS, University of Texas School of Dentistry",
@@ -97,6 +121,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2021-11-15",
     videos: makeVideos("glow-derma-clinic", 5),
+    lessons: [],
     username: "glowdermaclinic",
     experience: "9 years in dermatology and laser therapy",
     education: "MD Dermatology, University of Miami",
@@ -113,6 +138,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-01-20",
     videos: makeVideos("vital-cardio-center", 7),
+    lessons: [],
     username: "vitalcardiocenter",
     experience: "15 years in interventional cardiology",
     education: "MD, Northwestern University Feinberg School of Medicine",
@@ -129,6 +155,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-07-08",
     videos: makeVideos("bloom-womens-health", 4),
+    lessons: [],
     username: "bloomwomenshealth",
     experience: "10 years in obstetrics and gynecology",
     education: "MD, University of Colorado School of Medicine",
@@ -145,6 +172,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-05-30",
     videos: makeVideos("flex-physio-lab", 5),
+    lessons: [],
     username: "flexphysiolab",
     experience: "7 years in sports rehabilitation and physiotherapy",
     education: "DPT, University of Washington",
@@ -161,6 +189,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2021-09-12",
     videos: makeVideos("clearview-eye-care", 4),
+    lessons: [],
     username: "clearvieweyecare",
     experience: "14 years in ophthalmic surgery",
     education: "MD, Harvard Medical School",
@@ -177,6 +206,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-02-14",
     videos: makeVideos("little-steps-pediatrics", 6),
+    lessons: [],
     username: "littlestepspeds",
     experience: "6 years in pediatric care",
     education: "MD, Oregon Health & Science University",
@@ -193,6 +223,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: true,
     joinedDate: "2022-10-05",
     videos: makeVideos("mindful-therapy-collective", 5),
+    lessons: [],
     username: "mindfultherapyco",
     experience: "11 years in clinical psychology and mindfulness-based therapy",
     education: "PsyD, University of California, Berkeley",
@@ -209,6 +240,7 @@ export const mockProfiles: PublicProfile[] = [
     verified: false,
     joinedDate: "2023-08-19",
     videos: makeVideos("peak-ortho-sports-med", 4),
+    lessons: [],
     username: "peakorthosports",
     experience: "13 years in orthopedic and sports medicine surgery",
     education: "MD, University of Utah School of Medicine",
