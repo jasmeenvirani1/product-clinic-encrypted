@@ -53,6 +53,17 @@ const GoogleConnection = sequelize.define(
       type: DataTypes.ENUM("disconnected", "connected", "token_expired", "revoked"),
       defaultValue: "disconnected",
     },
+    // User-facing on/off switch, independent of `status` (which tracks OAuth/
+    // token health, not intent). Disabling keeps the Google account connected
+    // and tokens intact — it just tells feature code (Calendar events list,
+    // future AI-booking writes) to treat this service as off. Re-enabling
+    // re-runs the OAuth authorize flow (prompt=consent), so Google's
+    // permission screen is shown again rather than silently flipping a flag.
+    is_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
     // Display only — resolved via the ID token / userinfo claims on connect.
     google_account_email: {
       type: DataTypes.STRING(255),

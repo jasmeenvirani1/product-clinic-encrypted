@@ -119,9 +119,38 @@ async function revokeToken(accessToken) {
   }
 }
 
+/** List upcoming events on the connected account's primary calendar. Caller
+ *  supplies an already-valid plaintext access token (see
+ *  googleOAuthBootstrap.js's getValidAccessToken) — this function does not
+ *  refresh or persist anything. Returns Google's raw event objects, mapped
+ *  down to the fields the UI actually needs. Throws on API failure — caller
+ *  decides how to surface that. */
+async function listUpcomingEvents(accessToken, { maxResults = 10 } = {}) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ access_token: accessToken });
+  const calendar = google.calendar({ version: "v3", auth: client });
+
+  const { data } = await calendar.events.list({
+    calendarId: "primary",
+    timeMin: new Date().toISOString(),
+    maxResults,
+    singleEvents: true,
+    orderBy: "startTime",
+  });
+
+  return (data.items || []).map((event) => ({
+    id: event.id,
+    title: event.summary || "(No title)",
+    start: event.start?.dateTime || event.start?.date || null,
+    end: event.end?.dateTime || event.end?.date || null,
+    htmlLink: event.htmlLink || null,
+  }));
+}
+
 module.exports = {
   getAuthUrl,
   exchangeCode,
   refreshAccessToken,
   revokeToken,
+  listUpcomingEvents,
 };

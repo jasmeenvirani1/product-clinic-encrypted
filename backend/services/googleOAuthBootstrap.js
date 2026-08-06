@@ -98,11 +98,12 @@ function verifyState(state) {
 
 /** Get a valid (non-expired) plaintext access token for in-process use,
  *  refreshing via the stored refresh token when needed. Returns null when
- *  the tenant has no connected row or no refresh token. Not called by any
- *  route in this ticket — exists as a ready-made entry point for a future
- *  Calendar-consuming feature. Never returned over HTTP. */
+ *  the tenant has no connected row, no refresh token, or the row is
+ *  disabled (is_enabled: false — a disabled connection must never yield a
+ *  usable token to feature code, even though the underlying tokens are
+ *  still intact in the DB). Never returned over HTTP. */
 async function getValidAccessToken(connectionRow) {
-  if (!connectionRow || !connectionRow.refresh_token) return null;
+  if (!connectionRow || !connectionRow.refresh_token || !connectionRow.is_enabled) return null;
 
   const needsRefresh =
     !connectionRow.access_token ||
@@ -194,6 +195,11 @@ function mountGoogleOAuth(app, { authMiddleware } = {}) {
 
       await row.update({
         status: "connected",
+        // A completed OAuth round-trip (fresh consent screen, prompt=consent)
+        // is exactly the re-enable signal per the toggle feature's design —
+        // so reconnecting always turns the service back on, even if it had
+        // been manually disabled before this authorize call.
+        is_enabled: true,
         google_account_email: email,
         access_token: accessToken ? tokenCrypto.encrypt(accessToken) : row.access_token,
         // Google only returns a refresh_token on first consent (or when
@@ -231,10 +237,69 @@ function mountGoogleOAuth(app, { authMiddleware } = {}) {
         granted_scopes: row?.granted_scopes || [],
         token_expires_at: row?.token_expires_at || null,
         last_error: row?.last_error || null,
+        is_enabled: row ? row.is_enabled : true,
       });
     } catch (err) {
       log.error(MODULE, "status", { error: err.message });
       return res.status(500).json({ success: false, message: "Failed to load Google connection status." });
+    }
+  });
+
+  // POST /api/google/toggle — authenticated. Flips is_enabled on an already-
+  // connected row WITHOUT touching tokens/status — the Google account stays
+  // connected, disabling just stops feature code (Calendar events, future
+  // AI-booking writes) from being able to use it (see getValidAccessToken's
+  // is_enabled check). Turning back on does NOT re-show Google's consent
+  // screen by itself — the frontend re-triggers /oauth/authorize (which
+  // always sends prompt=consent) for that, since only a real OAuth
+  // round-trip can re-surface Google's own permission UI.
+  app.post("/api/google/toggle", authMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return res.status(400).json({ success: false, message: "No tenant" });
+
+      const service = req.body?.service || req.query.service || DEFAULT_SERVICE;
+      if (!KNOWN_SERVICES.includes(service)) {
+        return res.status(400).json({ success: false, message: "Unknown Google service." });
+      }
+      if (typeof req.body?.is_enabled !== "boolean") {
+        return res.status(400).json({ success: false, message: "is_enabled must be a boolean." });
+      }
+
+      const row = await GoogleConnection.findOne({ where: { tenant_id: tenantId, service } });
+      if (!row) {
+        return res.status(404).json({ success: false, message: "No Google connection found." });
+      }
+
+      await row.update({ is_enabled: req.body.is_enabled });
+      return res.json({ success: true, is_enabled: row.is_enabled });
+    } catch (err) {
+      log.error(MODULE, "toggle", { error: err.message });
+      return res.status(500).json({ success: false, message: "Failed to update Google connection." });
+    }
+  });
+
+  // GET /api/google/calendar/events — authenticated. Returns the connected
+  // account's upcoming primary-calendar events. Empty list (not an error)
+  // when disconnected or disabled — getValidAccessToken already refuses to
+  // yield a token for a disabled row, so this route can't leak events for a
+  // service the clinic turned off.
+  app.get("/api/google/calendar/events", authMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return res.status(400).json({ success: false, message: "No tenant" });
+
+      const row = await GoogleConnection.findOne({ where: { tenant_id: tenantId, service: "calendar" } });
+      const accessToken = await getValidAccessToken(row);
+      if (!accessToken) {
+        return res.json({ success: true, events: [] });
+      }
+
+      const events = await googleOAuthClient.listUpcomingEvents(accessToken);
+      return res.json({ success: true, events });
+    } catch (err) {
+      log.error(MODULE, "calendarEvents", { error: err.message });
+      return res.status(500).json({ success: false, message: "Failed to load Google Calendar events." });
     }
   });
 

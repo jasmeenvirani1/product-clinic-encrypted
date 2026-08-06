@@ -31,10 +31,29 @@ export interface GoogleStatusResponse {
   granted_scopes: string[];
   token_expires_at: string | null;
   last_error: string | null;
+  is_enabled: boolean;
 }
 
 export interface GoogleDisconnectResponse {
   success: boolean;
+}
+
+export interface GoogleToggleResponse {
+  success: boolean;
+  is_enabled: boolean;
+}
+
+export interface GoogleCalendarEvent {
+  id: string;
+  title: string;
+  start: string | null;
+  end: string | null;
+  htmlLink: string | null;
+}
+
+export interface GoogleCalendarEventsResponse {
+  success: boolean;
+  events: GoogleCalendarEvent[];
 }
 
 const GOOGLE_BASE = "/google";
@@ -55,6 +74,23 @@ export const googleService = {
   },
   async disconnect(service: GoogleServiceId = DEFAULT_SERVICE): Promise<GoogleDisconnectResponse> {
     const { data } = await api.post<GoogleDisconnectResponse>(`${GOOGLE_BASE}/disconnect`, { service });
+    return data;
+  },
+  // Flips is_enabled without touching the underlying connection/tokens.
+  // Turning back on does NOT re-show Google's consent screen by itself —
+  // call authorize() again for that (it always sends prompt=consent).
+  async toggle(
+    isEnabled: boolean,
+    service: GoogleServiceId = DEFAULT_SERVICE,
+  ): Promise<GoogleToggleResponse> {
+    const { data } = await api.post<GoogleToggleResponse>(`${GOOGLE_BASE}/toggle`, {
+      service,
+      is_enabled: isEnabled,
+    });
+    return data;
+  },
+  async calendarEvents(): Promise<GoogleCalendarEventsResponse> {
+    const { data } = await api.get<GoogleCalendarEventsResponse>(`${GOOGLE_BASE}/calendar/events`);
     return data;
   },
 };
