@@ -66,6 +66,7 @@ import { HeroSlider, DEFAULT_HERO_CONTENT } from '@/components/hero/HeroSlider';
 import type { HeroContent } from '@/services/hero.service';
 import { specialityService, type Speciality } from '@/services/speciality.service';
 import { CustomPlanEnquiryModal } from './components/CustomPlanEnquiryModal';
+import { WhatsAppDemoPhone } from './components/WhatsAppDemoPhone';
 
 // ─── Design tokens (driven by Theme Management) ─────────────────────────────────
 // These read the live CSS custom properties written by ThemeProvider
@@ -1692,15 +1693,11 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 </button>
               </div>
 
-              {/* Right: phone image */}
+              {/* Right: animated WhatsApp phone mockup */}
               <div className="flex justify-center lg:justify-end">
-                <Image
-                  src="/demo.png"
-                  alt="Live WhatsApp AI receptionist demo"
-                  width={420}
-                  height={720}
-                  className="h-auto w-full max-w-[330px] drop-shadow-2xl"
-                />
+                <div className="h-auto w-full max-w-[330px] drop-shadow-2xl">
+                  <WhatsAppDemoPhone />
+                </div>
               </div>
             </div>
           </div>
