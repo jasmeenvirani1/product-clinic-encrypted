@@ -1336,7 +1336,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ FEATURE VIDEO / IMAGE BAND ══════════════ */}
         <section className="py-10 sm:py-12 lg:py-16">
-          <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <div className="max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="relative rounded-3xl overflow-hidden shadow-xl shadow-slate-900/10">
               {landingVideo ? (
                 <video
