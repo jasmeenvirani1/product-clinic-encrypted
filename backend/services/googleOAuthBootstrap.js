@@ -303,6 +303,55 @@ function mountGoogleOAuth(app, { authMiddleware } = {}) {
     }
   });
 
+  // PATCH /api/google/calendar/events/:eventId — authenticated. Edits an
+  // existing event's title/start/end directly on the connected account's
+  // Google Calendar (not a local copy — there is no local Appointment model
+  // yet, Google's calendar IS the store of record for this feature today).
+  app.patch("/api/google/calendar/events/:eventId", authMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return res.status(400).json({ success: false, message: "No tenant" });
+
+      const { title, start, end } = req.body || {};
+      if (!title || !start || !end) {
+        return res.status(400).json({ success: false, message: "title, start, and end are required." });
+      }
+
+      const row = await GoogleConnection.findOne({ where: { tenant_id: tenantId, service: "calendar" } });
+      const accessToken = await getValidAccessToken(row);
+      if (!accessToken) {
+        return res.status(409).json({ success: false, message: "Google Calendar is not connected or is disabled." });
+      }
+
+      const event = await googleOAuthClient.updateEvent(accessToken, req.params.eventId, { title, start, end });
+      return res.json({ success: true, event });
+    } catch (err) {
+      log.error(MODULE, "updateEvent", { error: err.message });
+      return res.status(500).json({ success: false, message: "Failed to update the calendar event." });
+    }
+  });
+
+  // DELETE /api/google/calendar/events/:eventId — authenticated. Deletes an
+  // event directly from the connected account's Google Calendar.
+  app.delete("/api/google/calendar/events/:eventId", authMiddleware, async (req, res) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return res.status(400).json({ success: false, message: "No tenant" });
+
+      const row = await GoogleConnection.findOne({ where: { tenant_id: tenantId, service: "calendar" } });
+      const accessToken = await getValidAccessToken(row);
+      if (!accessToken) {
+        return res.status(409).json({ success: false, message: "Google Calendar is not connected or is disabled." });
+      }
+
+      await googleOAuthClient.deleteEvent(accessToken, req.params.eventId);
+      return res.json({ success: true });
+    } catch (err) {
+      log.error(MODULE, "deleteEvent", { error: err.message });
+      return res.status(500).json({ success: false, message: "Failed to delete the calendar event." });
+    }
+  });
+
   // POST /api/google/disconnect — authenticated. Best-effort revoke with
   // Google, then null credential fields (never destroy() the row).
   app.post("/api/google/disconnect", authMiddleware, async (req, res) => {

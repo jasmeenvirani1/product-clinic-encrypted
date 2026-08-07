@@ -56,6 +56,21 @@ export interface GoogleCalendarEventsResponse {
   events: GoogleCalendarEvent[];
 }
 
+export interface GoogleCalendarEventInput {
+  title: string;
+  start: string;
+  end: string;
+}
+
+export interface GoogleCalendarEventResponse {
+  success: boolean;
+  event: GoogleCalendarEvent;
+}
+
+export interface GoogleCalendarDeleteResponse {
+  success: boolean;
+}
+
 const GOOGLE_BASE = "/google";
 
 export const googleService = {
@@ -91,6 +106,24 @@ export const googleService = {
   },
   async calendarEvents(): Promise<GoogleCalendarEventsResponse> {
     const { data } = await api.get<GoogleCalendarEventsResponse>(`${GOOGLE_BASE}/calendar/events`);
+    return data;
+  },
+  // Edits directly on Google's calendar — there is no local Appointment
+  // record yet, so Google Calendar itself is the store of record here.
+  async updateCalendarEvent(
+    eventId: string,
+    input: GoogleCalendarEventInput,
+  ): Promise<GoogleCalendarEventResponse> {
+    const { data } = await api.patch<GoogleCalendarEventResponse>(
+      `${GOOGLE_BASE}/calendar/events/${encodeURIComponent(eventId)}`,
+      input,
+    );
+    return data;
+  },
+  async deleteCalendarEvent(eventId: string): Promise<GoogleCalendarDeleteResponse> {
+    const { data } = await api.delete<GoogleCalendarDeleteResponse>(
+      `${GOOGLE_BASE}/calendar/events/${encodeURIComponent(eventId)}`,
+    );
     return data;
   },
 };

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Empty, Spin, Switch, Tag } from "antd";
-import { Calendar } from "lucide-react";
+import { Alert, App, Button, DatePicker, Empty, Form, Input, Modal, Spin, Switch, Tag } from "antd";
+import { Calendar, Pencil, Trash2 } from "lucide-react";
+import dayjs, { type Dayjs } from "dayjs";
 import {
   googleService,
   type GoogleCalendarEvent,
@@ -10,6 +11,12 @@ import {
   type GoogleServiceId,
 } from "@/services/google.service";
 import { notifyIntegrationsChanged } from "@/utils/integrationEvents";
+
+type EventFormValues = {
+  title: string;
+  start: Dayjs;
+  end: Dayjs;
+};
 
 type Props = {
   /** Called after the redirect-back query param has been read, so the parent
@@ -30,6 +37,7 @@ const STATUS_LABEL: Record<GoogleConnectionStatus, string> = {
 };
 
 export function GoogleConnect({ onRedirectResult, service = "calendar" }: Props) {
+  const { message, modal } = App.useApp();
   const [status, setStatus] = useState<GoogleConnectionStatus>("disconnected");
   const [email, setEmail] = useState<string | null>(null);
   const [grantedScopes, setGrantedScopes] = useState<string[]>([]);
@@ -42,6 +50,10 @@ export function GoogleConnect({ onRedirectResult, service = "calendar" }: Props)
   const [toggling, setToggling] = useState(false);
   const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<GoogleCalendarEvent | null>(null);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [form] = Form.useForm<EventFormValues>();
 
   const loadStatus = useCallback(async () => {
     try {
@@ -171,6 +183,62 @@ export function GoogleConnect({ onRedirectResult, service = "calendar" }: Props)
     }
   };
 
+  const openEditModal = (event: GoogleCalendarEvent) => {
+    setEditingEvent(event);
+    form.setFieldsValue({
+      title: event.title,
+      start: event.start ? dayjs(event.start) : dayjs(),
+      end: event.end ? dayjs(event.end) : dayjs().add(30, "minute"),
+    });
+  };
+
+  // Edits go straight to Google Calendar (PATCH) — there is no local
+  // Appointment record yet, so Google's calendar is the store of record.
+  const handleSaveEvent = async (values: EventFormValues) => {
+    if (!editingEvent) return;
+    if (!values.end.isAfter(values.start)) {
+      void message.error("End time must be after the start time.");
+      return;
+    }
+
+    setSavingEvent(true);
+    try {
+      const { event } = await googleService.updateCalendarEvent(editingEvent.id, {
+        title: values.title,
+        start: values.start.toISOString(),
+        end: values.end.toISOString(),
+      });
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)));
+      void message.success("Event updated.");
+      setEditingEvent(null);
+    } catch {
+      void message.error("Failed to update the event on Google Calendar.");
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = (event: GoogleCalendarEvent) => {
+    modal.confirm({
+      title: "Delete this event?",
+      content: `"${event.title}" will be permanently removed from Google Calendar.`,
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setDeletingEventId(event.id);
+        try {
+          await googleService.deleteCalendarEvent(event.id);
+          setEvents((prev) => prev.filter((e) => e.id !== event.id));
+          void message.success("Event deleted.");
+        } catch {
+          void message.error("Failed to delete the event on Google Calendar.");
+        } finally {
+          setDeletingEventId(null);
+        }
+      },
+    });
+  };
+
   const isConnected = status === "connected";
   const isExpired = status === "token_expired";
   const hasCalendar = grantedScopes.some((s) => s.includes("calendar"));
@@ -239,10 +307,28 @@ export function GoogleConnect({ onRedirectResult, service = "calendar" }: Props)
                 <ul className="space-y-2">
                   {events.map((event) => (
                     <li key={event.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
-                      <span className="truncate text-sm text-slate-700">{event.title}</span>
-                      <span className="whitespace-nowrap text-xs text-slate-400">
-                        {event.start ? new Date(event.start).toLocaleString() : ""}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-slate-700">{event.title}</p>
+                        <p className="whitespace-nowrap text-xs text-slate-400">
+                          {event.start ? new Date(event.start).toLocaleString() : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<Pencil size={14} />}
+                          onClick={() => openEditModal(event)}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          loading={deletingEventId === event.id}
+                          icon={<Trash2 size={14} />}
+                          onClick={() => handleDeleteEvent(event)}
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -255,6 +341,28 @@ export function GoogleConnect({ onRedirectResult, service = "calendar" }: Props)
           </Button>
         </div>
       )}
+
+      <Modal
+        title="Edit event"
+        open={!!editingEvent}
+        onCancel={() => setEditingEvent(null)}
+        onOk={() => form.submit()}
+        okText="Save"
+        confirmLoading={savingEvent}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" onFinish={(values) => void handleSaveEvent(values)}>
+          <Form.Item name="title" label="Title" rules={[{ required: true, message: "Title is required." }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="start" label="Start" rules={[{ required: true, message: "Start time is required." }]}>
+            <DatePicker showTime className="w-full" />
+          </Form.Item>
+          <Form.Item name="end" label="End" rules={[{ required: true, message: "End time is required." }]}>
+            <DatePicker showTime className="w-full" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

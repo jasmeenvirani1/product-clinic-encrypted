@@ -147,10 +147,61 @@ async function listUpcomingEvents(accessToken, { maxResults = 10 } = {}) {
   }));
 }
 
+/** Update an existing event's title/start/end on the connected account's
+ *  primary calendar. `start`/`end` are ISO datetime strings — always sent as
+ *  timed events (dateTime), matching what the UI's edit form collects; this
+ *  never has to round-trip an all-day date-only event back to Google in the
+ *  same all-day shape, since the UI doesn't create/edit all-day events.
+ *  Throws on API failure (e.g. event deleted on Google's side, bad token) —
+ *  caller decides how to surface that. */
+async function updateEvent(accessToken, eventId, { title, start, end }) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ access_token: accessToken });
+  const calendar = google.calendar({ version: "v3", auth: client });
+
+  const { data } = await calendar.events.patch({
+    calendarId: "primary",
+    eventId,
+    requestBody: {
+      summary: title,
+      start: { dateTime: start },
+      end: { dateTime: end },
+    },
+  });
+
+  return {
+    id: data.id,
+    title: data.summary || "(No title)",
+    start: data.start?.dateTime || data.start?.date || null,
+    end: data.end?.dateTime || data.end?.date || null,
+    htmlLink: data.htmlLink || null,
+  };
+}
+
+/** Delete an event from the connected account's primary calendar. Treats an
+ *  already-gone event (404/410 — deleted directly on Google's side since we
+ *  last listed it) as a successful no-op rather than an error, since the
+ *  caller's intent ("this event should not exist") is already satisfied. */
+async function deleteEvent(accessToken, eventId) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ access_token: accessToken });
+  const calendar = google.calendar({ version: "v3", auth: client });
+
+  try {
+    await calendar.events.delete({ calendarId: "primary", eventId });
+  } catch (err) {
+    const code = err?.code || err?.response?.status;
+    if (code === 404 || code === 410) return;
+    throw err;
+  }
+}
+
 module.exports = {
   getAuthUrl,
   exchangeCode,
   refreshAccessToken,
   revokeToken,
+  updateEvent,
+  deleteEvent,
   listUpcomingEvents,
 };
