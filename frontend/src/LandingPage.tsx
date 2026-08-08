@@ -870,7 +870,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
     const timeout = window.setTimeout(() => {
       setHeroIntroCharCount((count) => Math.min(count + 1, heroIntroText.length));
-    }, 55);
+    }, 100);
 
     return () => window.clearTimeout(timeout);
   }, [hasTypedHeroIntro, heroIntroCharCount, heroIntroText.length, reducedMotion]);
@@ -886,7 +886,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     const currentWord = t.heroTypedWords[typedWordIndex];
     const isWordComplete = !isDeletingTypedText && typedText === currentWord;
     const isWordCleared = isDeletingTypedText && typedText === '';
-    const timeoutMs = isWordComplete ? 1400 : isDeletingTypedText ? 45 : 80;
+    const timeoutMs = isWordComplete ? 1800 : isDeletingTypedText ? 70 : 130;
 
     const timeout = window.setTimeout(() => {
       if (isWordComplete) {
