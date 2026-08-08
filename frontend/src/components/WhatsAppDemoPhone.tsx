@@ -21,7 +21,7 @@ interface ScriptStep {
   cardTitle?: string;
   cardBody?: string;
   /** details variant: label/value rows with an icon key. */
-  detailRows?: { icon: "tooth" | "calendar" | "clock" | "pin"; text: string }[];
+  detailRows?: { icon: "tooth" | "calendar" | "clock" | "pin" | "receipt" | "pill" | "doctor"; text: string }[];
   detailTitle?: string;
 }
 
@@ -96,14 +96,27 @@ const SCRIPTS: ScriptStep[][] = [
     {
       type: "out",
       typingDur: 1600,
-      text: "You're right, there was a duplicate charge of $85 on the 12th. I've refunded it — you should see it in 3-5 business days.",
+      text: "You're right, there was a duplicate charge on the 12th. Here's the refund I've issued:",
       time: "11:16 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1200,
+      text: "",
+      time: "11:16 AM",
+      variant: "details",
+      detailTitle: "💳 Refund Issued",
+      detailRows: [
+        { icon: "receipt", text: "Duplicate charge · $85.00" },
+        { icon: "calendar", text: "Billed on the 12th" },
+        { icon: "clock", text: "3-5 business days" },
+      ],
     },
     {
       type: "in",
       typingDur: 600,
       text: "That was fast, thank you!",
-      time: "11:16 AM",
+      time: "11:17 AM",
     },
     {
       type: "out",
@@ -135,14 +148,28 @@ const SCRIPTS: ScriptStep[][] = [
     {
       type: "out",
       typingDur: 1500,
-      text: "Got it — I've sent the refill request to Dr. Rao for approval. It's usually ready at the pharmacy within 2 hours.",
+      text: "Got it — I've sent the refill request to Dr. Rao for approval. Here's your request summary:",
       time: "3:07 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1100,
+      text: "",
+      time: "3:07 PM",
+      variant: "details",
+      detailTitle: "💊 Refill Requested",
+      detailRows: [
+        { icon: "pill", text: "Amoxicillin · 500mg" },
+        { icon: "doctor", text: "Prescribed by Dr. Rao" },
+        { icon: "clock", text: "Ready in ~2 hours" },
+        { icon: "pin", text: "RiverCare Pharmacy" },
+      ],
     },
     {
       type: "in",
       typingDur: 500,
       text: "Perfect, thank you!",
-      time: "3:07 PM",
+      time: "3:08 PM",
     },
   ],
   // 4) After-hours triage — patient reaches out with an urgent symptom, AI
@@ -175,8 +202,11 @@ const SCRIPTS: ScriptStep[][] = [
     {
       type: "out",
       typingDur: 1000,
-      text: "Done ✅ Dr. Iyer will see you at 9:15 PM tonight. Please head over whenever you're ready.",
+      text: "",
       time: "8:54 PM",
+      variant: "card",
+      cardTitle: "Urgent Slot Booked!",
+      cardBody: "Dr. Iyer will see your daughter tonight at 9:15 PM. Please head over whenever you're ready.",
     },
   ],
 ];
@@ -224,10 +254,40 @@ function IconPin() {
   );
 }
 
-function DetailIcon({ icon }: { icon: "tooth" | "calendar" | "clock" | "pin" }) {
+function IconReceipt() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="#128C7E" strokeWidth={2} className="wadp-row-icon">
+      <path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z" strokeLinejoin="round" />
+      <path d="M8.5 8h7M8.5 12h7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPill() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="#128C7E" strokeWidth={2} className="wadp-row-icon">
+      <rect x="3.5" y="9" width="17" height="8" rx="4" transform="rotate(-40 12 13)" />
+      <path d="M9.5 9.7 14.3 16.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconDoctor() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="#128C7E" strokeWidth={2} className="wadp-row-icon">
+      <circle cx="12" cy="7" r="3.2" />
+      <path d="M4.5 20c0-4.1 3.4-7 7.5-7s7.5 2.9 7.5 7" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DetailIcon({ icon }: { icon: "tooth" | "calendar" | "clock" | "pin" | "receipt" | "pill" | "doctor" }) {
   if (icon === "tooth") return <IconTooth />;
   if (icon === "calendar") return <IconCalendar />;
   if (icon === "clock") return <IconClock />;
+  if (icon === "receipt") return <IconReceipt />;
+  if (icon === "pill") return <IconPill />;
+  if (icon === "doctor") return <IconDoctor />;
   return <IconPin />;
 }
 
