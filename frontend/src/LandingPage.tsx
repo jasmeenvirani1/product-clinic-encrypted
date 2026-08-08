@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { Spin } from 'antd';
+import { Spin, Switch } from 'antd';
 import { APP_NAME, COPYRIGHT_YEAR } from './constants/brand';
 import { useThemeColors } from '@/providers/ThemeProvider';
 import { LogoMark } from './components/LogoMark';
@@ -801,6 +801,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   const [isCustomPlanModalOpen, setIsCustomPlanModalOpen] = React.useState(false);
   const [plans, setPlans] = React.useState<PlanData[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
+  const [billingCycle, setBillingCycle] = React.useState<'monthly' | 'yearly'>('monthly');
   const [footerPages, setFooterPages] = React.useState<FooterPageLink[]>([]);
   const [heroContent, setHeroContent] = React.useState<HeroContent>(DEFAULT_HERO_CONTENT);
   const [landingVideo, setLandingVideo] = React.useState<{ file_path: string; title?: string } | null>(null);
@@ -1119,8 +1120,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     }
     const midIndex = Math.floor((plans.length - 1) / 2);
     return plans.map((plan, i) => {
-      const displayPrice = plan.period === 'yearly' ? plan.yearly_price : plan.monthly_price || plan.price;
-      const period = plan.period === 'yearly' ? t.pricingYearly : t.pricingMonthly;
+      const displayPrice = billingCycle === 'yearly' ? plan.yearly_price || plan.price : plan.monthly_price || plan.price;
+      const period = billingCycle === 'yearly' ? t.pricingYearly : t.pricingMonthly;
       return {
         name: plan.plan_name,
         priceLabel: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : t.pricingCustom,
@@ -1135,7 +1136,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         highlight: i === midIndex,
       };
     });
-  }, [plans]);
+  }, [plans, billingCycle]);
 
   // Map API specialities onto the industries section; fall back to static copy
   // (with the goLogin CTA) if the API list is empty or the fetch failed.
@@ -1754,6 +1755,26 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
+
+            <div className="flex items-center justify-center gap-3 mb-10">
+              <span
+                className="text-sm font-semibold"
+                style={{ color: billingCycle === 'monthly' ? NAVY : BODY }}
+              >
+                Monthly
+              </span>
+              <Switch
+                checked={billingCycle === 'yearly'}
+                onChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+                style={billingCycle === 'yearly' ? { background: NAVY } : undefined}
+              />
+              <span
+                className="text-sm font-semibold"
+                style={{ color: billingCycle === 'yearly' ? NAVY : BODY }}
+              >
+                Yearly
+              </span>
+            </div>
 
             {plansLoading ? (
               <div className="flex justify-center py-16"><Spin size="large" /></div>
