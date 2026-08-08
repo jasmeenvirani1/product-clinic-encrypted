@@ -79,134 +79,113 @@ const SCRIPTS: ScriptStep[][] = [
       ],
     },
   ],
-  // 2) Billing question — quick plain-text back-and-forth about an invoice.
-  [
-    {
-      type: "in",
-      typingDur: 800,
-      text: "Hi, I got charged twice for my last visit. Can you check that?",
-      time: "11:14 AM",
-    },
-    {
-      type: "out",
-      typingDur: 1200,
-      text: "Hi James, sorry about that! Let me pull up your billing record — one moment.",
-      time: "11:14 AM",
-    },
-    {
-      type: "out",
-      typingDur: 1600,
-      text: "You're right, there was a duplicate charge on the 12th. Here's the refund I've issued:",
-      time: "11:16 AM",
-    },
-    {
-      type: "out",
-      typingDur: 1200,
-      text: "",
-      time: "11:16 AM",
-      variant: "details",
-      detailTitle: "💳 Refund Issued",
-      detailRows: [
-        { icon: "receipt", text: "Duplicate charge · $85.00" },
-        { icon: "calendar", text: "Billed on the 12th" },
-        { icon: "clock", text: "3-5 business days" },
-      ],
-    },
-    {
-      type: "in",
-      typingDur: 600,
-      text: "That was fast, thank you!",
-      time: "11:17 AM",
-    },
-    {
-      type: "out",
-      typingDur: 700,
-      text: "Anytime 😊 Let us know if anything else comes up.",
-      time: "11:17 AM",
-    },
-  ],
-  // 3) Prescription refill — patient requests a refill, AI checks and confirms.
+  // 2) Multi-language patient query — patient writes in Hindi, AI replies
+  // fluently in kind, showcasing native multi-language support.
   [
     {
       type: "in",
       typingDur: 900,
-      text: "Can I get a refill on my prescription? I'm almost out.",
-      time: "3:05 PM",
+      text: "नमस्ते, क्या मुझे कल डॉ. मेहता से अपॉइंटमेंट मिल सकती है?",
+      time: "10:18 AM",
     },
     {
       type: "out",
       typingDur: 1300,
-      text: "Sure! Which medication would you like refilled?",
-      time: "3:05 PM",
+      text: "नमस्ते! 👋 जी बिल्कुल, डॉ. मेहता कल दोपहर 3:00 बजे उपलब्ध हैं। क्या मैं यह अपॉइंटमेंट बुक कर दूं?",
+      time: "10:18 AM",
     },
     {
       type: "in",
-      typingDur: 800,
-      text: "The amoxicillin Dr. Rao prescribed last month.",
-      time: "3:06 PM",
-    },
-    {
-      type: "out",
-      typingDur: 1500,
-      text: "Got it — I've sent the refill request to Dr. Rao for approval. Here's your request summary:",
-      time: "3:07 PM",
+      typingDur: 700,
+      text: "हां, बुक कर दीजिए। धन्यवाद।",
+      time: "10:19 AM",
     },
     {
       type: "out",
       typingDur: 1100,
       text: "",
-      time: "3:07 PM",
-      variant: "details",
-      detailTitle: "💊 Refill Requested",
-      detailRows: [
-        { icon: "pill", text: "Amoxicillin · 500mg" },
-        { icon: "doctor", text: "Prescribed by Dr. Rao" },
-        { icon: "clock", text: "Ready in ~2 hours" },
-        { icon: "pin", text: "RiverCare Pharmacy" },
-      ],
+      time: "10:19 AM",
+      variant: "card",
+      cardTitle: "Appointment Confirmed!",
+      cardBody: "आपकी अपॉइंटमेंट डॉ. मेहता के साथ कल दोपहर 3:00 बजे के लिए पक्की हो गई है। धन्यवाद! 🙏",
+    },
+  ],
+  // 3) Automated reminder confirmation — AI proactively reaches out ahead of
+  // an upcoming visit, patient confirms, showcasing outbound automation.
+  [
+    {
+      type: "out",
+      typingDur: 1000,
+      text: "Hi Meera 👋 This is a reminder that you have an appointment with Dr. Shah tomorrow at 11:00 AM.",
+      time: "6:00 PM",
+    },
+    {
+      type: "out",
+      typingDur: 900,
+      text: "Reply YES to confirm, or RESCHEDULE if you'd like a different time.",
+      time: "6:00 PM",
     },
     {
       type: "in",
       typingDur: 500,
-      text: "Perfect, thank you!",
-      time: "3:08 PM",
+      text: "YES",
+      time: "6:02 PM",
+    },
+    {
+      type: "out",
+      typingDur: 900,
+      text: "",
+      time: "6:02 PM",
+      variant: "details",
+      detailTitle: "✅ Visit Confirmed",
+      detailRows: [
+        { icon: "doctor", text: "Dr. Shah · General Checkup" },
+        { icon: "calendar", text: "Tomorrow" },
+        { icon: "clock", text: "11:00 AM" },
+      ],
+    },
+    {
+      type: "out",
+      typingDur: 700,
+      text: "Great, see you then! We'll send another reminder 1 hour before your visit.",
+      time: "6:02 PM",
     },
   ],
-  // 4) After-hours triage — patient reaches out with an urgent symptom, AI
-  // triages and offers the next available emergency slot.
+  // 4) After-visit follow-up — AI checks in post-visit and collects
+  // feedback automatically, showcasing the follow-up workflow.
   [
     {
-      type: "in",
-      typingDur: 900,
-      text: "My daughter has a high fever and won't stop crying. Can someone see her tonight?",
-      time: "8:52 PM",
-    },
-    {
       type: "out",
-      typingDur: 1200,
-      text: "I'm so sorry to hear that. If it's a medical emergency please call 911 or go to the nearest ER.",
-      time: "8:52 PM",
-    },
-    {
-      type: "out",
-      typingDur: 1500,
-      text: "If it's manageable, Dr. Iyer has an urgent-care slot open right now — I can book it for you immediately.",
-      time: "8:53 PM",
+      typingDur: 1000,
+      text: "Hi Arjun 👋 Thanks for visiting RiverCare Clinic today! How was your experience with Dr. Iyer?",
+      time: "5:30 PM",
     },
     {
       type: "in",
       typingDur: 700,
-      text: "Yes please, book it.",
-      time: "8:53 PM",
+      text: "It was great, very quick and Dr. Iyer explained everything clearly.",
+      time: "5:32 PM",
     },
     {
       type: "out",
-      typingDur: 1000,
+      typingDur: 1100,
+      text: "That's wonderful to hear! 🎉 Would you mind leaving us a quick rating?",
+      time: "5:32 PM",
+    },
+    {
+      type: "in",
+      typingDur: 500,
+      text: "⭐⭐⭐⭐⭐",
+      time: "5:33 PM",
+    },
+    {
+      type: "out",
+      typingDur: 900,
       text: "",
-      time: "8:54 PM",
+      time: "5:33 PM",
       variant: "card",
-      cardTitle: "Urgent Slot Booked!",
-      cardBody: "Dr. Iyer will see your daughter tonight at 9:15 PM. Please head over whenever you're ready.",
+      cardTitle: "Feedback Recorded!",
+      cardBody: "Thank you, Arjun! Your 5-star review has been logged. We've also scheduled a follow-up reminder for your next checkup in 6 months.",
     },
   ],
 ];
@@ -596,10 +575,11 @@ type TimelineItem =
 /**
  * Self-contained animated WhatsApp conversation mockup inside a realistic
  * iPhone frame. Cycles through several independent conversation scenarios
- * (new patient inquiry, billing question, prescription refill, after-hours
- * triage) one after another — 1 → 2 → 3 → 4 → 1 … — so the same chat isn't
- * replayed every loop, using framer-motion + a setTimeout-driven step
- * machine, matching the pattern already used by HeroChatAnimation.
+ * (new patient inquiry, multi-language query, automated reminder
+ * confirmation, after-visit follow-up) one after another — 1 → 2 → 3 → 4 → 1
+ * … — so the same chat isn't replayed every loop, using framer-motion + a
+ * setTimeout-driven step machine, matching the pattern already used by
+ * HeroChatAnimation.
  */
 export function WhatsAppDemoPhone() {
   const [items, setItems] = React.useState<TimelineItem[]>([]);
