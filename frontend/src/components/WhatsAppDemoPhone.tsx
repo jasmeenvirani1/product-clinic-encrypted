@@ -20,26 +20,20 @@ interface ScriptStep {
 /** Day separator chip, always the first step of a cycle. */
 const DAY_CHIP = "TODAY";
 
-// Conversation script — mirrors the approved reference design exactly:
-// greeting → booking request → available-slots list → patient picks a time →
+// Conversation script — patient opens the chat, AI/clinic replies:
+// booking request → greeting + available-slots list → patient picks a time →
 // confirmation card → appointment-details card, then the chat clears and loops.
 const SCRIPT: ScriptStep[] = [
   {
-    type: "in",
-    typingDur: 800,
-    text: "Hi Sarah 👋 Welcome to RiverCare Clinic. How can I help you today?",
-    time: "9:41 AM",
-  },
-  {
     type: "out",
     typingDur: 900,
-    text: "I'd like to book an appointment with Dr. Kapoor tomorrow.",
+    text: "Hi, I'd like to book an appointment with Dr. Kapoor tomorrow.",
     time: "9:41 AM",
   },
   {
     type: "in",
     typingDur: 1300,
-    text: "Absolutely! I'd be happy to help you book an appointment with Dr. Kapoor. Here are the available slots for tomorrow:",
+    text: "Hi Sarah 👋 Welcome to RiverCare Clinic. I'd be happy to help you book an appointment with Dr. Kapoor. Here are the available slots for tomorrow:",
     time: "9:41 AM",
     variant: "slots",
   },
