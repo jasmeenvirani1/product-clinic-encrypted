@@ -15,48 +15,170 @@ interface ScriptStep {
   time: string;
   /** Which special bubble variant to render instead of a plain text bubble. */
   variant?: "slots" | "card" | "details";
+  /** slots variant: the list of times offered. */
+  slotTimes?: string[];
+  /** card variant: headline + body text for the confirmation card. */
+  cardTitle?: string;
+  cardBody?: string;
+  /** details variant: label/value rows with an icon key. */
+  detailRows?: { icon: "tooth" | "calendar" | "clock" | "pin"; text: string }[];
+  detailTitle?: string;
 }
 
 /** Day separator chip, always the first step of a cycle. */
 const DAY_CHIP = "TODAY";
 
-// Conversation script — patient opens the chat, AI/clinic replies:
-// booking request → greeting + available-slots list → patient picks a time →
-// confirmation card → appointment-details card, then the chat clears and loops.
-const SCRIPT: ScriptStep[] = [
-  {
-    type: "in",
-    typingDur: 900,
-    text: "Hi, I'd like to book an appointment with Dr. Kapoor tomorrow.",
-    time: "9:41 AM",
-  },
-  {
-    type: "out",
-    typingDur: 1300,
-    text: "Hi Sarah 👋 Welcome to RiverCare Clinic. I'd be happy to help you book an appointment with Dr. Kapoor. Here are the available slots for tomorrow:",
-    time: "9:41 AM",
-    variant: "slots",
-  },
-  {
-    type: "in",
-    typingDur: 700,
-    text: "2:30 PM works for me.",
-    time: "9:42 AM",
-  },
-  {
-    type: "out",
-    typingDur: 1400,
-    text: "",
-    time: "9:42 AM",
-    variant: "card",
-  },
-  {
-    type: "out",
-    typingDur: 900,
-    text: "",
-    time: "9:42 AM",
-    variant: "details",
-  },
+// Four independent conversation scenarios. Each plays out in full, the chat
+// clears, and the next scenario starts — cycling 1 → 2 → 3 → 4 → 1 … so the
+// same conversation isn't shown on every loop.
+const SCRIPTS: ScriptStep[][] = [
+  // 1) New patient inquiry — patient opens, AI answers + offers consultation
+  // slots, patient picks one, AI confirms + sends the visit details.
+  [
+    {
+      type: "in",
+      typingDur: 900,
+      text: "Hi, do you offer teeth whitening consultations? I'd like to book one this week.",
+      time: "9:41 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1300,
+      text: "Hi Sarah 👋 Welcome to RiverCare Clinic. Yes, we do! Here are the available consultation slots this week:",
+      time: "9:41 AM",
+      variant: "slots",
+      slotTimes: ["Wed, 1:00 PM", "Wed, 2:30 PM", "Thu, 4:00 PM"],
+    },
+    {
+      type: "in",
+      typingDur: 700,
+      text: "Wednesday 2:30 PM works for me.",
+      time: "9:42 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1400,
+      text: "",
+      time: "9:42 AM",
+      variant: "card",
+      cardTitle: "Appointment Confirmed!",
+      cardBody: "Your teeth whitening consultation with Dr. Kapoor is scheduled for Wednesday at 2:30 PM. You'll receive a reminder before your visit.",
+    },
+    {
+      type: "out",
+      typingDur: 900,
+      text: "",
+      time: "9:42 AM",
+      variant: "details",
+      detailTitle: "📋 Appointment Details",
+      detailRows: [
+        { icon: "tooth", text: "Dr. Kapoor · Teeth Whitening" },
+        { icon: "calendar", text: "Wednesday" },
+        { icon: "clock", text: "2:30 PM" },
+        { icon: "pin", text: "RiverCare Clinic" },
+      ],
+    },
+  ],
+  // 2) Billing question — quick plain-text back-and-forth about an invoice.
+  [
+    {
+      type: "in",
+      typingDur: 800,
+      text: "Hi, I got charged twice for my last visit. Can you check that?",
+      time: "11:14 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1200,
+      text: "Hi James, sorry about that! Let me pull up your billing record — one moment.",
+      time: "11:14 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1600,
+      text: "You're right, there was a duplicate charge of $85 on the 12th. I've refunded it — you should see it in 3-5 business days.",
+      time: "11:16 AM",
+    },
+    {
+      type: "in",
+      typingDur: 600,
+      text: "That was fast, thank you!",
+      time: "11:16 AM",
+    },
+    {
+      type: "out",
+      typingDur: 700,
+      text: "Anytime 😊 Let us know if anything else comes up.",
+      time: "11:17 AM",
+    },
+  ],
+  // 3) Prescription refill — patient requests a refill, AI checks and confirms.
+  [
+    {
+      type: "in",
+      typingDur: 900,
+      text: "Can I get a refill on my prescription? I'm almost out.",
+      time: "3:05 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1300,
+      text: "Sure! Which medication would you like refilled?",
+      time: "3:05 PM",
+    },
+    {
+      type: "in",
+      typingDur: 800,
+      text: "The amoxicillin Dr. Rao prescribed last month.",
+      time: "3:06 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1500,
+      text: "Got it — I've sent the refill request to Dr. Rao for approval. It's usually ready at the pharmacy within 2 hours.",
+      time: "3:07 PM",
+    },
+    {
+      type: "in",
+      typingDur: 500,
+      text: "Perfect, thank you!",
+      time: "3:07 PM",
+    },
+  ],
+  // 4) After-hours triage — patient reaches out with an urgent symptom, AI
+  // triages and offers the next available emergency slot.
+  [
+    {
+      type: "in",
+      typingDur: 900,
+      text: "My daughter has a high fever and won't stop crying. Can someone see her tonight?",
+      time: "8:52 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1200,
+      text: "I'm so sorry to hear that. If it's a medical emergency please call 911 or go to the nearest ER.",
+      time: "8:52 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1500,
+      text: "If it's manageable, Dr. Iyer has an urgent-care slot open right now — I can book it for you immediately.",
+      time: "8:53 PM",
+    },
+    {
+      type: "in",
+      typingDur: 700,
+      text: "Yes please, book it.",
+      time: "8:53 PM",
+    },
+    {
+      type: "out",
+      typingDur: 1000,
+      text: "Done ✅ Dr. Iyer will see you at 9:15 PM tonight. Please head over whenever you're ready.",
+      time: "8:54 PM",
+    },
+  ],
 ];
 
 // Post-reveal hold time for each step, before moving to the next one (ms).
@@ -100,6 +222,13 @@ function IconPin() {
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
     </svg>
   );
+}
+
+function DetailIcon({ icon }: { icon: "tooth" | "calendar" | "clock" | "pin" }) {
+  if (icon === "tooth") return <IconTooth />;
+  if (icon === "calendar") return <IconCalendar />;
+  if (icon === "clock") return <IconClock />;
+  return <IconPin />;
 }
 
 function IconCheck() {
@@ -208,9 +337,9 @@ function SlotsBubble({ step }: { step: ScriptStep }) {
         transition={{ duration: 0.45, ease: [0.34, 1.6, 0.64, 1] }}
       >
         <div className="wadp-s-title">{step.text}</div>
-        <div className="wadp-s-row"><IconCalendar />1:00 PM</div>
-        <div className="wadp-s-row"><IconCalendar />2:30 PM</div>
-        <div className="wadp-s-row"><IconCalendar />4:00 PM</div>
+        {(step.slotTimes ?? []).map((slot) => (
+          <div key={slot} className="wadp-s-row"><IconCalendar />{slot}</div>
+        ))}
         <div className="wadp-s-more">View more slots</div>
         <span className="wadp-meta-spacer-block" aria-hidden="true">{step.time}</span>
         <span className="wadp-meta">
@@ -240,11 +369,11 @@ function ConfirmedCard({ step }: { step: ScriptStep }) {
       >
         <div className="wadp-card-head-confirm">
           <span className="wadp-check-circle"><IconCheck /></span>
-          Appointment Confirmed!
+          {step.cardTitle ?? "Appointment Confirmed!"}
         </div>
         <div className="wadp-card-body">
           <div className="wadp-card-row wadp-card-row-plain">
-            Your appointment with Dr. Kapoor is scheduled for tomorrow at 2:30 PM. You&apos;ll receive a reminder before your visit.
+            {step.cardBody}
             <span className="wadp-meta-spacer" aria-hidden="true">{step.time}</span>
           </div>
         </div>
@@ -273,11 +402,13 @@ function DetailsCard({ step }: { step: ScriptStep }) {
         animate={{ y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: [0.34, 1.6, 0.64, 1] }}
       >
-        <div className="wadp-d-title">📋 Appointment Details</div>
-        <div className="wadp-d-row"><IconTooth />Dr. Kapoor</div>
-        <div className="wadp-d-row"><IconCalendar />Tomorrow</div>
-        <div className="wadp-d-row"><IconClock />2:30 PM</div>
-        <div className="wadp-d-row"><IconPin />RiverCare Clinic</div>
+        <div className="wadp-d-title">{step.detailTitle ?? "📋 Appointment Details"}</div>
+        {(step.detailRows ?? []).map((row) => (
+          <div key={row.text} className="wadp-d-row">
+            <DetailIcon icon={row.icon} />
+            {row.text}
+          </div>
+        ))}
         <span className="wadp-meta-spacer-block" aria-hidden="true">{step.time}</span>
         <span className="wadp-meta">
           <span>{step.time}</span>
@@ -404,9 +535,10 @@ type TimelineItem =
 
 /**
  * Self-contained animated WhatsApp conversation mockup inside a realistic
- * iPhone frame. Drives the same scripted sequence as the approved reference
- * design (day chip → greeting → booking request → slots → confirmation →
- * details → clear → loop) using framer-motion + a setTimeout-driven step
+ * iPhone frame. Cycles through several independent conversation scenarios
+ * (new patient inquiry, billing question, prescription refill, after-hours
+ * triage) one after another — 1 → 2 → 3 → 4 → 1 … — so the same chat isn't
+ * replayed every loop, using framer-motion + a setTimeout-driven step
  * machine, matching the pattern already used by HeroChatAnimation.
  */
 export function WhatsAppDemoPhone() {
@@ -424,12 +556,16 @@ export function WhatsAppDemoPhone() {
       });
 
     async function playScript() {
+      let scriptIndex = 0;
       while (!cancelled) {
         setItems([{ kind: "day" }]);
         await wait(500);
         if (cancelled) return;
 
-        for (const step of SCRIPT) {
+        const script = SCRIPTS[scriptIndex % SCRIPTS.length];
+        scriptIndex += 1;
+
+        for (const step of script) {
           if (cancelled) return;
           const isAI = step.type === "out";
 
