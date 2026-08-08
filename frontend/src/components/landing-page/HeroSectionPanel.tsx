@@ -203,11 +203,17 @@ export function HeroSectionPanel({ onActionsChange }: HeroSectionPanelProps) {
       </div>
 
       <Form layout="vertical">
-        <Form.Item label="Chat typing speed (ms)">
+        <Form.Item
+          label="Chat typing speed (ms)"
+          extra="400 is the floor built into the animation — values at or below it have no visible effect. Try 1200+ for a noticeably slower typing indicator and message cadence."
+        >
           <InputNumber value={content.typing_speed_ms} min={400} step={100} style={{ width: 200 }}
             onChange={(v) => patch({ typing_speed_ms: Number(v) || 1200 })} />
         </Form.Item>
-        <Form.Item label="Workflow step interval (ms)">
+        <Form.Item
+          label="Workflow step interval (ms)"
+          extra="600 is the floor built into the animation — values at or below it have no visible effect. Try 1500+ for a noticeably slower step-by-step highlight."
+        >
           <InputNumber value={content.step_interval_ms} min={600} step={100} style={{ width: 200 }}
             onChange={(v) => patch({ step_interval_ms: Number(v) || 1500 })} />
         </Form.Item>
