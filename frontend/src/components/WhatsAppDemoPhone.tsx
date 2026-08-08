@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Side = "in" | "out"; // 'in' = AI/clinic (left, white) · 'out' = patient (right, green)
+type Side = "in" | "out"; // 'in' = patient (left, white) · 'out' = AI/clinic (right, green)
 
 interface ScriptStep {
   type: Side;
@@ -25,33 +25,33 @@ const DAY_CHIP = "TODAY";
 // confirmation card → appointment-details card, then the chat clears and loops.
 const SCRIPT: ScriptStep[] = [
   {
-    type: "out",
+    type: "in",
     typingDur: 900,
     text: "Hi, I'd like to book an appointment with Dr. Kapoor tomorrow.",
     time: "9:41 AM",
   },
   {
-    type: "in",
+    type: "out",
     typingDur: 1300,
     text: "Hi Sarah 👋 Welcome to RiverCare Clinic. I'd be happy to help you book an appointment with Dr. Kapoor. Here are the available slots for tomorrow:",
     time: "9:41 AM",
     variant: "slots",
   },
   {
-    type: "out",
+    type: "in",
     typingDur: 700,
     text: "2:30 PM works for me.",
     time: "9:42 AM",
   },
   {
-    type: "in",
+    type: "out",
     typingDur: 1400,
     text: "",
     time: "9:42 AM",
     variant: "card",
   },
   {
-    type: "in",
+    type: "out",
     typingDur: 900,
     text: "",
     time: "9:42 AM",
@@ -195,14 +195,14 @@ function MessageBubble({ step, showRead }: { step: ScriptStep; showRead: boolean
 function SlotsBubble({ step }: { step: ScriptStep }) {
   return (
     <motion.div
-      className="wadp-row justify-start"
+      className="wadp-row justify-end"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.08 }}
     >
       <motion.div
-        className="wadp-bubble wadp-bubble-in wadp-bubble-slots"
-        style={{ transformOrigin: "left bottom" }}
+        className="wadp-bubble wadp-bubble-out wadp-bubble-slots"
+        style={{ transformOrigin: "right bottom" }}
         initial={{ y: 16, scale: 0.92 }}
         animate={{ y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: [0.34, 1.6, 0.64, 1] }}
@@ -226,14 +226,14 @@ function SlotsBubble({ step }: { step: ScriptStep }) {
 function ConfirmedCard({ step }: { step: ScriptStep }) {
   return (
     <motion.div
-      className="wadp-row justify-start"
+      className="wadp-row justify-end"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.08 }}
     >
       <motion.div
-        className="wadp-bubble wadp-bubble-in wadp-bubble-card"
-        style={{ transformOrigin: "left bottom" }}
+        className="wadp-bubble wadp-bubble-out wadp-bubble-card"
+        style={{ transformOrigin: "right bottom" }}
         initial={{ y: 16, scale: 0.92 }}
         animate={{ y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.34, 1.7, 0.64, 1] }}
@@ -261,14 +261,14 @@ function ConfirmedCard({ step }: { step: ScriptStep }) {
 function DetailsCard({ step }: { step: ScriptStep }) {
   return (
     <motion.div
-      className="wadp-row justify-start"
+      className="wadp-row justify-end"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.08 }}
     >
       <motion.div
-        className="wadp-bubble wadp-bubble-in wadp-bubble-details"
-        style={{ transformOrigin: "left bottom" }}
+        className="wadp-bubble wadp-bubble-out wadp-bubble-details"
+        style={{ transformOrigin: "right bottom" }}
         initial={{ y: 16, scale: 0.92 }}
         animate={{ y: 0, scale: 1 }}
         transition={{ duration: 0.45, ease: [0.34, 1.6, 0.64, 1] }}
@@ -431,7 +431,7 @@ export function WhatsAppDemoPhone() {
 
         for (const step of SCRIPT) {
           if (cancelled) return;
-          const isAI = step.type === "in";
+          const isAI = step.type === "out";
 
           if (isAI) {
             setStatusText("typing…");
