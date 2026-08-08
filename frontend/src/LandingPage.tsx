@@ -1690,7 +1690,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ DEMO BAND ══════════════ */}
         <section id="cta" className="scroll-mt-24 py-10 sm:py-12 lg:py-16" style={{ background: NAVY }}>
-          <div className="max-w-5xl mx-auto px-5 sm:px-8">
+          <div className="max-w-6xl 2xl:max-w-[84rem] mx-auto px-5 sm:px-8">
             <div className="grid lg:grid-cols-2 gap-10 items-center">
               {/* Left: copy */}
               <div className="text-white">
