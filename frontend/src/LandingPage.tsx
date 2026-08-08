@@ -163,8 +163,8 @@ const t = {
     // Hero
     heroBadge1: 'Built for healthcare operations',
     heroBadge2: 'HIPAA-ready infrastructure',
-    heroTitle1: 'Your Clinic Never',
-    heroTitle2: 'Misses Another',
+    heroTitle1: '24/7 AI Support So Your',
+    heroTitle2: 'Clinic Never Misses Another',
     heroTitle3: 'Patient.',
     heroTypedWords: [
       'Patient.',
@@ -1293,7 +1293,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   <ShieldCheck size={15} /> {t.heroBadge2}
                 </span>
               </div>
-              <h1 className="font-heading text-[1.9rem] sm:text-5xl lg:text-[3.1rem] 2xl:text-[3.6rem] font-bold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
+              <h1 className="font-heading text-[1.9rem] sm:text-[2.6rem] lg:text-[2.6rem] 2xl:text-[3rem] font-bold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
                 <span className="block whitespace-nowrap">
                   {visibleHeroIntroLines[0] || '\u00A0'}
                   {!hasTypedHeroIntro && activeHeroIntroLineIndex === 0 && renderHeroCursor(NAVY)}
