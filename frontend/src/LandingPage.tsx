@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { Spin, Switch } from 'antd';
+import { Spin } from 'antd';
 import { APP_NAME, COPYRIGHT_YEAR } from './constants/brand';
 import { useThemeColors } from '@/providers/ThemeProvider';
 import { LogoMark } from './components/LogoMark';
@@ -336,6 +336,7 @@ const t = {
     pricingCtaStart: 'Get Started',
     pricingCtaBook: 'Book Demo',
     pricingCtaContact: 'Contact Sales',
+    pricingCtaTrial: 'Start 14 Day Free Trial',
     pricingLoading: 'Loading plans…',
     pricingFallback: [
       { name: 'Starter', price: '$499', period: '/mo', eyebrow: 'FOR GETTING STARTED', features: [
@@ -1138,6 +1139,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     });
   }, [plans, billingCycle]);
 
+  // Average % saved by paying yearly vs. 12x the monthly price, derived from
+  // whichever plans carry both prices — drives the "Save X%" toggle badge
+  // instead of a guessed/hardcoded number.
+  const yearlySavingsPct = React.useMemo(() => {
+    const withBoth = plans.filter((p) => p.monthly_price > 0 && p.yearly_price > 0);
+    if (withBoth.length === 0) return 0;
+    const pct =
+      withBoth.reduce((sum, p) => sum + (1 - p.yearly_price / (p.monthly_price * 12)), 0) / withBoth.length;
+    return Math.round(pct * 100);
+  }, [plans]);
+
   // Map API specialities onto the industries section; fall back to static copy
   // (with the goLogin CTA) if the API list is empty or the fetch failed.
   const industryItems = React.useMemo(() => {
@@ -1756,24 +1768,50 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
 
-            <div className="flex items-center justify-center gap-3 mb-10">
-              <span
-                className="text-sm font-semibold"
-                style={{ color: billingCycle === 'monthly' ? NAVY : BODY }}
+            <div className="flex justify-center mb-10">
+              <div
+                className="relative inline-flex items-center p-1 rounded-full"
+                style={{ background: PILL, border: '1px solid #e2e8f0' }}
               >
-                Monthly
-              </span>
-              <Switch
-                checked={billingCycle === 'yearly'}
-                onChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
-                style={billingCycle === 'yearly' ? { background: NAVY } : undefined}
-              />
-              <span
-                className="text-sm font-semibold"
-                style={{ color: billingCycle === 'yearly' ? NAVY : BODY }}
-              >
-                Yearly
-              </span>
+                {/* Sliding highlight behind whichever segment is active. */}
+                <motion.span
+                  className="absolute top-1 bottom-1 rounded-full"
+                  style={{ background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.25)}` }}
+                  animate={{
+                    left: billingCycle === 'monthly' ? 4 : '50%',
+                    width: 'calc(50% - 4px)',
+                  }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className="relative z-10 px-5 sm:px-6 h-10 rounded-full text-sm font-semibold transition-colors"
+                  style={{ color: billingCycle === 'monthly' ? '#fff' : BODY }}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('yearly')}
+                  className="relative z-10 flex items-center gap-1.5 px-5 sm:px-6 h-10 rounded-full text-sm font-semibold transition-colors whitespace-nowrap"
+                  style={{ color: billingCycle === 'yearly' ? '#fff' : BODY }}
+                >
+                  Yearly
+                  {yearlySavingsPct > 0 && (
+                    <span
+                      className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                      style={
+                        billingCycle === 'yearly'
+                          ? { background: ACCENT, color: NAVY }
+                          : { background: 'rgba(14,163,113,0.12)', color: '#0ea371' }
+                      }
+                    >
+                      Save {yearlySavingsPct}%
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {plansLoading ? (
@@ -1852,7 +1890,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           : { background: '#fff', color: NAVY, border: `1.5px solid #d9e2ec` }
                       }
                     >
-                      {tier.cta}
+                      {t.pricingCtaTrial}
                     </button>
                   </motion.div>
                 ))}
