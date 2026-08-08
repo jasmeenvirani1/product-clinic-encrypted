@@ -1768,25 +1768,25 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
 
-            <div className="flex justify-center mb-10">
+            <div className="flex items-center justify-center gap-3 mb-10">
               <div
-                className="relative inline-flex items-center p-1 rounded-full"
+                className="relative inline-grid grid-cols-2 p-1 rounded-full w-64 sm:w-72"
                 style={{ background: PILL, border: '1px solid #e2e8f0' }}
               >
-                {/* Sliding highlight behind whichever segment is active. */}
+                {/* Sliding highlight behind whichever segment is active. Each
+                    segment is an equal 50%-width grid column, so the highlight's
+                    left/width math always lines up with the button under it
+                    regardless of label length. */}
                 <motion.span
-                  className="absolute top-1 bottom-1 rounded-full"
-                  style={{ background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.25)}` }}
-                  animate={{
-                    left: billingCycle === 'monthly' ? 4 : '50%',
-                    width: 'calc(50% - 4px)',
-                  }}
+                  className="absolute top-1 bottom-1 left-1 rounded-full"
+                  style={{ width: 'calc(50% - 0.25rem)', background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.25)}` }}
+                  animate={{ x: billingCycle === 'monthly' ? 0 : '100%' }}
                   transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                 />
                 <button
                   type="button"
                   onClick={() => setBillingCycle('monthly')}
-                  className="relative z-10 px-5 sm:px-6 h-10 rounded-full text-sm font-semibold transition-colors"
+                  className="relative z-10 h-10 rounded-full text-sm font-semibold transition-colors"
                   style={{ color: billingCycle === 'monthly' ? '#fff' : BODY }}
                 >
                   Monthly
@@ -1794,24 +1794,20 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 <button
                   type="button"
                   onClick={() => setBillingCycle('yearly')}
-                  className="relative z-10 flex items-center gap-1.5 px-5 sm:px-6 h-10 rounded-full text-sm font-semibold transition-colors whitespace-nowrap"
+                  className="relative z-10 h-10 rounded-full text-sm font-semibold transition-colors"
                   style={{ color: billingCycle === 'yearly' ? '#fff' : BODY }}
                 >
                   Yearly
-                  {yearlySavingsPct > 0 && (
-                    <span
-                      className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                      style={
-                        billingCycle === 'yearly'
-                          ? { background: ACCENT, color: NAVY }
-                          : { background: 'rgba(14,163,113,0.12)', color: '#0ea371' }
-                      }
-                    >
-                      Save {yearlySavingsPct}%
-                    </span>
-                  )}
                 </button>
               </div>
+              {yearlySavingsPct > 0 && (
+                <span
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
+                  style={{ background: 'rgba(14,163,113,0.12)', color: '#0ea371' }}
+                >
+                  Save {yearlySavingsPct}%
+                </span>
+              )}
             </div>
 
             {plansLoading ? (
