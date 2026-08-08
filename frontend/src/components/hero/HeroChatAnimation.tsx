@@ -68,15 +68,18 @@ export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = tru
       // Show the typing indicator on the side of whoever is about to send.
       setTypingSender(messages[index].sender === "assistant" ? "assistant" : "user");
       // Global typing speed drives every message (the admin "Chat typing speed"
-      // field is the single source of truth).
-      const delay = typingSpeedMs;
+      // field is the single source of truth). The gap before the next message
+      // starts scales with it too, so raising the admin value slows the whole
+      // cadence instead of just the typing-indicator duration.
+      const delay = Math.max(400, typingSpeedMs);
+      const gap = Math.max(700, Math.round(typingSpeedMs * 0.6));
       timers.push(
         setTimeout(() => {
           if (cancelled) return;
           setTypingSender(null);
           setVisibleCount(index + 1);
-          timers.push(setTimeout(() => step(index + 1), 700));
-        }, Math.max(400, delay))
+          timers.push(setTimeout(() => step(index + 1), gap));
+        }, delay)
       );
     };
 

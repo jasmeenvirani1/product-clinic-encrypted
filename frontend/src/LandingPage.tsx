@@ -336,6 +336,7 @@ const t = {
     pricingCtaStart: 'Get Started',
     pricingCtaBook: 'Book Demo',
     pricingCtaContact: 'Contact Sales',
+    pricingCtaTrial: 'Start 14 Day Free Trial',
     pricingLoading: 'Loading plans…',
     pricingFallback: [
       { name: 'Starter', price: '$499', period: '/mo', eyebrow: 'FOR GETTING STARTED', features: [
@@ -801,6 +802,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   const [isCustomPlanModalOpen, setIsCustomPlanModalOpen] = React.useState(false);
   const [plans, setPlans] = React.useState<PlanData[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(true);
+  const [billingCycle, setBillingCycle] = React.useState<'monthly' | 'yearly'>('monthly');
   const [footerPages, setFooterPages] = React.useState<FooterPageLink[]>([]);
   const [heroContent, setHeroContent] = React.useState<HeroContent>(DEFAULT_HERO_CONTENT);
   const [landingVideo, setLandingVideo] = React.useState<{ file_path: string; title?: string } | null>(null);
@@ -870,7 +872,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
     const timeout = window.setTimeout(() => {
       setHeroIntroCharCount((count) => Math.min(count + 1, heroIntroText.length));
-    }, 55);
+    }, 100);
 
     return () => window.clearTimeout(timeout);
   }, [hasTypedHeroIntro, heroIntroCharCount, heroIntroText.length, reducedMotion]);
@@ -886,7 +888,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     const currentWord = t.heroTypedWords[typedWordIndex];
     const isWordComplete = !isDeletingTypedText && typedText === currentWord;
     const isWordCleared = isDeletingTypedText && typedText === '';
-    const timeoutMs = isWordComplete ? 1400 : isDeletingTypedText ? 45 : 80;
+    const timeoutMs = isWordComplete ? 1800 : isDeletingTypedText ? 70 : 130;
 
     const timeout = window.setTimeout(() => {
       if (isWordComplete) {
@@ -1119,8 +1121,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     }
     const midIndex = Math.floor((plans.length - 1) / 2);
     return plans.map((plan, i) => {
-      const displayPrice = plan.period === 'yearly' ? plan.yearly_price : plan.monthly_price || plan.price;
-      const period = plan.period === 'yearly' ? t.pricingYearly : t.pricingMonthly;
+      const displayPrice = billingCycle === 'yearly' ? plan.yearly_price || plan.price : plan.monthly_price || plan.price;
+      const period = billingCycle === 'yearly' ? t.pricingYearly : t.pricingMonthly;
       return {
         name: plan.plan_name,
         priceLabel: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : t.pricingCustom,
@@ -1135,6 +1137,17 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         highlight: i === midIndex,
       };
     });
+  }, [plans, billingCycle]);
+
+  // Average % saved by paying yearly vs. 12x the monthly price, derived from
+  // whichever plans carry both prices — drives the "Save X%" toggle badge
+  // instead of a guessed/hardcoded number.
+  const yearlySavingsPct = React.useMemo(() => {
+    const withBoth = plans.filter((p) => p.monthly_price > 0 && p.yearly_price > 0);
+    if (withBoth.length === 0) return 0;
+    const pct =
+      withBoth.reduce((sum, p) => sum + (1 - p.yearly_price / (p.monthly_price * 12)), 0) / withBoth.length;
+    return Math.round(pct * 100);
   }, [plans]);
 
   // Map API specialities onto the industries section; fall back to static copy
@@ -1160,6 +1173,13 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-[var(--color-primary)] selection:text-white overflow-x-clip" style={{ color: BODY }}>
       {/* ══════════════ NAV ══════════════ */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[99] h-[4.25rem] sm:h-[4.75rem] md:h-[5.5rem] lg:h-[6rem] pointer-events-none backdrop-blur-md"
+        style={{
+          maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
+        }}
+      />
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
         <div className="w-full max-w-7xl xl:max-w-[92rem] bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5 rounded-full pl-4 sm:pl-5 md:pl-6 pr-3 sm:pr-3.5 md:pr-4 h-14 sm:h-16 md:h-[4.5rem] lg:h-20 flex items-center justify-between gap-3">
           <a href="#home" className="flex items-center gap-2 sm:gap-2.5 md:gap-3 no-underline shrink-0 min-w-0">
@@ -1670,8 +1690,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ DEMO BAND ══════════════ */}
         <section id="cta" className="scroll-mt-24 py-10 sm:py-12 lg:py-16" style={{ background: NAVY }}>
-          <div className="max-w-5xl mx-auto px-5 sm:px-8">
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="max-w-6xl 2xl:max-w-[84rem] mx-auto px-5 sm:px-8">
+            <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-center">
               {/* Left: copy */}
               <div className="text-white">
                 {/* Uses the shared <Eyebrow> so this pill tracks the same on-primary
@@ -1694,8 +1714,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Right: animated WhatsApp phone mockup */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="h-auto w-full max-w-[330px] drop-shadow-2xl">
+              <div className="flex justify-center">
+                <div className="h-auto w-full max-w-[300px] drop-shadow-2xl">
                   <WhatsAppDemoPhone />
                 </div>
               </div>
@@ -1747,6 +1767,48 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-3" style={{ color: NAVY }}>{t.pricingTitle}</h2>
               <p style={{ color: BODY }}>{t.pricingSub}</p>
             </motion.div>
+
+            <div className="flex items-center justify-center gap-3 mb-10">
+              <div
+                className="relative inline-grid grid-cols-2 p-1 rounded-full w-64 sm:w-72"
+                style={{ background: PILL, border: '1px solid #e2e8f0' }}
+              >
+                {/* Sliding highlight behind whichever segment is active. Each
+                    segment is an equal 50%-width grid column, so the highlight's
+                    left/width math always lines up with the button under it
+                    regardless of label length. */}
+                <motion.span
+                  className="absolute top-1 bottom-1 left-1 rounded-full"
+                  style={{ width: 'calc(50% - 0.25rem)', background: NAVY, boxShadow: `0 6px 16px ${navyAlpha(0.25)}` }}
+                  animate={{ x: billingCycle === 'monthly' ? 0 : '100%' }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className="relative z-10 h-10 rounded-full text-sm font-semibold transition-colors"
+                  style={{ color: billingCycle === 'monthly' ? '#fff' : BODY }}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('yearly')}
+                  className="relative z-10 h-10 rounded-full text-sm font-semibold transition-colors"
+                  style={{ color: billingCycle === 'yearly' ? '#fff' : BODY }}
+                >
+                  Yearly
+                </button>
+              </div>
+              {yearlySavingsPct > 0 && (
+                <span
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
+                  style={{ background: 'rgba(14,163,113,0.12)', color: '#0ea371' }}
+                >
+                  Save {yearlySavingsPct}%
+                </span>
+              )}
+            </div>
 
             {plansLoading ? (
               <div className="flex justify-center py-16"><Spin size="large" /></div>
@@ -1824,7 +1886,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                           : { background: '#fff', color: NAVY, border: `1.5px solid #d9e2ec` }
                       }
                     >
-                      {tier.cta}
+                      {t.pricingCtaTrial}
                     </button>
                   </motion.div>
                 ))}
