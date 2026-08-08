@@ -79,35 +79,45 @@ const SCRIPTS: ScriptStep[][] = [
       ],
     },
   ],
-  // 2) Multi-language patient query — patient writes in Hindi, AI replies
-  // fluently in kind, showcasing native multi-language support.
+  // 2) Insurance/coverage check — patient asks if their plan is accepted,
+  // AI checks and confirms coverage details.
   [
     {
       type: "in",
       typingDur: 900,
-      text: "नमस्ते, क्या मुझे कल डॉ. मेहता से अपॉइंटमेंट मिल सकती है?",
+      text: "Hi, do you accept Blue Shield insurance? I'd like to book a check-up.",
       time: "10:18 AM",
     },
     {
       type: "out",
       typingDur: 1300,
-      text: "नमस्ते! 👋 जी बिल्कुल, डॉ. मेहता कल दोपहर 3:00 बजे उपलब्ध हैं। क्या मैं यह अपॉइंटमेंट बुक कर दूं?",
+      text: "Hi Meera 👋 Yes, we accept Blue Shield! Let me pull up your plan's coverage for a general check-up.",
       time: "10:18 AM",
+    },
+    {
+      type: "out",
+      typingDur: 1200,
+      text: "",
+      time: "10:19 AM",
+      variant: "details",
+      detailTitle: "🛡️ Coverage Confirmed",
+      detailRows: [
+        { icon: "receipt", text: "Blue Shield · In-Network" },
+        { icon: "doctor", text: "General Checkup · Fully Covered" },
+        { icon: "calendar", text: "No referral needed" },
+      ],
     },
     {
       type: "in",
       typingDur: 700,
-      text: "हां, बुक कर दीजिए। धन्यवाद।",
-      time: "10:19 AM",
+      text: "That's great, let's book it.",
+      time: "10:20 AM",
     },
     {
       type: "out",
-      typingDur: 1100,
-      text: "",
-      time: "10:19 AM",
-      variant: "card",
-      cardTitle: "Appointment Confirmed!",
-      cardBody: "आपकी अपॉइंटमेंट डॉ. मेहता के साथ कल दोपहर 3:00 बजे के लिए पक्की हो गई है। धन्यवाद! 🙏",
+      typingDur: 900,
+      text: "Perfect! I've got you down for Friday at 10:30 AM with Dr. Mehta. See you then! 😊",
+      time: "10:20 AM",
     },
   ],
   // 3) Automated reminder confirmation — AI proactively reaches out ahead of
@@ -575,7 +585,7 @@ type TimelineItem =
 /**
  * Self-contained animated WhatsApp conversation mockup inside a realistic
  * iPhone frame. Cycles through several independent conversation scenarios
- * (new patient inquiry, multi-language query, automated reminder
+ * (new patient inquiry, insurance/coverage check, automated reminder
  * confirmation, after-visit follow-up) one after another — 1 → 2 → 3 → 4 → 1
  * … — so the same chat isn't replayed every loop, using framer-motion + a
  * setTimeout-driven step machine, matching the pattern already used by
