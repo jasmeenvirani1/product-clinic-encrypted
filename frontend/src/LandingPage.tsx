@@ -1691,7 +1691,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
         {/* ══════════════ DEMO BAND ══════════════ */}
         <section id="cta" className="scroll-mt-24 py-10 sm:py-12 lg:py-16" style={{ background: NAVY }}>
           <div className="max-w-6xl 2xl:max-w-[84rem] mx-auto px-5 sm:px-8">
-            <div className="grid lg:grid-cols-2 gap-10 items-center">
+            <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-center">
               {/* Left: copy */}
               <div className="text-white">
                 {/* Uses the shared <Eyebrow> so this pill tracks the same on-primary
@@ -1714,8 +1714,8 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Right: animated WhatsApp phone mockup */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="h-auto w-full max-w-[330px] drop-shadow-2xl">
+              <div className="flex justify-center">
+                <div className="h-auto w-full max-w-[300px] drop-shadow-2xl">
                   <WhatsAppDemoPhone />
                 </div>
               </div>
