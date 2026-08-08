@@ -1161,11 +1161,10 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     <div className="min-h-screen bg-white font-sans selection:bg-[var(--color-primary)] selection:text-white overflow-x-clip" style={{ color: BODY }}>
       {/* ══════════════ NAV ══════════════ */}
       <div
-        className="fixed top-0 left-0 right-0 z-[99] h-20 sm:h-24 md:h-28 lg:h-32 pointer-events-none backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-[99] h-[4.25rem] sm:h-[4.75rem] md:h-[5.5rem] lg:h-[6rem] pointer-events-none backdrop-blur-md"
         style={{
-          background: 'linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0))',
-          maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+          maskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 70%, transparent 100%)',
         }}
       />
       <nav className="fixed top-0 left-0 right-0 z-[100] flex flex-col items-center pt-3 px-3 sm:px-4 lg:px-6">
