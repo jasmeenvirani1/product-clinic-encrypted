@@ -163,8 +163,8 @@ const t = {
     // Hero
     heroBadge1: 'Built for healthcare operations',
     heroBadge2: 'HIPAA-ready infrastructure',
-    heroTitle1: '24/7 AI Support So Your',
-    heroTitle2: 'Clinic Never Misses Another',
+    heroTitle1: 'Your AI Receptionist That',
+    heroTitle2: 'Never Misses Another',
     heroTitle3: 'Patient.',
     heroTypedWords: [
       'Patient.',
