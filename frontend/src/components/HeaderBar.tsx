@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { toggleSidebar } from "../store/slices/uiSlice";
+import { NotificationBell } from "./NotificationBell";
 
 const roleLabelMap: Record<string, { label: string; dot: string }> = {
   super_admin:  { label: "Super Admin",   dot: "bg-violet-500" },
@@ -35,6 +36,8 @@ export const HeaderBar = () => {
 
       {/* Right */}
       <div className="flex items-center gap-2">
+        {role === "super_admin" && <NotificationBell />}
+
         {/* Role badge */}
         <span className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
           <span className={`h-1.5 w-1.5 rounded-full ${roleInfo.dot}`} />

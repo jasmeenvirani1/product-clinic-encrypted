@@ -34,6 +34,9 @@ const GoogleConnection = require("./GoogleConnection");
 const InstagramReel = require("./InstagramReel");
 const Lesson = require("./Lesson");
 const LessonReel = require("./LessonReel");
+const ClinicSchedule = require("./ClinicSchedule");
+const Appointment = require("./Appointment");
+const AiCredentialAlert = require("./AiCredentialAlert");
 
 // User <-> Role
 Role.hasMany(User, { foreignKey: "role_id" });
@@ -173,6 +176,23 @@ InstagramReel.belongsToMany(Lesson, {
 LessonReel.belongsTo(Lesson, { foreignKey: "lesson_id" });
 LessonReel.belongsTo(InstagramReel, { foreignKey: "instagram_reel_id" });
 
+// ClinicSchedule associations (one tenant → one schedule row)
+User.hasOne(ClinicSchedule, { foreignKey: "tenant_id", as: "clinicSchedule" });
+ClinicSchedule.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+
+// Appointment associations
+User.hasMany(Appointment, { foreignKey: "tenant_id", as: "appointments" });
+Appointment.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+Lead.hasMany(Appointment, { foreignKey: "lead_id", as: "appointments" });
+Appointment.belongsTo(Lead, { foreignKey: "lead_id", as: "Lead" });
+Conversation.hasMany(Appointment, { foreignKey: "conversation_id", as: "appointments" });
+Appointment.belongsTo(Conversation, { foreignKey: "conversation_id", as: "Conversation" });
+
+// AiCredentialAlert associations (dedup/cooldown state for issue #42's
+// super_admin OpenAI-credential-failure alert)
+User.hasMany(AiCredentialAlert, { foreignKey: "tenant_id", as: "aiCredentialAlerts" });
+AiCredentialAlert.belongsTo(User, { foreignKey: "tenant_id", as: "Tenant" });
+
 module.exports = {
   sequelize,
   Role,
@@ -210,6 +230,9 @@ module.exports = {
   InstagramReel,
   Lesson,
   LessonReel,
+  ClinicSchedule,
+  Appointment,
+  AiCredentialAlert,
 };
 
 

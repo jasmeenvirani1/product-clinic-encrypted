@@ -196,6 +196,50 @@ async function deleteEvent(accessToken, eventId) {
   }
 }
 
+/** Create a new event on the connected account's primary calendar. Same
+ *  plaintext-accessToken contract as updateEvent/deleteEvent — caller already
+ *  resolved a valid token via getValidAccessToken. Throws on API failure. */
+async function createEvent(accessToken, { title, description, start, end, attendeeEmail }) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ access_token: accessToken });
+  const calendar = google.calendar({ version: "v3", auth: client });
+
+  const { data } = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary: title,
+      description: description || undefined,
+      start: { dateTime: start },
+      end: { dateTime: end },
+      attendees: attendeeEmail ? [{ email: attendeeEmail }] : undefined,
+    },
+  });
+
+  return {
+    id: data.id,
+    title: data.summary || "(No title)",
+    start: data.start?.dateTime || data.start?.date || null,
+    end: data.end?.dateTime || data.end?.date || null,
+    htmlLink: data.htmlLink || null,
+  };
+}
+
+/** Query Google's Freebusy API for the connected primary calendar between
+ *  timeMin/timeMax (ISO strings). Returns raw busy intervals
+ *  [{ start, end }, ...] — caller (availability service) combines these with
+ *  clinic-schedule config to compute open slots. Throws on API failure. */
+async function getFreeBusy(accessToken, { timeMin, timeMax }) {
+  const client = buildOAuth2Client();
+  client.setCredentials({ access_token: accessToken });
+  const calendar = google.calendar({ version: "v3", auth: client });
+
+  const { data } = await calendar.freebusy.query({
+    requestBody: { timeMin, timeMax, items: [{ id: "primary" }] },
+  });
+
+  return data.calendars?.primary?.busy || [];
+}
+
 module.exports = {
   getAuthUrl,
   exchangeCode,
@@ -204,4 +248,6 @@ module.exports = {
   updateEvent,
   deleteEvent,
   listUpcomingEvents,
+  createEvent,
+  getFreeBusy,
 };

@@ -250,7 +250,7 @@ const t = {
     howSteps: [
       { icon: 'plug', t: 'Connect', d: 'We integrate with your website, WhatsApp, and calendar — no technical work needed on your end.' },
       { icon: 'sliders', t: 'Customize', d: "We train the AI on your hospital's services, doctors, timings, and FAQs — fully branded to you." },
-      { icon: 'rocket', t: 'Go Live', d: 'Your AI receptionist starts working immediately — booking appointments and answering patients 24/7.' },
+      { icon: 'rocket', t: 'Go Live', d: 'Your AI receptionist starts working immediately with RAG-powered intelligence — booking appointments and answering patient questions accurately, 24/7.' },
     ],
 
     // Results
