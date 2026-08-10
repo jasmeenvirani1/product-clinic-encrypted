@@ -100,16 +100,23 @@ export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
 
   const triggerImageUpload = () => fileInputRef.current?.click();
 
-  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = reader.result as string;
-      editor.chain().focus().setImage({ src }).run();
-    };
-    reader.readAsDataURL(file);
+    if (!files.length) return;
+
+    for (const file of files) {
+      const src = await readFileAsDataUrl(file);
+      editor.chain().focus("end").insertContent({ type: "image", attrs: { src } }).run();
+    }
   };
 
   const toggleHtmlView = () => {
@@ -201,8 +208,9 @@ export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          className="hidden"
-          onChange={handleImageFile}
+          multiple
+          onChange={(e) => void handleImageFile(e)}
+          style={{ display: "none" }}
         />
         <div className="mx-1 h-5 w-px bg-slate-200" />
         <Tooltip title="Undo">
