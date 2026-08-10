@@ -284,7 +284,11 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
             <Input.TextArea rows={3} placeholder="Brief summary shown on cards/listing." />
           </Form.Item>
           <Form.Item label="Detail Content" tooltip="Rich content shown on the speciality detail page.">
-            <TiptapEditor value={detailContent} onChange={setDetailContent} />
+            <TiptapEditor
+              value={detailContent}
+              onChange={setDetailContent}
+              onUploadImage={specialityService.uploadDetailImage}
+            />
           </Form.Item>
           <Form.Item name="order" label="Order" tooltip="Lower numbers appear first.">
             <InputNumber min={0} style={{ width: 120 }} />

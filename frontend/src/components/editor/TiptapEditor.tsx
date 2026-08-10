@@ -23,6 +23,9 @@ import { useEffect, useRef, useState } from "react";
 interface TiptapEditorProps {
   value: string;
   onChange: (value: string) => void;
+  /** Uploads a file and resolves to its public URL. Falls back to inline
+   *  base64 embedding (not recommended for large images) if omitted. */
+  onUploadImage?: (file: File) => Promise<string>;
 }
 
 const HEADING_OPTIONS = [
@@ -32,9 +35,10 @@ const HEADING_OPTIONS = [
   { label: "Heading 3", value: "h3" },
 ];
 
-export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
+export function TiptapEditor({ value, onChange, onUploadImage }: TiptapEditorProps) {
   const [showHtml, setShowHtml] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -113,9 +117,14 @@ export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
     e.target.value = "";
     if (!files.length) return;
 
-    for (const file of files) {
-      const src = await readFileAsDataUrl(file);
-      editor.chain().focus("end").insertContent({ type: "image", attrs: { src } }).run();
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const src = onUploadImage ? await onUploadImage(file) : await readFileAsDataUrl(file);
+        editor.chain().focus("end").insertContent({ type: "image", attrs: { src } }).run();
+      }
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -195,12 +204,13 @@ export function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             onClick={setLink}
           />
         </Tooltip>
-        <Tooltip title="Insert image">
+        <Tooltip title="Insert image(s)">
           <Button
             size="small"
             type="text"
             icon={<ImageIcon size={14} />}
-            disabled={showHtml}
+            loading={uploading}
+            disabled={showHtml || uploading}
             onClick={triggerImageUpload}
           />
         </Tooltip>

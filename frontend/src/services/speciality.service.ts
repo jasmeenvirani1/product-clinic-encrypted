@@ -1,5 +1,10 @@
 import { API } from "@/utils/API";
 
+// Backend origin (API baseURL minus the trailing /api) — used to build
+// absolute URLs for uploaded images referenced from detail_content HTML,
+// since the frontend and backend are served from different origins.
+const BACKEND_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/api\/?$/, "");
+
 export interface Speciality {
   id: number;
   tenant_id: number | null;
@@ -69,6 +74,17 @@ export const specialityService = {
     await API.delete(`/super-admin/specialities/${id}`);
   },
 
+  // Uploads an image for use inside the Detail Content rich text editor and
+  // returns its public URL (the file is stored on disk, not embedded as base64).
+  uploadDetailImage: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const { data } = await API.post("/super-admin/specialities/upload-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return `${BACKEND_ORIGIN}${data.data.url}`;
+  },
+
   // Public: active master specialities for the landing page (no auth).
   getPublic: async (): Promise<
     Pick<
@@ -115,5 +131,14 @@ export const tenantSpecialityService = {
   revertOverride: async (slug: string): Promise<{ reverted: boolean; resolved: Speciality | null }> => {
     const { data } = await API.delete(`/tenant/specialities/${slug}`);
     return data.data;
+  },
+
+  uploadDetailImage: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("image", file);
+    const { data } = await API.post("/tenant/specialities/upload-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return `${BACKEND_ORIGIN}${data.data.url}`;
   },
 };
