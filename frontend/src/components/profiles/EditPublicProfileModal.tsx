@@ -34,7 +34,7 @@ interface EditProfileFormValues {
 
 /** Inline "edit my public profile" modal — same fields/save call as
  *  ProfileSettingsPanel's Basic Information section, so the owner can edit
- *  without leaving the public profile page (no redirect to /app/settings). */
+ *  without leaving the public profile page (no redirect to /app/profile). */
 export function EditPublicProfileModal({ open, onClose, onSaved }: EditPublicProfileModalProps) {
   const { message } = App.useApp();
   const dispatch = useAppDispatch();

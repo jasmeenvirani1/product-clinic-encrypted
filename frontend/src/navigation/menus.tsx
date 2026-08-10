@@ -219,7 +219,7 @@ export const appMenu: MenuEntry[] = [
   // Integrations retired — consolidated into App Connections (/app/connections).
   // The old /app/integrations route survives as a redirect for existing bookmarks.
   { key: "app-connections",   label: "App Connections", icon: <Plug size={18} />,            path: "/app/connections",   roles: ["tenant_admin"] },
-  { key: "app-settings",      label: "Settings",        icon: <Settings size={18} />,        path: "/app/settings",      roles: ["tenant_admin"] },
+  { key: "app-settings",      label: "Profile",         icon: <Settings size={18} />,        path: "/app/profile",       roles: ["tenant_admin"] },
   { key: "app-billing",       label: "Billing",         icon: <CreditCard size={18} />,      path: "/app/billing",       roles: ["tenant_admin"] },
   { key: "users",             label: "Users",           icon: <Users size={18} />,           path: "/app/users",         roles: ["tenant_admin"] },
   { key: "app-theme-settings", label: "Theme Settings", icon: <Palette size={18} />,        path: "/app/theme-settings", roles: ["tenant_admin"] },
@@ -440,7 +440,14 @@ export function buildMenuFromPermissions(
 ): MenuEntry[] {
   const getSidebarLabel = (slug: string, defaultLabel: string) => {
     if (slug === "app-conversations") return "Chats";
+    if (slug === "app-settings") return "Profile";
     return defaultLabel;
+  };
+
+  // app-settings now routes to the renamed /app/profile page.
+  const getSidebarSegment = (slug: string, defaultSegment: string) => {
+    if (slug === "app-settings") return "profile";
+    return defaultSegment;
   };
 
   return menuPermissions
@@ -488,7 +495,7 @@ export function buildMenuFromPermissions(
         key:   slug,
         label: getSidebarLabel(slug, mp.menu.name),
         icon:  getIcon(mp.menu.icon),
-        path:  `/app/${segment}`,
+        path:  `/app/${getSidebarSegment(slug, segment)}`,
         roles: [role],
       };
     });

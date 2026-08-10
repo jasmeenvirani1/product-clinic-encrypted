@@ -19,6 +19,7 @@ const { classifyLeadIntent } = require("../services/leadIntentService");
 const { triggerLeadSummary } = require("../services/leadSummaryService");
 const { getPlatformPromptInstructions, getPlatformUseCases, buildUseCasesBlock } = require("../utils/platformAISettings");
 const { rephraseFAQAnswer } = require("../services/aiPhrasing");
+const appointmentAvailabilityService = require("../services/appointmentAvailabilityService");
 
 const MODULE = "ConversationController";
 
@@ -63,6 +64,69 @@ const isBookingConfirmationMessage = (text) => {
   if (!text) return false;
   return QUOTED_SLOT_RE.test(text.trim());
 };
+
+// ─── OpenAI tool-calling: booking tools (first tool-call infra in this
+// codebase — see generateAIResponse's intercept loop below) ─────────────
+// Tool schemas passed to OpenAI. BOOKING_TOOLS and TOOL_HANDLERS share the
+// same key set — a future tool is added by appending to both, never by
+// growing a branching chain in the intercept loop itself.
+const BOOKING_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "check_availability",
+      description: "Check open appointment slots at the clinic within a date range.",
+      parameters: {
+        type: "object",
+        properties: {
+          range_start: { type: "string", description: "ISO date (YYYY-MM-DD), inclusive." },
+          range_end: { type: "string", description: "ISO date (YYYY-MM-DD), inclusive." },
+        },
+        required: ["range_start", "range_end"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "book_appointment",
+      description: "Book a confirmed appointment slot after the patient has picked an exact date/time.",
+      parameters: {
+        type: "object",
+        properties: {
+          start: { type: "string", description: "ISO 8601 datetime for the appointment start." },
+          end: { type: "string", description: "ISO 8601 datetime for the appointment end." },
+          notes: { type: "string", description: "Short summary of what the appointment is for." },
+        },
+        required: ["start", "end"],
+      },
+    },
+  },
+];
+
+// Generic dispatch table — { [toolName]: async (args, ctx) => result }.
+// `ctx` is the toolContext passed into generateAIResponse: { tenantId,
+// leadId, conversationId }.
+const TOOL_HANDLERS = {
+  check_availability: async (args, ctx) => appointmentAvailabilityService.getAvailability({
+    tenantId: ctx.tenantId, rangeStart: args.range_start, rangeEnd: args.range_end,
+  }),
+  book_appointment: async (args, ctx) => appointmentAvailabilityService.bookSlot({
+    tenantId: ctx.tenantId, leadId: ctx.leadId, conversationId: ctx.conversationId,
+    start: args.start, end: args.end, title: "Clinic appointment", description: args.notes,
+  }),
+};
+
+// Runaway guard for the tool-call intercept loop inside generateAIResponse.
+const MAX_TOOL_CALL_ITERATIONS = 3;
+
+// Exported so webhookController.js's independent generateAIResponse
+// (WhatsApp/Instagram, see issue #41) can reuse the SAME tool schemas/
+// dispatch table instead of forking a second definition. Purely additive —
+// does not change any behavior here.
+exports.BOOKING_TOOLS = BOOKING_TOOLS;
+exports.TOOL_HANDLERS = TOOL_HANDLERS;
+exports.MAX_TOOL_CALL_ITERATIONS = MAX_TOOL_CALL_ITERATIONS;
 
 const maybeMarkLeadWonFromOutgoingConfirmation = async ({ lead, conversation, text }) => {
   if (!lead || !text) return lead;
@@ -302,7 +366,12 @@ const injectDateHint = (text, now) => {
 };
 
 // ─── Generate AI Response via OpenAI ────────────────────────────────
-const generateAIResponse = async (patientText, intent, aiSettings, conversationHistory, imageAttachments = []) => {
+// `toolContext` ({ tenantId, leadId, conversationId }) is opt-in and
+// additive — when null/omitted, the request sent to OpenAI is byte-for-byte
+// identical to pre-#40 behavior (no `tools` key at all). Only sendMessage's
+// patient branch passes it today; any other caller can omit it and simply
+// won't be offered booking tools.
+const generateAIResponse = async (patientText, intent, aiSettings, conversationHistory, imageAttachments = [], toolContext = null) => {
   if (!aiSettings.openai_api_key) {
     log.warn(MODULE, "generateAIResponse", { message: "No OpenAI API key configured, using fallback." });
     if (intent === "high") return "Thank you for your interest! I'd love to help you move forward. Could you share your preferred dates and any specific requirements?";
@@ -350,7 +419,12 @@ const generateAIResponse = async (patientText, intent, aiSettings, conversationH
     const dateParsingInstruction = `DATE & DAY PARSING — CRITICAL: Today is ${currentDate} which is ${humanDate} (${todayDayName}). Current time is ${currentTime}. Users commonly write dates as DD-MM-YYYY (e.g. "12-5-2026" = 12 May 2026) or DD/MM/YYYY. ALWAYS interpret user-provided dates as DD-MM-YYYY format. Compare actual calendar dates — NOT strings. A date is VALID if it falls on or after ${humanDate} — this explicitly includes TODAY (${humanDate}).\n\nRELATIVE DATE CALCULATION: When the user says a relative day (e.g. "next Monday", "next week Monday", "tomorrow"), calculate the exact calendar date based on today being ${todayDayName} ${humanDate}. Example: if today is Friday 8 May 2026, "next Monday" = Monday 11 May 2026 (3 days ahead), NOT the following Monday. Always confirm the exact date you calculated before booking.\n\nTIME VALIDATION — THREE RULES:\n1. DATE ONLY (no time given) → ALWAYS accept if the date is today or in the future. NEVER say "that date has already passed" for today (${humanDate}) or any future date.\n2. TODAY + specific time → only reject if that clock time is before ${currentTime} (current time). Otherwise accept.\n3. FUTURE date + any time → ALWAYS accept. NEVER say "that time has already passed" for a date after today.`;
 
     const baseSystemPrompt = buildSystemPrompt(aiSettings, intent, resolvedPrompt + useCasesBlock);
-    const systemPrompt = `${conversationGuard}${baseSystemPrompt}\n\n${photoInstruction}\n\n${dateParsingInstruction}`;
+    // Only added when toolContext is present — keeps the request byte-for-byte
+    // identical to pre-#40 behavior for any caller that omits toolContext.
+    const bookingToolsInstruction = toolContext
+      ? `\n\nBOOKING TOOLS: You have access to check_availability and book_appointment. When a patient asks to book an appointment, call check_availability first and offer 2-4 concrete slots from the result. If the tool result has "connected": false, do NOT offer any slots — tell the patient to contact the clinic directly to book, and do not call book_appointment. Only call book_appointment after the patient has explicitly confirmed one specific date and time from the offered slots. If book_appointment returns "booked": false, apologize that the slot is no longer available, call check_availability again, and offer new options.`
+      : "";
+    const systemPrompt = `${conversationGuard}${baseSystemPrompt}\n\n${photoInstruction}\n\n${dateParsingInstruction}${bookingToolsInstruction}`;
 
     const chatMessages = [{ role: "system", content: systemPrompt }];
 
@@ -390,12 +464,57 @@ const generateAIResponse = async (patientText, intent, aiSettings, conversationH
       chatMessages.push({ role: "user", content: annotatedText });
     }
 
-    const completion = await openai.chat.completions.create({
+    const requestOpts = {
       model,
       messages: chatMessages,
       max_tokens: hasImages ? 500 : 300,
       temperature: 0.7,
-    });
+    };
+    // Tools are only offered when toolContext is present — omitted entirely
+    // otherwise, so the request shape is unchanged for non-booking callers.
+    if (toolContext) {
+      requestOpts.tools = BOOKING_TOOLS;
+      requestOpts.tool_choice = "auto";
+    }
+
+    let completion = await openai.chat.completions.create(requestOpts);
+
+    // Tool-call intercept loop (only reachable when toolContext was present,
+    // since that's the only way `tools` was offered to the model). Capped at
+    // MAX_TOOL_CALL_ITERATIONS as a runaway guard.
+    let iterations = 0;
+    while (
+      toolContext &&
+      completion.choices[0]?.message?.tool_calls?.length &&
+      iterations < MAX_TOOL_CALL_ITERATIONS
+    ) {
+      iterations += 1;
+      const assistantMessage = completion.choices[0].message;
+      chatMessages.push(assistantMessage);
+
+      for (const toolCall of assistantMessage.tool_calls) {
+        const handler = TOOL_HANDLERS[toolCall.function.name];
+        let resultPayload;
+        try {
+          const args = JSON.parse(toolCall.function.arguments || "{}");
+          if (!handler) throw new Error(`Unknown tool: ${toolCall.function.name}`);
+          resultPayload = await handler(args, toolContext);
+        } catch (toolErr) {
+          log.error(MODULE, "generateAIResponse:toolCall", {
+            tool: toolCall.function.name,
+            error: toolErr.message,
+          });
+          resultPayload = { error: true, message: toolErr.message };
+        }
+        chatMessages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(resultPayload),
+        });
+      }
+
+      completion = await openai.chat.completions.create({ ...requestOpts, messages: chatMessages });
+    }
 
     const reply = completion.choices[0]?.message?.content;
     if (reply) return reply.trim();
@@ -863,9 +982,15 @@ exports.sendMessage = async (req, res) => {
         // Exclude the just-saved patient message to avoid adding it twice
         const history = allHistory.slice(0, -1);
         const faqAnswer = await matchFAQ(text, tenantId);
+        // toolContext enables the booking tool loop inside generateAIResponse
+        // (see BOOKING_TOOLS/TOOL_HANDLERS above). FAQ-matched replies never
+        // enter the tool loop — booking only triggers via the plain
+        // generateAIResponse branch, consistent with FAQ being reserved for
+        // static Q&A.
+        const toolContext = { tenantId, leadId: conversation.lead_id, conversationId };
         const aiText = faqAnswer
           ? await rephraseFAQAnswer({ patientText: text, faqAnswer, intent, aiSettings })
-          : await generateAIResponse(text, intent, aiSettings, history);
+          : await generateAIResponse(text, intent, aiSettings, history, [], toolContext);
         const aiMsg = await Message.create({
           conversation_id: conversationId,
           sender_type: "ai",

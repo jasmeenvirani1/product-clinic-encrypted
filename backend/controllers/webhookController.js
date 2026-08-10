@@ -24,6 +24,9 @@ const {
   upsertInboundLeadFromMessage,
 } = require("../services/leadAutomation");
 const { classifyLeadIntent } = require("../services/leadIntentService");
+// Booking tool schemas/dispatch table are defined ONCE in conversationController.js
+// (issue #40) and reused here as-is (issue #41) — do not fork/duplicate them.
+const { BOOKING_TOOLS, TOOL_HANDLERS, MAX_TOOL_CALL_ITERATIONS } = require("./conversationController");
 
 const MODULE = "WebhookController";
 
@@ -118,7 +121,10 @@ const scheduleBatchedPhotoReply = ({ conversationId, tenantId, leadId, channel, 
       const history = lastAiIdx >= 0 ? allMessages.slice(0, lastAiIdx + 1) : [];
 
       const aiInputText = "I've sent my photos as you requested. Please go ahead and assess them.";
-      const aiText = await generateAIResponse(aiInputText, intent, setting, history, mergedImages);
+      const aiText = await generateAIResponse(
+        aiInputText, intent, setting, history, mergedImages,
+        null, "", "", null, channel === "Instagram" ? "instagram" : "whatsapp"
+      );
 
       await Message.create({
         conversation_id: conversationId,
@@ -366,12 +372,22 @@ const injectDateHint = (text, now) => {
   return `${text}\n\n[PARSED DATE/TIME: ${hints.join(" | ")}]`;
 };
 
-// 8-arg signature shared by the Meta path AND the WhatsApp-QR bootstrap:
-//   (text, intent, aiSettings, history, images, overridePrompt, perTurnHint, chatSummary)
+// 9-arg signature shared by the Meta path AND the WhatsApp-QR bootstrap:
+//   (text, intent, aiSettings, history, images, overridePrompt, perTurnHint, chatSummary, toolContext)
 // - overridePrompt: tenant/self-chat prompt override (null → platform default)
 // - perTurnHint: per-turn language/dialect/voice hints
 // - chatSummary: rolling memory of older turns
-const generateAIResponse = async (text, intent, aiSettings, conversationHistory, imageAttachments = [], overridePrompt = null, perTurnHint = "", chatSummary = "") => {
+// - toolContext ({ tenantId, leadId, conversationId }): opt-in, additive — same
+//   contract as conversationController.js's generateAIResponse (issue #40). When
+//   null/omitted (the default), behavior is byte-for-byte unchanged from before
+//   issue #41: no `tools`/`tool_choice` key is added to any OpenAI request, and
+//   the tool-call intercept loop below is never entered.
+// `channel` (new, additive, issue #42): "whatsapp" | "instagram" — used only
+// to label the super_admin credential-failure alert (aiCredentialAlertService).
+// Defaulting to "whatsapp" preserves byte-for-byte identical behavior for any
+// existing caller that omits it (conversationController.js's Web Chat path
+// never reaches this function's failure branch anyway — see issue #42 arch doc).
+const generateAIResponse = async (text, intent, aiSettings, conversationHistory, imageAttachments = [], overridePrompt = null, perTurnHint = "", chatSummary = "", toolContext = null, channel = "whatsapp") => {
   // Resolve credentials: tenant's own key first, else the super-admin/platform
   // key so AI replies still work for tenants without their own key.
   let apiKey = aiSettings.openai_api_key;
@@ -433,7 +449,13 @@ const generateAIResponse = async (text, intent, aiSettings, conversationHistory,
       ? `CONVERSATION SUMMARY SO FAR — AUTHORITATIVE MEMORY: The messages below are only the most recent turns. Everything before them is summarised here. Treat EVERY fact in this summary as already collected — NEVER ask again for anything listed (name, age, area, duration, treatments, photos, medical answer, booking date/time), and use these exact values in booking and confirmation.\n${chatSummary}\n\n`
       : "";
 
-    const systemPrompt = `${conversationGuard}${summaryBlock}${basePrompt}\n\n${photoInstruction}\n\n${dateParsingInstruction}${languageInstruction}${perTurnHint ? `\n\n${perTurnHint}` : ""}`;
+    // Only added when toolContext is present — keeps the prompt (and therefore
+    // the request) byte-for-byte identical to pre-#41 behavior for any caller
+    // that omits toolContext. Same instruction text as conversationController.js.
+    const bookingToolsInstruction = toolContext
+      ? `\n\nBOOKING TOOLS: You have access to check_availability and book_appointment. When a patient asks to book an appointment, call check_availability first and offer 2-4 concrete slots from the result. If the tool result has "connected": false, do NOT offer any slots — tell the patient to contact the clinic directly to book, and do not call book_appointment. Only call book_appointment after the patient has explicitly confirmed one specific date and time from the offered slots. If book_appointment returns "booked": false, apologize that the slot is no longer available, call check_availability again, and offer new options.`
+      : "";
+    const systemPrompt = `${conversationGuard}${summaryBlock}${basePrompt}\n\n${photoInstruction}\n\n${dateParsingInstruction}${languageInstruction}${perTurnHint ? `\n\n${perTurnHint}` : ""}${bookingToolsInstruction}`;
     const openai = createOpenAI(apiKey, baseURL);
 
     const chatMessages = [{ role: "system", content: systemPrompt }];
@@ -489,18 +511,84 @@ const generateAIResponse = async (text, intent, aiSettings, conversationHistory,
     for (const cred of credCandidates) {
       try {
         const client = createOpenAI(cred.apiKey, cred.baseURL);
-        const completion = await client.chat.completions.create({
+        const requestOpts = {
           model: cred.model || "gpt-4o",
           messages: chatMessages,
           max_tokens: hasImages ? 2500 : 4000,
           temperature: 0.7,
-        });
+        };
+        // Tools are only offered when toolContext is present — omitted entirely
+        // otherwise, so the request shape is unchanged for non-booking callers.
+        if (toolContext) {
+          requestOpts.tools = BOOKING_TOOLS;
+          requestOpts.tool_choice = "auto";
+        }
+
+        // Per-attempt message list — tool-call turns from a failed credential
+        // attempt must never leak into a retry with the next credential.
+        let attemptMessages = chatMessages;
+        let completion = await client.chat.completions.create(requestOpts);
+
+        // Tool-call intercept loop (only reachable when toolContext was present,
+        // since that's the only way `tools` was offered to the model). Mirrors
+        // conversationController.js's loop exactly, capped at the same
+        // MAX_TOOL_CALL_ITERATIONS runaway guard.
+        let iterations = 0;
+        while (
+          toolContext &&
+          completion.choices[0]?.message?.tool_calls?.length &&
+          iterations < MAX_TOOL_CALL_ITERATIONS
+        ) {
+          iterations += 1;
+          if (attemptMessages === chatMessages) attemptMessages = [...chatMessages];
+          const assistantMessage = completion.choices[0].message;
+          attemptMessages.push(assistantMessage);
+
+          for (const toolCall of assistantMessage.tool_calls) {
+            const handler = TOOL_HANDLERS[toolCall.function.name];
+            let resultPayload;
+            try {
+              const args = JSON.parse(toolCall.function.arguments || "{}");
+              if (!handler) throw new Error(`Unknown tool: ${toolCall.function.name}`);
+              resultPayload = await handler(args, toolContext);
+            } catch (toolErr) {
+              log.error(MODULE, "generateAIResponse:toolCall", {
+                tool: toolCall.function.name,
+                error: toolErr.message,
+              });
+              resultPayload = { error: true, message: toolErr.message };
+            }
+            attemptMessages.push({
+              role: "tool",
+              tool_call_id: toolCall.id,
+              content: JSON.stringify(resultPayload),
+            });
+          }
+
+          completion = await client.chat.completions.create({ ...requestOpts, messages: attemptMessages });
+        }
+
         const reply = completion.choices[0]?.message?.content;
         if (reply && reply.trim()) return reply.trim();
       } catch (err) {
         lastErr = err;
         log.warn(MODULE, "generateAIResponse:keyFailed", { error: err.message });
       }
+    }
+    // NEW (issue #42) — additive only, no change to any line below this block:
+    // alert super_admin that every credential candidate failed. Fire-and-forget,
+    // never throws into this path (aiCredentialAlertService's own guarantee).
+    try {
+      const { notify } = require("../services/aiCredentialAlertService");
+      await notify({
+        tenantId: aiSettings.tenant_id,
+        failedCredentialType: credCandidates.length > 1 ? "super_admin_fallback_key" : "tenant_key",
+        error: lastErr,
+        model,
+        channel,
+      });
+    } catch (alertErr) {
+      log.warn(MODULE, "generateAIResponse:alertFailed", { error: alertErr.message });
     }
     log.error(MODULE, "generateAIResponse", { error: lastErr?.message, note: "all keys failed" });
     return "Thank you for your message. A team member will follow up shortly.";
@@ -828,10 +916,15 @@ const handleInstagramInboundMessage = async ({ session, senderId, message }) => 
       const faqMatch = await matchFAQ(aiInputText, tenantId);
       const faqAnswer = faqMatch?.answer || null;
       const promptOverride = setting.prompt_instructions || null;
+      // toolContext enables the booking tool loop inside generateAIResponse (see
+      // BOOKING_TOOLS/TOOL_HANDLERS, issue #40/#41). FAQ-matched replies never
+      // enter the tool loop — booking only triggers via the plain
+      // generateAIResponse branch, same convention as conversationController.js.
+      const toolContext = { tenantId, leadId: conversation.lead_id, conversationId: conversation.id };
 
       let aiText = faqMatch
         ? faqAnswer || ""
-        : await generateAIResponse(aiInputText, intent, setting, history, imageAttachments, promptOverride);
+        : await generateAIResponse(aiInputText, intent, setting, history, imageAttachments, promptOverride, "", "", toolContext, "instagram");
 
       await Message.create({
         conversation_id: conversation.id,

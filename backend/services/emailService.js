@@ -280,4 +280,77 @@ async function sendCreditUsageAlert({ toEmail, percent, creditsUsed, creditLimit
   }
 }
 
-module.exports = { sendIntentNotification, sendLeadCaptureEscalation, sendNewLeadCreatedEmail, sendCreditUsageAlert };
+/**
+ * Send a super_admin alert when every OpenAI credential candidate (tenant's
+ * own key, then the platform fallback key) fails for a WhatsApp/Instagram AI
+ * reply. Fired by aiCredentialAlertService, mirroring sendCreditUsageAlert's
+ * shape/style. Never throws — logs and returns on failure.
+ */
+async function sendAICredentialFailureAlert({
+  toEmail,
+  tenantId,
+  tenantName,
+  credentialType,
+  errorMessage,
+  errorStatus,
+  channel,
+  model,
+}) {
+  if (!toEmail) return;
+
+  const credentialLabel =
+    credentialType === "super_admin_fallback_key" ? "Platform fallback key" : "Tenant's own key";
+  const tenantLabel = tenantName || `Tenant #${tenantId}`;
+  const origin = getAppOrigin();
+  const dashboardLink = `${origin}/login?redirect=${encodeURIComponent("/app/dashboard")}`;
+  const timestamp = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+  try {
+    await transporter.sendMail({
+      from: `"${APP_FULL_NAME}" <${process.env.SMTP_FROM}>`,
+      to: toEmail,
+      subject: `[${APP_SHORT_NAME}] OpenAI credential failure — ${tenantLabel}`,
+      html: `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;color:#0f172a">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f1f5f9;padding:32px 16px"><tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 6px 20px rgba(15,23,42,0.06)">
+      <tr><td style="height:6px;background:linear-gradient(90deg,${COLORS.error},${COLORS.error}aa)"></td></tr>
+      <tr><td style="padding:30px 36px 0">
+        <div style="display:inline-block;padding:4px 12px;border-radius:999px;background:${COLORS.error}1a;color:${COLORS.error};font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Action required</div>
+        <h1 style="margin:14px 0 6px;font-size:22px;line-height:1.2;color:#0f172a;letter-spacing:-0.01em">AI reply failed — OpenAI credential issue</h1>
+        <p style="margin:0;color:#64748b;font-size:14px;line-height:1.6">
+          Every OpenAI credential candidate failed while generating an AI reply on <strong>${channel || "whatsapp"}</strong>. Patients are receiving the static fallback reply until this is resolved.
+        </p>
+      </td></tr>
+      <tr><td style="padding:20px 36px 0">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <tr><td style="padding:6px 0;color:#94a3b8;width:140px">Tenant</td><td style="padding:6px 0;color:#0f172a;font-weight:600">${tenantLabel}</td></tr>
+          <tr><td style="padding:6px 0;color:#94a3b8">Credential</td><td style="padding:6px 0;color:#0f172a;font-weight:600">${credentialLabel}</td></tr>
+          ${model ? `<tr><td style="padding:6px 0;color:#94a3b8">Model</td><td style="padding:6px 0;color:#0f172a">${model}</td></tr>` : ""}
+          <tr><td style="padding:6px 0;color:#94a3b8;vertical-align:top">Error</td><td style="padding:6px 0;color:#0f172a">${errorMessage || "Unknown error"}${errorStatus ? ` (status ${errorStatus})` : ""}</td></tr>
+          <tr><td style="padding:6px 0;color:#94a3b8">When</td><td style="padding:6px 0;color:#0f172a">${timestamp}</td></tr>
+        </table>
+      </td></tr>
+      <tr><td align="center" style="padding:26px 36px 6px">
+        <a href="${dashboardLink}" style="display:inline-block;padding:13px 28px;background:${COLORS.primary};background:linear-gradient(135deg,${COLORS.primary},${COLORS.primaryDeep});color:${COLORS.white};text-decoration:none;font-weight:600;font-size:14px;border-radius:10px;letter-spacing:0.01em;box-shadow:0 6px 14px ${COLORS.primaryGlow}">Open dashboard →</a>
+      </td></tr>
+      <tr><td style="padding:14px 36px 26px;border-top:1px dashed #cbd5e1;text-align:center">
+        <p style="margin:0;font-size:11px;color:${COLORS.textMuted2}">${APP_FULL_NAME} &middot; You're getting this because you're a platform super_admin and an OpenAI credential just failed for a clinic's AI replies.</p>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`,
+    });
+    log.info(MODULE, "sendAICredentialFailureAlert", { toEmail, tenantId, credentialType });
+  } catch (err) {
+    log.error(MODULE, "sendAICredentialFailureAlert", { error: err.message, toEmail, tenantId });
+  }
+}
+
+module.exports = {
+  sendIntentNotification,
+  sendLeadCaptureEscalation,
+  sendNewLeadCreatedEmail,
+  sendCreditUsageAlert,
+  sendAICredentialFailureAlert,
+};

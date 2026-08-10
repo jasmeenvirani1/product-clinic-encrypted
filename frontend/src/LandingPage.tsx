@@ -163,8 +163,8 @@ const t = {
     // Hero
     heroBadge1: 'Built for healthcare operations',
     heroBadge2: 'HIPAA-ready infrastructure',
-    heroTitle1: 'Your Clinic Never',
-    heroTitle2: 'Misses Another',
+    heroTitle1: 'Your AI Receptionist That',
+    heroTitle2: 'Never Misses Another',
     heroTitle3: 'Patient.',
     heroTypedWords: [
       'Patient.',
@@ -250,7 +250,7 @@ const t = {
     howSteps: [
       { icon: 'plug', t: 'Connect', d: 'We integrate with your website, WhatsApp, and calendar — no technical work needed on your end.' },
       { icon: 'sliders', t: 'Customize', d: "We train the AI on your hospital's services, doctors, timings, and FAQs — fully branded to you." },
-      { icon: 'rocket', t: 'Go Live', d: 'Your AI receptionist starts working immediately — booking appointments and answering patients 24/7.' },
+      { icon: 'rocket', t: 'Go Live', d: 'Your AI receptionist starts working immediately with RAG-powered intelligence — booking appointments and answering patient questions accurately, 24/7.' },
     ],
 
     // Results
@@ -1293,7 +1293,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                   <ShieldCheck size={15} /> {t.heroBadge2}
                 </span>
               </div>
-              <h1 className="font-heading text-[1.9rem] sm:text-5xl lg:text-[3.1rem] 2xl:text-[3.6rem] font-bold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
+              <h1 className="font-heading text-[1.9rem] sm:text-[2.6rem] lg:text-[2.6rem] 2xl:text-[3rem] font-bold tracking-tight mb-5" style={{ color: NAVY, lineHeight: 1.3 }}>
                 <span className="block whitespace-nowrap">
                   {visibleHeroIntroLines[0] || '\u00A0'}
                   {!hasTypedHeroIntro && activeHeroIntroLineIndex === 0 && renderHeroCursor(NAVY)}

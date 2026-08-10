@@ -6,6 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { SquarePen, Plus, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import { AppSwitch } from "@/components/ui/AppSwitch";
+import { TiptapEditor } from "@/components/editor/TiptapEditor";
 import { specialityService, type Speciality } from "@/services/speciality.service";
 import { ICON_OPTIONS } from "@/constants/iconOptions";
 
@@ -24,6 +25,7 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
   const [editing, setEditing] = useState<Speciality | null>(null);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [detailContent, setDetailContent] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -53,6 +55,7 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
+    setDetailContent("");
     // Default the new item's order to the end of the list.
     const nextOrder = specialities.length ? Math.max(...specialities.map((s) => s.order)) + 1 : 0;
     form.setFieldsValue({ is_active: true, order: nextOrder });
@@ -75,7 +78,6 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
       name: speciality.name,
       icon: speciality.icon,
       short_description: speciality.short_description,
-      detail_content: speciality.detail_content ? JSON.stringify(speciality.detail_content, null, 2) : "",
       order: speciality.order,
       is_active: speciality.is_active,
       meta_title: speciality.meta_title,
@@ -86,6 +88,7 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
       canonical_url: speciality.canonical_url,
       keywords: speciality.keywords,
     });
+    setDetailContent(typeof speciality.detail_content === "string" ? speciality.detail_content : "");
     setModalOpen(true);
   };
 
@@ -93,22 +96,7 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
     try {
       const values = await form.validateFields();
 
-      let detail_content: Record<string, unknown> | null | undefined = undefined;
-      if (typeof values.detail_content === "string") {
-        const raw = values.detail_content.trim();
-        if (!raw) {
-          detail_content = null;
-        } else {
-          try {
-            detail_content = JSON.parse(raw);
-          } catch {
-            void message.error("Detail Content must be valid JSON.");
-            return;
-          }
-        }
-      }
-
-      const payload = { ...values, detail_content };
+      const payload = { ...values, detail_content: detailContent.trim() ? detailContent : null };
 
       setSaving(true);
       if (editing) {
@@ -266,7 +254,7 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
         onOk={() => void handleSave()}
         okText={editing ? "Update" : "Add"}
         confirmLoading={saving}
-        width={680}
+        width={960}
         destroyOnClose
       >
         <Form form={form} layout="vertical" className="mt-4">
@@ -295,12 +283,12 @@ export function SpecialitiesPanel({ onActionsChange }: SpecialitiesPanelProps) {
           <Form.Item name="short_description" label="Short Description">
             <Input.TextArea rows={3} placeholder="Brief summary shown on cards/listing." />
           </Form.Item>
-          <Form.Item
-            name="detail_content"
-            label="Detail Content"
-            tooltip="Rich content blocks for the detail page, as JSON."
-          >
-            <Input.TextArea rows={5} placeholder='e.g. { "blocks": [] }' />
+          <Form.Item label="Detail Content" tooltip="Rich content shown on the speciality detail page.">
+            <TiptapEditor
+              value={detailContent}
+              onChange={setDetailContent}
+              onUploadImage={specialityService.uploadDetailImage}
+            />
           </Form.Item>
           <Form.Item name="order" label="Order" tooltip="Lower numbers appear first.">
             <InputNumber min={0} style={{ width: 120 }} />

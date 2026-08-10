@@ -354,10 +354,14 @@ function scheduleBatchedQrPhotoReply({ conversationId, tenantId, acctId, leadId,
       // Rolling memory (same as the text path) so the post-photo reply keeps
       // earlier collected facts and the conversation language.
       const chatSummary = await updateChatSummary({ conversation, fullHistory: history, setting });
+      // toolContext enables the booking tool loop inside webhook.generateAIResponse
+      // (see BOOKING_TOOLS/TOOL_HANDLERS, issue #40/#41) — same shape as the
+      // Instagram/Web Chat call sites, built from already-in-scope server state.
+      const toolContext = { tenantId, leadId: leadId || null, conversationId };
       // Strip any stray photo-guide marker — this is a post-photo reply, so the
       // guide itself is never sent here, but the marker must never reach the patient.
       const aiText = extractPhotoGuideMarker(
-        await webhook.generateAIResponse(aiInputText, intent, setting, history, mergedImages, promptOverride, "", chatSummary)
+        await webhook.generateAIResponse(aiInputText, intent, setting, history, mergedImages, promptOverride, "", chatSummary, toolContext)
       ).text;
 
       await Message.create({
@@ -744,9 +748,15 @@ async function handleInbound(accountId, message) {
         const chatSummary = faqMatch
           ? ""
           : await updateChatSummary({ conversation, fullHistory: history, setting });
+        // toolContext enables the booking tool loop inside webhook.generateAIResponse
+        // (see BOOKING_TOOLS/TOOL_HANDLERS, issue #40/#41). Self-chat has no real
+        // `lead` (it's the clinic owner's own test thread — see isSelfChat above),
+        // so booking tools are only offered for real patient conversations, same
+        // as Instagram/Web Chat always having a concrete leadId.
+        const toolContext = isSelfChat ? null : { tenantId, leadId: lead?.id || null, conversationId: conversation.id };
         let aiText = faqMatch
           ? (faqAnswer ? await rephraseFAQAnswer({ patientText: aiInputText, faqAnswer, intent, aiSettings: setting, conversationHistory: history }) : "")
-          : await webhook.generateAIResponse(aiInputText, intent, setting, history, imageAttachments, promptOverride, perTurnHint, chatSummary);
+          : await webhook.generateAIResponse(aiInputText, intent, setting, history, imageAttachments, promptOverride, perTurnHint, chatSummary, toolContext);
 
         // Photo-guide: the AI emits [[PHOTO_GUIDE]] on the FIRST photo request
         // only. Strip it from the reply and, when present, attach the fixed

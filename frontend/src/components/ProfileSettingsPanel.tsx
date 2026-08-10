@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Button, Form, Input, Select, Upload, message } from "antd";
 import type { UploadFile } from "antd";
-import { Bell, Bot, Building2, KeyRound, Mail, Phone, Plus, Save, SquarePen, Trash2, UploadCloud, User } from "lucide-react";
+import { Bell, Bot, Building2, CalendarClock, KeyRound, Mail, Phone, Plus, Save, SquarePen, Trash2, UploadCloud, User } from "lucide-react";
 import { PageSection } from "@/components/PageSection";
 import { useAppDispatch } from "@/hooks/useAppDispatch";
 import { useAppSelector } from "@/hooks/useAppSelector";
@@ -13,6 +13,7 @@ import { specialityService, type Speciality } from "@/services/speciality.servic
 import { useThemeColors } from "@/providers/ThemeProvider";
 import { ThemeSettingsPanel, type ThemeSettingsPanelHandle } from "@/components/ThemeSettingsPanel";
 import { AiModelsPanel, type AiModelsPanelHandle } from "@/components/AiModelsPanel";
+import { ClinicSettingsPanel, type ClinicSettingsPanelHandle } from "@/components/ClinicSettingsPanel";
 import {
   PROFILE_IMAGE_ACCEPT,
   beforeUploadProfileImage,
@@ -23,7 +24,7 @@ import {
 } from "@/utils/profileImage";
 import { AppSwitch } from "@/components/ui/AppSwitch";
 
-type SettingsKey = "profile" | "password" | "platform" | "ai-models";
+type SettingsKey = "profile" | "password" | "clinic-settings" | "platform" | "ai-models";
 
 const COUNTRY_OPTIONS = [{ value: "india", label: "India" }, { value: "usa", label: "USA" }];
 const STATE_OPTIONS = [{ value: "maharashtra", label: "Maharashtra" }, { value: "gujarat", label: "Gujarat" }];
@@ -35,7 +36,7 @@ const NOTIFICATION_ITEMS = [
   { key: "campaign_alerts", label: "Campaign pacing alerts", desc: "Alert when campaign budget runs low", defaultChecked: false },
 ];
 
-export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
+export function ProfileSettingsPanel({ eyebrow, title = "Settings" }: { eyebrow: string; title?: string }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const { platformName, refreshTheme } = useThemeColors();
@@ -48,9 +49,12 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
   const [profilePhotoFiles, setProfilePhotoFiles] = useState<UploadFile[]>([]);
   const themePanelRef = useRef<ThemeSettingsPanelHandle>(null);
   const aiModelsPanelRef = useRef<AiModelsPanelHandle>(null);
+  const clinicSettingsPanelRef = useRef<ClinicSettingsPanelHandle>(null);
   const [platformDraftName, setPlatformDraftName] = useState(platformName);
   const [platformDirty, setPlatformDirty] = useState(false);
   const [savingPlatform, setSavingPlatform] = useState(false);
+  const [clinicSettingsDirty, setClinicSettingsDirty] = useState(false);
+  const [savingClinicSettings, setSavingClinicSettings] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<Speciality[]>([]);
 
   useEffect(() => {
@@ -203,9 +207,23 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
     }
   };
 
+  const saveClinicSettings = async () => {
+    setSavingClinicSettings(true);
+    try {
+      await clinicSettingsPanelRef.current?.save();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to update clinic settings.";
+      void message.error(msg);
+    } finally {
+      setSavingClinicSettings(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <PageSection eyebrow={eyebrow} title="Settings" description={`Manage your ${roleLabel.toLowerCase()} profile.`} />
+      <PageSection eyebrow={eyebrow} title={title} description={`Manage your ${roleLabel.toLowerCase()} profile.`} />
 
       <section className="overflow-hidden border border-brand-border bg-white shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-[270px_1fr] md:items-start">
@@ -241,6 +259,23 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
                 <KeyRound size={15} className="shrink-0" />
                 Change Password
               </button>
+              {user?.role !== "staff_user" && (
+                <button
+                  type="button"
+                  onClick={() => setActiveSection("clinic-settings")}
+                  className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    activeSection === "clinic-settings"
+                      ? "bg-sidebar-active text-primary"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  {activeSection === "clinic-settings" && (
+                    <span className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary" />
+                  )}
+                  <CalendarClock size={15} className="shrink-0" />
+                  Clinic Settings
+                </button>
+              )}
               {user?.role === "super_admin" && (
                 <button
                   type="button"
@@ -398,6 +433,38 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
                   <Button type="primary" htmlType="submit" loading={savingPw}>Save Changes</Button>
                 </div>
               </Form>
+            )}
+
+            {activeSection === "clinic-settings" && user?.role !== "staff_user" && (
+              <div>
+                <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Clinic Settings</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Configure your open hours, appointment slot length, and buffer time between bookings.
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      disabled={!clinicSettingsDirty}
+                      onClick={() => clinicSettingsPanelRef.current?.discard()}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<Save size={14} />}
+                      loading={savingClinicSettings}
+                      disabled={!clinicSettingsDirty}
+                      onClick={() => void saveClinicSettings()}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+
+                <ClinicSettingsPanel ref={clinicSettingsPanelRef} onDirtyChange={setClinicSettingsDirty} />
+              </div>
             )}
 
             {activeSection === "platform" && user?.role === "super_admin" && (

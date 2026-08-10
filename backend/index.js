@@ -82,6 +82,8 @@ app.use("/api/tenant/specialities",        require("./routes/tenantSpecialityRou
 app.use("/api/ai-models",                  require("./routes/aiModelRoutes"));
 app.use("/api/super-admin/ai-models",      require("./routes/superAdminAiModelRoutes"));
 app.use("/api/lessons",                    require("./routes/lessonRoutes"));
+app.use("/api/clinic-schedule",            require("./routes/clinicScheduleRoutes"));
+app.use("/api/notifications",              require("./routes/notificationRoutes"));
 
 // WhatsApp-QR channel (Baileys — link the clinic's real WhatsApp by QR scan).
 // Registers /api/whatsapp-qr/* and restores linked sessions on boot.

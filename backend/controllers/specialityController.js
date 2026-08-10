@@ -7,6 +7,32 @@ const MODULE = "SpecialityController";
 // super-admin master-list boundary; tenant-scoped rows/resolution are
 // deferred to a follow-up ticket.
 
+// Public URL for a stored speciality detail-content image (served via the
+// static /uploads mount).
+const specialityImageUrl = (filename) => (filename ? `/uploads/specialities/${filename}` : null);
+
+// POST /api/super-admin/specialities/upload-image
+// POST /api/tenant/specialities/upload-image
+// Accepts a single "image" upload for use inside the Detail Content rich
+// text editor and returns its public URL — the editor inserts <img src="...">
+// pointing here instead of embedding base64, which was blowing past the
+// JSON body size limit.
+exports.uploadDetailImage = async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ success: false, message: "An image is required." });
+    }
+    return res.status(200).json({
+      success: true,
+      data: { url: specialityImageUrl(file.filename) },
+    });
+  } catch (err) {
+    log.error(MODULE, "uploadDetailImage", { error: err.message });
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
 // GET /api/public/specialities — consumed by the public landing page (no auth).
 // Returns only active, non-deleted, master (tenant_id: null) rows, ordered,
 // with a whitelisted attribute set.
