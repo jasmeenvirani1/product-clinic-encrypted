@@ -91,7 +91,7 @@ export const Sidebar = ({ brand, items, collapsed, permissionsLoading = false }:
           key: "profile",
           icon: <User size={14} />,
           label: profileLabel("profile", "Profile"),
-          href: "/app/settings",
+          href: "/app/profile",
         },
       ];
 

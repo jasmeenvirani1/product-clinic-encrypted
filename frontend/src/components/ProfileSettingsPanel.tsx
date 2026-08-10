@@ -35,7 +35,7 @@ const NOTIFICATION_ITEMS = [
   { key: "campaign_alerts", label: "Campaign pacing alerts", desc: "Alert when campaign budget runs low", defaultChecked: false },
 ];
 
-export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
+export function ProfileSettingsPanel({ eyebrow, title = "Settings" }: { eyebrow: string; title?: string }) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const { platformName, refreshTheme } = useThemeColors();
@@ -205,7 +205,7 @@ export function ProfileSettingsPanel({ eyebrow }: { eyebrow: string }) {
 
   return (
     <div className="space-y-5">
-      <PageSection eyebrow={eyebrow} title="Settings" description={`Manage your ${roleLabel.toLowerCase()} profile.`} />
+      <PageSection eyebrow={eyebrow} title={title} description={`Manage your ${roleLabel.toLowerCase()} profile.`} />
 
       <section className="overflow-hidden border border-brand-border bg-white shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-[270px_1fr] md:items-start">
