@@ -10,7 +10,7 @@ interface PublicSpecialityDetail {
   name: string;
   icon: string | null;
   short_description: string | null;
-  detail_content: Record<string, unknown> | null;
+  detail_content: string | Record<string, unknown> | null;
   meta_title: string | null;
   meta_description: string | null;
   og_title: string | null;
@@ -128,7 +128,10 @@ export default async function SpecialityDetailPage({
   if (!speciality) notFound();
 
   const brand = await getPlatformBrand();
-  const renderedBlocks = renderDetailBlocks(speciality.detail_content);
+  const isHtmlContent = typeof speciality.detail_content === "string";
+  const renderedBlocks = isHtmlContent
+    ? null
+    : renderDetailBlocks(speciality.detail_content as Record<string, unknown> | null);
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -142,9 +145,16 @@ export default async function SpecialityDetailPage({
             <p className="mt-3 text-lg text-slate-600 leading-relaxed">{speciality.short_description}</p>
           )}
           <div className="mt-8">
-            {renderedBlocks ?? (
-              !speciality.short_description && (
-                <p className="text-slate-500">More details coming soon.</p>
+            {isHtmlContent && (speciality.detail_content as string).trim() ? (
+              <div
+                className="prose prose-slate max-w-none [&_img]:rounded-md"
+                dangerouslySetInnerHTML={{ __html: speciality.detail_content as string }}
+              />
+            ) : (
+              renderedBlocks ?? (
+                !speciality.short_description && (
+                  <p className="text-slate-500">More details coming soon.</p>
+                )
               )
             )}
           </div>

@@ -7,7 +7,8 @@ export interface Speciality {
   name: string;
   icon: string | null;
   short_description: string | null;
-  detail_content: Record<string, unknown> | null;
+  /** HTML content produced by the rich text editor. */
+  detail_content: string | Record<string, unknown> | null;
   order: number;
   is_active: boolean;
   is_deleted: boolean;
@@ -30,7 +31,7 @@ export type SpecialityInput = {
   name: string;
   icon?: string | null;
   short_description?: string | null;
-  detail_content?: Record<string, unknown> | null;
+  detail_content?: string | Record<string, unknown> | null;
   order?: number;
   is_active?: boolean;
   meta_title?: string | null;
