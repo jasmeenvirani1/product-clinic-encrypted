@@ -147,7 +147,14 @@ export default async function SpecialityDetailPage({
           <div className="mt-8">
             {isHtmlContent && (speciality.detail_content as string).trim() ? (
               <div
-                className="prose prose-slate max-w-none [&_img]:rounded-md"
+                className={
+                  "max-w-none text-slate-700 leading-relaxed " +
+                  "[&_img]:max-w-full [&_img]:rounded-md " +
+                  "[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:text-slate-900 [&_h1]:my-4 " +
+                  "[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:text-slate-900 [&_h2]:my-3 " +
+                  "[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:leading-snug [&_h3]:text-slate-900 [&_h3]:my-2 " +
+                  "[&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6"
+                }
                 dangerouslySetInnerHTML={{ __html: speciality.detail_content as string }}
               />
             ) : (

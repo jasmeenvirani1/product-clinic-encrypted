@@ -62,7 +62,12 @@ export function TiptapEditor({ value, onChange, onUploadImage }: TiptapEditorPro
     editorProps: {
       attributes: {
         class:
-          "min-h-[260px] rounded-b-lg border-x border-b border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none [&_img]:max-w-full [&_img]:rounded-md",
+          "min-h-[260px] rounded-b-lg border-x border-b border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none " +
+          "[&_img]:max-w-full [&_img]:rounded-md " +
+          "[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight [&_h1]:my-4 " +
+          "[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:my-3 " +
+          "[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:leading-snug [&_h3]:my-2 " +
+          "[&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6",
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
