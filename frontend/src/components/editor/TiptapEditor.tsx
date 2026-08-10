@@ -2,6 +2,9 @@
 
 import { Button, Select, Tooltip } from "antd";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
   Code2,
   Image as ImageIcon,
@@ -18,6 +21,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Underline from "@tiptap/extension-underline";
 import Image from "@tiptap/extension-image";
+import TextAlign from "@tiptap/extension-text-align";
 import { useEffect, useRef, useState } from "react";
 
 interface TiptapEditorProps {
@@ -51,6 +55,7 @@ export function TiptapEditor({ value, onChange, onUploadImage }: TiptapEditorPro
         defaultProtocol: "https",
       }),
       Image.configure({ inline: false }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content: value || "",
     immediatelyRender: false,
@@ -177,6 +182,34 @@ export function TiptapEditor({ value, onChange, onUploadImage }: TiptapEditorPro
             onClick={() => editor.chain().focus().toggleUnderline().run()}
           />
         </Tooltip>
+        <Tooltip title="Align left">
+          <Button
+            size="small"
+            type={editor.isActive({ textAlign: "left" }) ? "primary" : "text"}
+            icon={<AlignLeft size={14} />}
+            disabled={showHtml}
+            onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          />
+        </Tooltip>
+        <Tooltip title="Align center">
+          <Button
+            size="small"
+            type={editor.isActive({ textAlign: "center" }) ? "primary" : "text"}
+            icon={<AlignCenter size={14} />}
+            disabled={showHtml}
+            onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          />
+        </Tooltip>
+        <Tooltip title="Align right">
+          <Button
+            size="small"
+            type={editor.isActive({ textAlign: "right" }) ? "primary" : "text"}
+            icon={<AlignRight size={14} />}
+            disabled={showHtml}
+            onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          />
+        </Tooltip>
+        <div className="mx-1 h-5 w-px bg-slate-200" />
         <Tooltip title="Bullet list">
           <Button
             size="small"
