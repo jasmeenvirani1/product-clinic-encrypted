@@ -204,18 +204,18 @@ export function HeroSectionPanel({ onActionsChange }: HeroSectionPanelProps) {
 
       <Form layout="vertical">
         <Form.Item
-          label="Chat typing speed (ms)"
-          extra="400 is the floor built into the animation — values at or below it have no visible effect. Try 1200+ for a noticeably slower typing indicator and message cadence."
+          label="Chat typing speed — higher = slower (ms)"
+          extra="This is a delay, not a speed: bigger number = slower typing indicator and message cadence. 400 is the fastest allowed (floor). Try 2000+ for a clearly slow, deliberate pace."
         >
-          <InputNumber value={content.typing_speed_ms} min={400} step={100} style={{ width: 200 }}
-            onChange={(v) => patch({ typing_speed_ms: Number(v) || 1200 })} />
+          <InputNumber value={content.typing_speed_ms} min={400} max={5000} step={200} style={{ width: 220 }}
+            onChange={(v) => patch({ typing_speed_ms: Number(v) || 1800 })} />
         </Form.Item>
         <Form.Item
-          label="Workflow step interval (ms)"
-          extra="600 is the floor built into the animation — values at or below it have no visible effect. Try 1500+ for a noticeably slower step-by-step highlight."
+          label="Workflow step interval — higher = slower (ms)"
+          extra="This is a delay, not a speed: bigger number = slower step-by-step highlight. 600 is the fastest allowed (floor). Try 2200+ for a clearly slow pace."
         >
-          <InputNumber value={content.step_interval_ms} min={600} step={100} style={{ width: 200 }}
-            onChange={(v) => patch({ step_interval_ms: Number(v) || 1500 })} />
+          <InputNumber value={content.step_interval_ms} min={600} max={6000} step={200} style={{ width: 220 }}
+            onChange={(v) => patch({ step_interval_ms: Number(v) || 2200 })} />
         </Form.Item>
         <Form.Item label="Show hero slider on landing page">
           <Switch checked={content.is_active} onChange={(v) => patch({ is_active: v })} />
