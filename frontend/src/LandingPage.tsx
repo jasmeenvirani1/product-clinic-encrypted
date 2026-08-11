@@ -329,6 +329,7 @@ const t = {
       priceNote: 'Custom pricing',
       priceSub: 'Billed to fit your scale',
       cta: 'Talk to Sales',
+      ctaNote: 'No setup fees · Response within 1 business day',
     },
     pricingMonthly: '/mo',
     pricingYearly: '/yr',
@@ -1915,7 +1916,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 >
                   {t.customPlan.chip}
                 </span>
-                <p className="font-heading text-3xl font-bold leading-tight mb-1" style={{ color: PLAN_DARK_TEXT }}>
+                <p className="font-heading text-2xl font-bold leading-tight mb-1 whitespace-nowrap" style={{ color: PLAN_DARK_TEXT }}>
                   {t.customPlan.priceNote}
                 </p>
                 <p className="text-[13.5px]" style={{ color: PLAN_DARK_MUTED }}>{t.customPlan.priceSub}</p>
@@ -1945,7 +1946,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Right rail: CTA stays last, as before. */}
-              <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex items-center">
+              <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex flex-col items-center justify-center gap-3">
                 <button
                   onClick={() => setIsCustomPlanModalOpen(true)}
                   className="w-full h-12 rounded-xl font-semibold text-[16.5px] text-white transition-all hover:brightness-110"
@@ -1953,6 +1954,9 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 >
                   {t.customPlan.cta}
                 </button>
+                <p className="text-[12.5px] text-center leading-snug" style={{ color: BODY }}>
+                  {t.customPlan.ctaNote}
+                </p>
               </div>
             </motion.div>
           </div>
