@@ -37,8 +37,8 @@ export const DEFAULT_HERO_CONTENT: HeroContent = {
     { label: "Payment received", icon: "rupee" },
   ],
   slide_interval_ms: 6000,
-  typing_speed_ms: 1200,
-  step_interval_ms: 1500,
+  typing_speed_ms: 1800,
+  step_interval_ms: 2200,
   is_active: true,
 };
 
