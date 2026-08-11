@@ -25,7 +25,11 @@ type Props = {
 export function WhatsAppMultiConnect({ conversationsPath }: Props) {
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<WhatsAppSessionInfo[]>([]);
-  const [maxSlots, setMaxSlots] = useState(5);
+  // `null` = unlimited plan (Enterprise/Custom). Only fall back to 5 when
+  // `maxSlots` is truly absent from a malformed response (undefined), never
+  // when the backend deliberately sends `null` to mean "unlimited".
+  const [maxSlots, setMaxSlots] = useState<number | null>(5);
+  const [used, setUsed] = useState(0);
   // Slots to SHOW widgets for. Always includes every persisted slot; the "Add"
   // button reveals the next empty slot so the user can scan a new number.
   const [visibleSlots, setVisibleSlots] = useState<number[]>([1]);
@@ -35,7 +39,8 @@ export function WhatsAppMultiConnect({ conversationsPath }: Props) {
       const res = await whatsappQrService.sessions();
       const rows = res.sessions ?? [];
       setSessions(rows);
-      setMaxSlots(res.maxSlots ?? 5);
+      setMaxSlots(res.maxSlots === undefined ? 5 : res.maxSlots);
+      setUsed(res.used ?? rows.length);
       const persisted = rows.map((r) => r.slot);
       // Show all persisted slots, and slot 1 at minimum.
       setVisibleSlots((prev) => {
@@ -60,7 +65,8 @@ export function WhatsAppMultiConnect({ conversationsPath }: Props) {
   };
 
   const highestSlot = Math.max(...visibleSlots, ...sessions.map((s) => s.slot), 1);
-  const canAddMore = highestSlot < maxSlots;
+  // maxSlots === null means an unlimited plan — always allow adding more.
+  const canAddMore = maxSlots === null || highestSlot < maxSlots;
 
   const addNumber = () => {
     const next = highestSlot + 1;
@@ -89,13 +95,27 @@ export function WhatsAppMultiConnect({ conversationsPath }: Props) {
             // number shouldn't yank the user away from this settings screen.
             autoRedirect={slot === 1}
             onChanged={() => void load()}
-            totalSlotCount={visibleSlots.length}
+            // Dropping the removed slot's card is normally correct (it frees
+            // that slot number so "Add another number" can re-offer it), but
+            // slot 1 must always stay visible as the tenant's primary connect
+            // entry point — this became reachable once removal of a tenant's
+            // *only* remaining slot was allowed (issue #46 fix): a 1-number-
+            // plan tenant removing their sole slot 1 would otherwise be left
+            // with an empty visibleSlots array and no "Connect WhatsApp" card
+            // to click at all.
             onRemoved={(removedSlot) =>
-              setVisibleSlots((prev) => prev.filter((s) => s !== removedSlot))
+              setVisibleSlots((prev) => {
+                const next = prev.filter((s) => s !== removedSlot);
+                return next.includes(1) ? next : [1, ...next];
+              })
             }
           />
         </div>
       ))}
+
+      <p className="text-xs text-slate-500">
+        {maxSlots === null ? `${used} numbers connected` : `${used} of ${maxSlots} numbers used`}
+      </p>
 
       {canAddMore && (
         <>
