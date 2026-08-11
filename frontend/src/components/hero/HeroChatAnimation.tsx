@@ -24,7 +24,7 @@ interface Props {
  * are shown it pauses; if onCycleComplete is given it signals the slider to
  * advance, otherwise it restarts its own loop.
  */
-export function HeroChatAnimation({ messages, typingSpeedMs = 1200, active = true, onCycleComplete }: Props) {
+export function HeroChatAnimation({ messages, typingSpeedMs = 1800, active = true, onCycleComplete }: Props) {
   const { platformName } = useThemeColors();
   const [visibleCount, setVisibleCount] = React.useState(0);
   // Which sender is currently "typing" (null = nobody). Drives the side the

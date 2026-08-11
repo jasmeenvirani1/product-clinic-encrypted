@@ -67,6 +67,7 @@ import type { HeroContent } from '@/services/hero.service';
 import { specialityService, type Speciality } from '@/services/speciality.service';
 import { CustomPlanEnquiryModal } from './components/CustomPlanEnquiryModal';
 import { WhatsAppDemoPhone } from './components/WhatsAppDemoPhone';
+import { ConnectAnimation, CustomizeAnimation, GoLiveAnimation } from './components/landing/HowItWorksAnimated';
 
 // ─── Design tokens (driven by Theme Management) ─────────────────────────────────
 // These read the live CSS custom properties written by ThemeProvider
@@ -152,13 +153,13 @@ const t = {
     nav: [
       { label: 'Home', href: '#home' },
       { label: 'Features', href: '#solution' },
-      { label: 'Pricing', href: '#pricing' },
       { label: 'Integration', href: '#integration' },
+      { label: 'Pricing', href: '#pricing' },
       { label: 'Profiles', href: '/profiles', type: 'route' as const },
       { label: 'FAQ', href: '#faq' },
       { label: 'Contact', href: '#cta' },
     ],
-    navCta: 'Book Demo',
+    navCta: 'Try It Now',
 
     // Hero
     heroBadge1: 'Built for healthcare operations',
@@ -167,11 +168,11 @@ const t = {
     heroTitle2: 'Never Misses Another',
     heroTitle3: 'Patient.',
     heroTypedWords: [
-      'Patient.',
-      'Call.',
-      'Lead.',
-      'Booking.',
-      'Message.',
+      'Patients.',
+      'Calls.',
+      'Leads.',
+      'Bookings.',
+      'Messages.',
     ],
     heroSubtitle:
       'ClinicFlow is the AI front desk that answers, books, and follows up with every patient — on WhatsApp, call, or web — 24/7, without adding staff.',
@@ -329,6 +330,7 @@ const t = {
       priceNote: 'Custom pricing',
       priceSub: 'Billed to fit your scale',
       cta: 'Talk to Sales',
+      ctaNote: 'No setup fees · Response within 1 business day',
     },
     pricingMonthly: '/mo',
     pricingYearly: '/yr',
@@ -872,7 +874,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
     const timeout = window.setTimeout(() => {
       setHeroIntroCharCount((count) => Math.min(count + 1, heroIntroText.length));
-    }, 100);
+    }, 160);
 
     return () => window.clearTimeout(timeout);
   }, [hasTypedHeroIntro, heroIntroCharCount, heroIntroText.length, reducedMotion]);
@@ -888,7 +890,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
     const currentWord = t.heroTypedWords[typedWordIndex];
     const isWordComplete = !isDeletingTypedText && typedText === currentWord;
     const isWordCleared = isDeletingTypedText && typedText === '';
-    const timeoutMs = isWordComplete ? 1800 : isDeletingTypedText ? 70 : 130;
+    const timeoutMs = isWordComplete ? 1800 : isDeletingTypedText ? 110 : 200;
 
     const timeout = window.setTimeout(() => {
       if (isWordComplete) {
@@ -1574,27 +1576,21 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
 
         {/* ══════════════ HOW IT WORKS ══════════════ */}
         <section className="py-10 sm:py-12 lg:py-16 bg-white">
-          <div className="max-w-5xl 2xl:max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-8">
             <motion.div {...fadeInUp} className="text-center mb-12">
               <Eyebrow>{t.howBadge}</Eyebrow>
               <h2 className="font-heading text-[1.75rem] sm:text-4xl lg:text-5xl font-semibold tracking-tight" style={{ color: NAVY }}>{t.howTitle}</h2>
             </motion.div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
               {t.howSteps.map((step, i) => (
                 <motion.div
                   {...fadeInUp}
                   transition={{ duration: 0.5, delay: i * 0.12 }}
                   key={step.t}
-                  className="bg-white rounded-2xl border border-slate-200 p-3 hover:shadow-lg transition-all"
+                  className="bg-white rounded-2xl border border-slate-200 p-3.5 hover:shadow-lg transition-all"
                 >
                   <div className="relative mb-4 h-64 sm:h-80 lg:h-96 overflow-hidden rounded-xl">
-                    <Image
-                      src={`/works-${i + 1}.png`}
-                      alt={step.t}
-                      fill
-                      className="object-contain"
-                      style={i === 1 ? { objectPosition: 'left top', padding: '0 0 0 4px' } : undefined}
-                    />
+                    {i === 0 ? <ConnectAnimation /> : i === 1 ? <CustomizeAnimation /> : <GoLiveAnimation />}
                   </div>
                   <div className="px-2 pb-3">
                     <h4 className="font-bold text-xl mb-2" style={{ color: NAVY }}>{step.t}</h4>
@@ -1801,12 +1797,18 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 </button>
               </div>
               {yearlySavingsPct > 0 && (
-                <span
-                  className="text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-                  style={{ background: 'rgba(14,163,113,0.12)', color: '#0ea371' }}
+                <motion.span
+                  className="inline-flex items-center gap-1 text-[11.5px] font-extrabold px-3 py-1.5 rounded-full whitespace-nowrap text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e, #0ea371)',
+                    boxShadow: '0 3px 10px rgba(14,163,113,0.35)',
+                  }}
+                  animate={{ scale: [1, 1.06, 1] }}
+                  transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                 >
+                  <span aria-hidden="true">🎉</span>
                   Save {yearlySavingsPct}%
-                </span>
+                </motion.span>
               )}
             </div>
 
@@ -1915,7 +1917,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 >
                   {t.customPlan.chip}
                 </span>
-                <p className="font-heading text-3xl font-bold leading-tight mb-1" style={{ color: PLAN_DARK_TEXT }}>
+                <p className="font-heading text-2xl font-bold leading-tight mb-1 whitespace-nowrap" style={{ color: PLAN_DARK_TEXT }}>
                   {t.customPlan.priceNote}
                 </p>
                 <p className="text-[13.5px]" style={{ color: PLAN_DARK_MUTED }}>{t.customPlan.priceSub}</p>
@@ -1945,7 +1947,7 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
               </div>
 
               {/* Right rail: CTA stays last, as before. */}
-              <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex items-center">
+              <div className="px-7 pb-7 sm:px-9 sm:pb-9 lg:p-9 lg:w-60 lg:shrink-0 flex flex-col items-center justify-center gap-3">
                 <button
                   onClick={() => setIsCustomPlanModalOpen(true)}
                   className="w-full h-12 rounded-xl font-semibold text-[16.5px] text-white transition-all hover:brightness-110"
@@ -1953,6 +1955,9 @@ const ClinicFlowLanding = (_props: { variant?: string }) => {
                 >
                   {t.customPlan.cta}
                 </button>
+                <p className="text-[12.5px] text-center leading-snug" style={{ color: BODY }}>
+                  {t.customPlan.ctaNote}
+                </p>
               </div>
             </motion.div>
           </div>

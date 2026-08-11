@@ -23,7 +23,7 @@ interface Props {
  * slider to advance (onCycleComplete) or loops back to the first step.
  * (Floating badges are rendered by HeroSlider so they appear on every slide.)
  */
-export function HeroWorkflowList({ steps, stepIntervalMs = 1500, active = true, onCycleComplete }: Props) {
+export function HeroWorkflowList({ steps, stepIntervalMs = 2200, active = true, onCycleComplete }: Props) {
   const [activeIdx, setActiveIdx] = React.useState(0);
 
   const onDoneRef = React.useRef(onCycleComplete);

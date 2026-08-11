@@ -57,6 +57,17 @@ const Plan = sequelize.define(
       allowNull: true,
       defaultValue: null,
     },
+    // Max number of WhatsApp numbers (slots) a tenant on this plan may
+    // connect. null = unlimited (e.g. Enterprise); a number = cap. Same
+    // null-means-unlimited convention as credit_limit above — do not use a
+    // different sentinel (e.g. -1). Counted against WhatsAppSession rows via
+    // whatsappNumberLimitService, overridable per-account via
+    // User.feature_overrides.max_whatsapp_numbers.
+    max_whatsapp_numbers: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

@@ -85,7 +85,9 @@ export interface WhatsAppSessionInfo {
 export interface WhatsAppSessionsResponse {
   success: boolean;
   sessions: WhatsAppSessionInfo[];
-  maxSlots: number;
+  /** Tenant's real plan-derived cap. `null` = unlimited plan (Enterprise/Custom). */
+  maxSlots: number | null;
+  used: number;
 }
 
 // The backend FORCES the tenant to the logged-in user; the URL param carries

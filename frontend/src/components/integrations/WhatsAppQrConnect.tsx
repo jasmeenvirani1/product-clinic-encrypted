@@ -21,8 +21,6 @@ type Props = {
   title?: string;
   /** Called after a successful logout so a parent list can refresh. */
   onChanged?: () => void;
-  /** Total persisted slots for this tenant — drives the "last card" guard. */
-  totalSlotCount?: number;
   /** Called after a successful remove so the parent can drop this card immediately. */
   onRemoved?: (slot: number) => void;
 };
@@ -45,7 +43,6 @@ export function WhatsAppQrConnect({
   slot = 1,
   title,
   onChanged,
-  totalSlotCount,
   onRemoved,
 }: Props) {
   const router = useRouter();
@@ -120,8 +117,9 @@ export function WhatsAppQrConnect({
       const s = await whatsappQrService.connect(slot);
       apply(s, true);
       startPolling(); // QR arrives a moment after connect; poll for it + connection
-    } catch {
-      setError("Failed to start WhatsApp session. Try again.");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg ?? "Failed to start WhatsApp session. Try again.");
     } finally {
       setBusy(false);
     }
@@ -168,11 +166,20 @@ export function WhatsAppQrConnect({
   const isConnected = status === "connected";
   const showQr = status === "qr_pending" && qr;
   const isWorking = status === "connecting" || (status === "qr_pending" && !qr);
-  const isLastSlot = (totalSlotCount ?? 0) <= 1;
-  const removeDisabled = isConnected || isLastSlot;
-  const removeDisabledReason = isConnected
-    ? "Disconnect WhatsApp before removing this number."
-    : "At least one WhatsApp number must remain";
+  // Removal is only blocked while the number is actively connected — the
+  // number must be disconnected first (mirrors the backend's own guard in
+  // whatsappQrBootstrap.js's /remove route). There used to also be a
+  // "can't remove your last remaining slot" rule here, but that predates
+  // per-plan number limits (issue #46): a tenant on a 1-number plan can
+  // legitimately have exactly one slot, and once they disconnect it they
+  // must be able to remove it too, in order to free the slot for a
+  // *different* number (e.g. the clinic changed its WhatsApp number). The
+  // backend no longer enforces a "≥1 slot" floor either — removing down to
+  // zero slots is a safe, valid state (identical to a brand-new tenant who
+  // hasn't connected anything yet), so this component shouldn't invent a
+  // stricter rule than the API it's calling.
+  const removeDisabled = isConnected;
+  const removeDisabledReason = "Disconnect WhatsApp before removing this number.";
 
   return (
     <div className="relative space-y-4">

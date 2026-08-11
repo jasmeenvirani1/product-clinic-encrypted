@@ -31,6 +31,7 @@ const {
 } = require("./leadAutomation");
 const { rephraseFAQAnswer } = require("./aiPhrasing");
 const { getCreditStatus, consumeCredit } = require("./creditService");
+const { canAddNewSlot, getNumberLimitStatus } = require("./whatsappNumberLimitService");
 const { sendIntentNotification } = require("./emailService");
 const { createNotification } = require("./notificationService");
 const { getSelfChatPrompt, getSuperAdminAICredentials } = require("../utils/platformAISettings");
@@ -48,6 +49,13 @@ const MODULE = "WhatsAppQR";
 // (1, 2, …). The Baileys transport keys sessions by a single accountId string,
 // so we encode both parts as `${tenantId}:${slot}`. Inbound/CRM logic strips
 // the slot back to the plain tenantId; outbound picks the slot to send from.
+//
+// NOTE: this is now the hard TECHNICAL ceiling on slot numbers (a real
+// Baileys/session-manager resource limit, decoupled from billing) — NOT the
+// billing-tier cap anymore. The actual per-tenant billing cap comes from
+// Plan.max_whatsapp_numbers / User.feature_overrides via
+// whatsappNumberLimitService (see canAddNewSlot / getNumberLimitStatus
+// below). Even "unlimited"-plan tenants cannot exceed this constant.
 const MAX_SLOTS_PER_TENANT = 5;
 
 const makeAccountId = (tenantId, slot = 1) => `${Number(tenantId)}:${Number(slot) || 1}`;
@@ -955,6 +963,41 @@ function mountWhatsAppQr(app, { authMiddleware } = {}) {
     return makeAccountId(tenantId, slot);
   };
 
+  // Plan-limit capacity check for NEW slot connections. Must be registered
+  // BEFORE the portable whatsapp-qr router below — Express matches routes in
+  // registration order, so this explicit handler for the exact
+  // method+path (POST .../:accountId/connect) fires first and either
+  // short-circuits with a 403 (at capacity, net-new slot) or calls next() to
+  // fall through to the portable router's own /connect handler. It never
+  // shadows status/qr/logout (different methods/paths).
+  //
+  // This cannot live inside resolveAccountId: that function is shared
+  // (synchronously) by ALL four portable routes and can only return an
+  // accountId string or falsy — it cannot carry a structured 403 payload,
+  // and gating it would incorrectly also block status/qr polling.
+  app.post("/api/whatsapp-qr/:accountId/connect", authMiddleware, async (req, res, next) => {
+    try {
+      const tenantId = req.user?.tenant_id || req.user?.id;
+      if (!tenantId) return next(); // let the portable router's own guard handle it
+
+      const slot = normalizeSlot(req.params.accountId);
+      const existingRow = await WhatsAppSession.findOne({ where: { tenant_id: tenantId, slot } });
+      const allowed = await canAddNewSlot(tenantId, { existingRow: !!existingRow });
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: "You've reached your plan's WhatsApp number limit. Upgrade your plan to connect more numbers.",
+          code: "PLAN_LIMIT_REACHED",
+          feature: "max_whatsapp_numbers",
+        });
+      }
+      return next();
+    } catch (err) {
+      log.error(MODULE, "planLimitCheck", { error: err.message });
+      return next(); // fail open — never block a connect attempt on our own error
+    }
+  });
+
   app.use(
     "/api/whatsapp-qr",
     whatsappQr.router({ authMiddleware, resolveAccountId })
@@ -978,7 +1021,18 @@ function mountWhatsAppQr(app, { authMiddleware } = {}) {
         number: live?.number || r.number,
       };
     });
-    return { sessions, maxSlots: MAX_SLOTS_PER_TENANT };
+    // maxSlots reflects the tenant's real plan-derived limit and is passed
+    // through AS-IS, including null for "unlimited" (Enterprise) plans.
+    // MAX_SLOTS_PER_TENANT is NOT substituted here — it is purely an internal
+    // technical ceiling (enforced separately by normalizeSlot() and the
+    // connect-route capacity check below), not the tenant-facing cap. Leaking
+    // it into maxSlots would make an unlimited plan look like a hard cap of 5
+    // to the frontend. frontend/src/components/integrations/
+    // WhatsAppMultiConnect.tsx already branches on `maxSlots ? "X of Y used" :
+    // "X connected"`, so a falsy (null) maxSlots here renders correctly with
+    // no frontend change needed.
+    const { limit } = await getNumberLimitStatus(tenantId);
+    return { sessions, maxSlots: limit, used: rows.length };
   };
 
   // List all linked-number slots for the logged-in tenant (drives the multi-
@@ -1017,15 +1071,25 @@ function mountWhatsAppQr(app, { authMiddleware } = {}) {
 
       // A slot the tenant has never connected has no DB row yet — it's still a
       // real card in the UI, so removing it is a no-op success, not a 404.
+      //
+      // NOTE: there used to be a blanket "at least one slot must always
+      // remain" rule here (block removal once totalSlots <= 1). That rule
+      // predates per-plan number limits (issue #46) and made sense only when
+      // every tenant had the same flat MAX_SLOTS_PER_TENANT cap with no way
+      // to change which number they used other than logout/reconnect on the
+      // same slot. Now that a 1-number-plan tenant can legitimately have
+      // exactly one slot total, that old rule permanently traps them: once
+      // they disconnect their only number, they can never remove it (to free
+      // the slot for a *different* number) because totalSlots is still 1.
+      // Removing a slot never leaves the tenant with fewer DB rows than
+      // WhatsAppSession structurally requires (zero is a valid, already-
+      // handled state — it's exactly what a brand-new tenant looks like
+      // before their first-ever connect), so there is no structural reason
+      // to keep this floor. The only real invariant worth enforcing is "you
+      // can't remove a slot that's currently connected" (checked above) —
+      // removing down to zero slots is safe and is the correct way for a
+      // 1-slot-plan tenant to swap to a different WhatsApp number.
       if (row) {
-        const totalSlots = await WhatsAppSession.count({ where: { tenant_id: tenantId } });
-        if (totalSlots <= 1) {
-          return res.status(409).json({
-            success: false,
-            message: "At least one WhatsApp number must remain.",
-          });
-        }
-
         await whatsappQr.removeSlot(accountId);
         await WhatsAppSession.destroy({ where: { tenant_id: tenantId, slot } });
       }
